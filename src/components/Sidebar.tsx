@@ -68,13 +68,13 @@ export const Sidebar: React.FC = () => {
           Ikwezi Portal
         </h1>
         <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px', textTransform: 'uppercase', fontWeight: 600 }}>
-          {currentUser.role === 'IKWEZI_ADMIN' ? 'Mining Administrator' : 'Transporter Panel'}
+          {currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER' ? 'Mining Administrator' : 'Transporter Panel'}
         </p>
       </div>
 
       {/* Navigation Links */}
       <nav style={{ flex: 1 }}>
-        {currentUser.role === 'TRANSPORTER' ? (
+        {currentUser.role === 'DRIVER' || currentUser.role === 'TRANSPORTER_ADMIN' || currentUser.role === 'TRANSPORTER' ? (
           <>
             <NavLink 
               to="/transporter/dashboard" 

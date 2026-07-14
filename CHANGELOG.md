@@ -2,6 +2,17 @@
 
 All notable changes to the Transporter Proof-of-Delivery (POD) Attachment & Invoice Automation Portal will be documented in this file.
 
+## [2026-07-14] Support 5 Portal Logins and Persona-Based Quick Access
+- **Problem**: The portal only supported a simple toggle between two pre-loaded transporter/admin accounts, whereas the senior's notes require 5 distinct stakeholder roles (Company Admin, Transporter Admin, Driver, Customer, and Weighbridge Supervisor).
+- **Changed**:
+  - Registered 5 distinct users in `mockData.ts` with custom display titles and company affiliations.
+  - Refactored `DemoContext.tsx` to handle authentication roles natively without hardcoded fallbacks.
+  - Redesigned `Login.tsx` to display a beautiful quick-access list of the 5 personas, enabling one-click logins.
+  - Configured `App.tsx`, `Sidebar.tsx`, and `TopBar.tsx` role routing paths and navigation layout templates.
+- **Tests added**: Verified project build successfully.
+- **SAP/interface impact**: No.
+- **Known risk/follow-up**: None.
+
 ## [2026-07-14] Add Automated Invoice OCR Number Extraction & Auto-fill
 - **Problem**: Transporters had to type invoice numbers manually, which detracted from demonstrating AI OCR automation features.
 - **Changed**:

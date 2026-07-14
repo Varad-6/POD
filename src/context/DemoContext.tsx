@@ -12,7 +12,7 @@ import {
 // Types
 export interface User {
   username: string;
-  role: 'TRANSPORTER' | 'IKWEZI_ADMIN';
+  role: 'COMPANY_ADMIN' | 'TRANSPORTER_ADMIN' | 'DRIVER' | 'CUSTOMER' | 'SUPERVISOR' | 'TRANSPORTER' | 'IKWEZI_ADMIN';
   companyName?: string;
   displayName?: string;
 }
@@ -162,7 +162,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (matched) {
       const u: User = {
         username: matched.username,
-        role: matched.role === 'IKWEZI_ADMIN' ? 'IKWEZI_ADMIN' : 'TRANSPORTER',
+        role: matched.role as any,
         companyName: matched.companyName,
         displayName: matched.displayName
       };

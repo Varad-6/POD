@@ -66,8 +66,8 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
       {/* User Info & Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
         
-        {/* Notification Bell (Only for Transporter Role) */}
-        {currentUser.role === 'TRANSPORTER' && (
+        {/* Notification Bell (Only for Transporter Roles) */}
+        {(currentUser.role === 'DRIVER' || currentUser.role === 'TRANSPORTER_ADMIN' || currentUser.role === 'TRANSPORTER') && (
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowNotifDropdown(!showNotifDropdown)}
@@ -186,7 +186,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
             {currentUser.displayName || currentUser.companyName}
           </p>
           <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', fontWeight: 500 }}>
-            {currentUser.role === 'IKWEZI_ADMIN' ? 'Ikwezi Admin' : 'Authorized Transporter'}
+            {currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER' ? (currentUser.role === 'SUPERVISOR' ? 'Supervisor' : currentUser.role === 'CUSTOMER' ? 'Customer' : 'Company Admin') : (currentUser.role === 'DRIVER' ? 'Driver' : 'Transporter Admin')}
           </p>
         </div>
 

@@ -24,7 +24,8 @@ const MainApp: React.FC = () => {
     if (!currentUser && location.pathname !== '/login') {
       navigate('/login');
     } else if (currentUser && location.pathname === '/login') {
-      if (currentUser.role === 'IKWEZI_ADMIN') {
+      const role = currentUser.role;
+      if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN' || role === 'SUPERVISOR' || role === 'CUSTOMER') {
         navigate('/admin/dashboard');
       } else {
         navigate('/transporter/dashboard');
@@ -46,9 +47,10 @@ const MainApp: React.FC = () => {
   // Demo toggle helper
   const toggleRole = () => {
     if (!currentUser) return;
-    const targetUser = currentUser.role === 'TRANSPORTER' ? 'admin' : 'transporter';
+    const isCompanySide = currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER';
+    const targetUser = isCompanySide ? 'transporter_admin' : 'company_admin';
     login(targetUser);
-    if (targetUser === 'admin') {
+    if (targetUser === 'company_admin') {
       navigate('/admin/dashboard');
     } else {
       navigate('/transporter/dashboard');
@@ -103,7 +105,7 @@ const MainApp: React.FC = () => {
               onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
             >
               <UserCheck size={12} />
-              Switch to {currentUser.role === 'TRANSPORTER' ? 'Admin' : 'Transporter'}
+              Switch to {currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER' ? 'Transporter Admin' : 'Company Admin'}
             </button>
           )}
 
@@ -164,7 +166,11 @@ const MainApp: React.FC = () => {
                   path="*" 
                   element={
                     <Navigate 
-                      to={currentUser.role === 'IKWEZI_ADMIN' ? "/admin/dashboard" : "/transporter/dashboard"} 
+                      to={
+                        currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER'
+                          ? "/admin/dashboard" 
+                          : "/transporter/dashboard"
+                      } 
                       replace 
                     />
                   } 

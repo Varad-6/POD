@@ -5,9 +5,11 @@
 // ============================================================
 
 export const USERS = [
-  { username: "transporter", password: "password123", role: "TRANSPORTER", companyName: "Sipho Transport Services (Pty) Ltd" },
-  { username: "transporter2", password: "password123", role: "TRANSPORTER", companyName: "Vaal Logistics CC" },
-  { username: "admin", password: "password123", role: "IKWEZI_ADMIN", displayName: "Thandiwe Nkosi — Logistics Admin" },
+  { username: "company_admin", password: "password123", role: "COMPANY_ADMIN", displayName: "Thandiwe Nkosi (Company Admin)" },
+  { username: "transporter_admin", password: "password123", role: "TRANSPORTER_ADMIN", companyName: "Sipho Transport Services", displayName: "Sipho Kumalo (Transporter Admin)" },
+  { username: "driver", password: "password123", role: "DRIVER", companyName: "Sipho Transport Services", displayName: "Dumisani Dlamini (Driver)" },
+  { username: "customer", password: "password123", role: "CUSTOMER", companyName: "Eskom Holdings (Client)", displayName: "John Ndlovu (Customer)" },
+  { username: "supervisor", password: "password123", role: "SUPERVISOR", displayName: "Pieter Botha (Weighbridge Supervisor)" },
 ];
 
 export const PURCHASE_ORDERS = [

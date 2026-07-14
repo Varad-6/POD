@@ -2,16 +2,24 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, Key } from 'lucide-react';
 import { useDemo } from '../context/DemoContext';
+import { USERS } from '../data/mockData';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useDemo();
   
-  const [activeTab, setActiveTab] = useState<'TRANSPORTER' | 'IKWEZI_ADMIN'>('TRANSPORTER');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+
+  const personas = [
+    { username: 'company_admin', role: 'COMPANY_ADMIN', label: 'Company Admin', desc: 'Thandiwe Nkosi (Ikwezi)', color: '#1e3a8a', bg: '#dbeafe' },
+    { username: 'transporter_admin', role: 'TRANSPORTER_ADMIN', label: 'Transporter Admin', desc: 'Sipho Kumalo (Sipho)', color: '#0f766e', bg: '#ccfbf1' },
+    { username: 'driver', role: 'DRIVER', label: 'Transporter (Driver)', desc: 'Dumisani Dlamini (Sipho Driver)', color: '#d97706', bg: '#fef3c7' },
+    { username: 'customer', role: 'CUSTOMER', label: 'Customer / Client', desc: 'John Ndlovu (Eskom)', color: '#7c3aed', bg: '#ede9fe' },
+    { username: 'supervisor', role: 'SUPERVISOR', label: 'Weighbridge Supervisor', desc: 'Pieter Botha (Weighbridge)', color: '#2563eb', bg: '#dbeafe' }
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,28 +27,31 @@ export const Login: React.FC = () => {
 
     const success = login(username);
     if (success) {
-      if (activeTab === 'TRANSPORTER') {
-        navigate('/transporter/dashboard');
-      } else {
+      const matched = USERS.find((u: any) => u.username.toLowerCase() === username.toLowerCase());
+      const role = matched?.role;
+      if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN' || role === 'SUPERVISOR' || role === 'CUSTOMER') {
         navigate('/admin/dashboard');
+      } else {
+        navigate('/transporter/dashboard');
       }
     } else {
       setError('Invalid username or password');
     }
   };
 
-  const handleQuickAccess = () => {
+  const handlePersonaClick = (uname: string) => {
     setError('');
-    const demoUser = activeTab === 'TRANSPORTER' ? 'transporter' : 'admin';
-    setUsername(demoUser);
+    setUsername(uname);
     setPassword('password123');
     
-    const success = login(demoUser);
+    const success = login(uname);
     if (success) {
-      if (activeTab === 'TRANSPORTER') {
-        navigate('/transporter/dashboard');
-      } else {
+      const matched = USERS.find((u: any) => u.username.toLowerCase() === uname.toLowerCase());
+      const role = matched?.role;
+      if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN' || role === 'SUPERVISOR' || role === 'CUSTOMER') {
         navigate('/admin/dashboard');
+      } else {
+        navigate('/transporter/dashboard');
       }
     }
   };
@@ -59,82 +70,23 @@ export const Login: React.FC = () => {
       <div 
         style={{
           width: '100%',
-          maxWidth: '440px',
+          maxWidth: '460px',
           backgroundColor: '#ffffff',
           borderRadius: '16px',
           boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
-          padding: '40px 32px',
+          padding: '36px 28px',
           border: '1px solid rgba(255,255,255,0.1)'
         }}
         className="animate-scale-in"
       >
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <h1 style={{ color: 'var(--primary-color)', fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>
             Ikwezi Mining
           </h1>
           <p style={{ color: 'var(--neutral-secondary)', fontSize: '14px', marginTop: '4px', fontWeight: '500' }}>
             Transporter & Invoice Portal
           </p>
-        </div>
-
-        {/* Form Role Toggle */}
-        <div 
-          style={{
-            display: 'flex',
-            backgroundColor: 'var(--page-bg)',
-            padding: '4px',
-            borderRadius: '10px',
-            marginBottom: '24px',
-            border: '1px solid var(--border-grey)'
-          }}
-        >
-          <button
-            onClick={() => {
-              setActiveTab('TRANSPORTER');
-              setError('');
-              setUsername('');
-              setPassword('');
-            }}
-            style={{
-              flex: 1,
-              padding: '10px',
-              fontSize: '13px',
-              fontWeight: 600,
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              backgroundColor: activeTab === 'TRANSPORTER' ? '#ffffff' : 'transparent',
-              color: activeTab === 'TRANSPORTER' ? 'var(--primary-color)' : 'var(--neutral-secondary)',
-              boxShadow: activeTab === 'TRANSPORTER' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            Transporter
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('IKWEZI_ADMIN');
-              setError('');
-              setUsername('');
-              setPassword('');
-            }}
-            style={{
-              flex: 1,
-              padding: '10px',
-              fontSize: '13px',
-              fontWeight: 600,
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              backgroundColor: activeTab === 'IKWEZI_ADMIN' ? '#ffffff' : 'transparent',
-              color: activeTab === 'IKWEZI_ADMIN' ? 'var(--primary-color)' : 'var(--neutral-secondary)',
-              boxShadow: activeTab === 'IKWEZI_ADMIN' ? '0 1px 3px rgba(0,0,0,0.05)' : 'none',
-              transition: 'all 0.15s ease'
-            }}
-          >
-            Ikwezi Admin
-          </button>
         </div>
 
         {/* Credentials Form */}
@@ -148,7 +100,7 @@ export const Login: React.FC = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 className="form-input has-icon-left" 
-                placeholder={activeTab === 'TRANSPORTER' ? "transporter" : "admin"}
+                placeholder="Enter username"
                 required
               />
             </div>
@@ -201,61 +153,61 @@ export const Login: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ margin: '24px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+        <div style={{ margin: '20px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
           <div style={{ height: '1px', backgroundColor: 'var(--border-grey)', flex: 1 }}></div>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--neutral-secondary)', textTransform: 'uppercase' }}>Demo Automation</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--neutral-secondary)', textTransform: 'uppercase' }}>Demo Quick Access</span>
           <div style={{ height: '1px', backgroundColor: 'var(--border-grey)', flex: 1 }}></div>
         </div>
 
-        {/* Quick Access fast track button */}
-        <button
-          onClick={handleQuickAccess}
-          style={{
-            width: '100%',
-            backgroundColor: 'var(--secondary-bg)',
-            border: '1px solid rgba(31, 78, 121, 0.2)',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            textAlign: 'left',
-            transition: 'all 0.15s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = 'var(--primary-color)';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(31, 78, 121, 0.2)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-        >
-          <div 
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--primary-color)',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-            }}
-          >
-            <Key size={18} />
-          </div>
-          <div>
-            <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '1px' }}>
-              Instant Quick Access
-            </p>
-            <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)' }}>
-              Auto-fill demo credentials for {activeTab === 'TRANSPORTER' ? 'Transporter' : 'Ikwezi Admin'}
-            </p>
-          </div>
-        </button>
+        {/* Persona Select Grid */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto', paddingRight: '4px' }}>
+          {personas.map((p) => (
+            <button
+              key={p.username}
+              type="button"
+              onClick={() => handlePersonaClick(p.username)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px',
+                borderRadius: '10px',
+                border: '1px solid var(--border-grey)',
+                backgroundColor: '#ffffff',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = p.color;
+                e.currentTarget.style.backgroundColor = p.bg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-grey)';
+                e.currentTarget.style.backgroundColor = '#ffffff';
+              }}
+            >
+              <div style={{ flex: 1, marginRight: '8px' }}>
+                <p style={{ fontSize: '12.5px', fontWeight: 700, color: 'var(--neutral-primary)' }}>{p.label}</p>
+                <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', marginTop: '2px', lineHeight: 1.2 }}>{p.desc}</p>
+              </div>
+              <span 
+                style={{ 
+                  fontSize: '9px', 
+                  fontWeight: 700, 
+                  padding: '3px 8px', 
+                  borderRadius: '12px', 
+                  backgroundColor: p.bg, 
+                  color: p.color, 
+                  whiteSpace: 'nowrap',
+                  border: '1px solid ' + p.color + '22'
+                }}
+              >
+                {p.role.replace('_', ' ')}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
