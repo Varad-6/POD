@@ -6,7 +6,8 @@ import {
   OCR_RESULTS,
   ADMIN_APPROVAL_QUEUE,
   INVOICES,
-  DASHBOARD_SUMMARY
+  DASHBOARD_SUMMARY,
+  CONTRACTS
 } from '../data/mockData';
 
 // Types
@@ -19,6 +20,7 @@ export interface User {
 
 export interface PurchaseOrder {
   purchaseOrderNo: string;
+  contractRef: string;
   transporter: string;
   productDescription: string;
   rate: number;
@@ -29,7 +31,7 @@ export interface PurchaseOrder {
   toLocation: string;
   paymentTerms: string;
   poDate: string;
-  status: 'PENDING_SIGNATURE' | 'ACCEPTED_SIGNED';
+  status: 'PENDING_SIGNATURE' | 'ACCEPTED_SIGNED' | 'PENDING_ASSIGNMENT' | 'ASSIGNED' | 'DRIVER_ASSIGNED' | 'DRIVER_ARRIVED' | 'SUPERVISOR_APPROVED' | 'SUPERVISOR_REJECTED' | 'EN_ROUTE' | 'DELIVERED_STAMPED' | 'DELIVERED_FAILED' | 'POD_SUBMITTED' | 'POD_APPROVED' | 'INVOICE_SUBMITTED' | 'PAID';
   signedBy?: string;
   signedDate?: string;
 }
@@ -52,7 +54,7 @@ export interface OffloadRecord {
   site: string;
   productDescription: string;
   offloadDate: string;
-  podStatus: 'PENDING_POD' | 'SUBMITTED_AWAITING_APPROVAL' | 'APPROVED' | 'APPROVED_MISMATCH_OVERRIDE' | 'REJECTED' | 'LOW_CONFIDENCE' | 'APPROVED_INVOICE_PENDING';
+  podStatus: 'PENDING_POD' | 'SUBMITTED_AWAITING_APPROVAL' | 'APPROVED' | 'APPROVED_MISMATCH_OVERRIDE' | 'REJECTED' | 'LOW_CONFIDENCE' | 'APPROVED_INVOICE_PENDING' | 'PENDING_ASSIGNMENT' | 'ASSIGNED' | 'DRIVER_ASSIGNED' | 'DRIVER_ARRIVED' | 'SUPERVISOR_APPROVED' | 'SUPERVISOR_REJECTED' | 'EN_ROUTE' | 'DELIVERED_STAMPED' | 'DELIVERED_FAILED' | 'POD_SUBMITTED' | 'POD_APPROVED' | 'INVOICE_SUBMITTED' | 'PAID';
   rejectionReason?: string;
   uploadedFileName?: string;
 }
@@ -99,6 +101,13 @@ interface DemoContextType {
   submitInvoice: (waybillNo: string, invoiceNo: string, fileName: string) => Promise<void>;
   postInvoice: (invoiceNo: string) => Promise<void>;
   payInvoice: (invoiceNo: string, paymentRef: string) => Promise<void>;
+  contracts: any[];
+  assignPOToTransporter: (purchaseOrderNo: string, transporterName: string) => Promise<void>;
+  assignPOToDriver: (purchaseOrderNo: string, driverName: string, horseRegNo: string, trailer1RegNo: string, trailer2RegNo: string) => Promise<void>;
+  driverConfirmArrival: (purchaseOrderNo: string) => Promise<void>;
+  supervisorLogWeights: (waybillNo: string, tareWeightKg: number, grossWeightKg: number, isApproved: boolean) => Promise<void>;
+  driverDepartSiding: (waybillNo: string) => Promise<void>;
+  customerLogWeights: (waybillNo: string, grossWeightKg: number, tareWeightKg: number, isApproved: boolean) => Promise<void>;
   resetDemo: () => void;
   showToast: (message: string, type?: 'success' | 'error' | 'warning') => void;
   removeToast: (id: string) => void;
@@ -129,6 +138,11 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : INVOICES as Invoice[];
   });
 
+  const [contracts, setContracts] = useState<any[]>(() => {
+    const saved = localStorage.getItem('demo_contracts');
+    return saved ? JSON.parse(saved) : CONTRACTS;
+  });
+
   const [notifications, setNotifications] = useState<DemoNotification[]>(() => {
     const saved = localStorage.getItem('demo_notifications');
     return saved ? JSON.parse(saved) : [];
@@ -152,6 +166,10 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     localStorage.setItem('demo_invoices', JSON.stringify(invoices));
   }, [invoices]);
+
+  useEffect(() => {
+    localStorage.setItem('demo_contracts', JSON.stringify(contracts));
+  }, [contracts]);
 
   useEffect(() => {
     localStorage.setItem('demo_notifications', JSON.stringify(notifications));
@@ -372,6 +390,168 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     showToast(`Invoice ${invoiceNo} marked as PAID`, 'success');
   };
 
+  const assignPOToTransporter = async (purchaseOrderNo: string, transporterName: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setPurchaseOrders((prev) =>
+      prev.map((po) =>
+        po.purchaseOrderNo === purchaseOrderNo
+          ? { ...po, status: 'ASSIGNED', transporter: transporterName }
+          : po
+      )
+    );
+    showToast(`PO #${purchaseOrderNo} successfully assigned to ${transporterName}`, 'success');
+  };
+
+  const assignPOToDriver = async (
+    purchaseOrderNo: string,
+    driverName: string,
+    horseRegNo: string,
+    trailer1RegNo: string,
+    trailer2RegNo: string
+  ) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    // Update PO status
+    setPurchaseOrders((prev) =>
+      prev.map((po) =>
+        po.purchaseOrderNo === purchaseOrderNo
+          ? { ...po, status: 'DRIVER_ASSIGNED' }
+          : po
+      )
+    );
+
+    // Update or create corresponding offload record
+    setOffloadRecords((prev) => {
+      const exists = prev.some((r) => r.poRef === purchaseOrderNo);
+      if (exists) {
+        return prev.map((r) =>
+          r.poRef === purchaseOrderNo
+            ? {
+                ...r,
+                driverName,
+                horseRegNo,
+                trailer1RegNo,
+                trailer2RegNo,
+                podStatus: 'DRIVER_ASSIGNED' as any
+              }
+            : r
+        );
+      } else {
+        const matchingPO = purchaseOrders.find((po) => po.purchaseOrderNo === purchaseOrderNo);
+        const newRecord: OffloadRecord = {
+          waybillNo: `WB-9988${Math.floor(10 + Math.floor(Math.random() * 89))}`,
+          poRef: purchaseOrderNo,
+          loadingWaySlipNo: `EL-${Math.floor(100000 + Math.random() * 900000)}`,
+          horseRegNo,
+          trailer1RegNo,
+          trailer2RegNo,
+          driverName,
+          driverIdNo: '8509125679082',
+          tareWeightKg: 0,
+          grossWeightKg: 0,
+          netWeightKg: 0,
+          loadingKm: 89000,
+          offloadingKm: 89200,
+          operatorName: 'Lucky',
+          site: matchingPO?.fromLocation || 'Ilima Siding',
+          productDescription: matchingPO?.productDescription || 'SL BIT 20%ASH',
+          offloadDate: new Date().toISOString().split('T')[0],
+          podStatus: 'DRIVER_ASSIGNED'
+        };
+        return [newRecord, ...prev];
+      }
+    });
+    
+    showToast(`PO #${purchaseOrderNo} assigned to driver ${driverName}`, 'success');
+  };
+
+  const driverConfirmArrival = async (purchaseOrderNo: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    setPurchaseOrders((prev) =>
+      prev.map((po) =>
+        po.purchaseOrderNo === purchaseOrderNo
+          ? { ...po, status: 'DRIVER_ARRIVED' }
+          : po
+      )
+    );
+
+    setOffloadRecords((prev) =>
+      prev.map((r) =>
+        r.poRef === purchaseOrderNo
+          ? { ...r, podStatus: 'DRIVER_ARRIVED' as any }
+          : r
+      )
+    );
+
+    showToast(`Driver confirmed arrival at Siding`, 'success');
+  };
+
+  const supervisorLogWeights = async (
+    waybillNo: string,
+    tareWeightKg: number,
+    grossWeightKg: number,
+    isApproved: boolean
+  ) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    const status: any = isApproved ? 'SUPERVISOR_APPROVED' : 'SUPERVISOR_REJECTED';
+    
+    setOffloadRecords((prev) =>
+      prev.map((r) =>
+        r.waybillNo === waybillNo
+          ? {
+              ...r,
+              tareWeightKg,
+              grossWeightKg,
+              netWeightKg: grossWeightKg - tareWeightKg,
+              podStatus: status
+            }
+          : r
+      )
+    );
+
+    showToast(isApproved ? `Pre-dispatch weights approved for Waybill ${waybillNo}` : `Pre-dispatch weights rejected`, isApproved ? 'success' : 'error');
+  };
+
+  const driverDepartSiding = async (waybillNo: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    setOffloadRecords((prev) =>
+      prev.map((r) =>
+        r.waybillNo === waybillNo
+          ? { ...r, podStatus: 'EN_ROUTE' as any }
+          : r
+      )
+    );
+
+    showToast(`Truck is now en route to Customer`, 'success');
+  };
+
+  const customerLogWeights = async (
+    waybillNo: string,
+    grossWeightKg: number,
+    tareWeightKg: number,
+    isApproved: boolean
+  ) => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    const status: any = isApproved ? 'DELIVERED_STAMPED' : 'DELIVERED_FAILED';
+    
+    setOffloadRecords((prev) =>
+      prev.map((r) =>
+        r.waybillNo === waybillNo
+          ? {
+              ...r,
+              podStatus: status
+            }
+          : r
+      )
+    );
+
+    showToast(isApproved ? `Delivery verified and e-stamped!` : `Delivery verification failed`, isApproved ? 'success' : 'error');
+  };
+
   const markNotificationRead = (id: string) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, read: true } : n))
@@ -383,12 +563,14 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('demo_pos');
     localStorage.removeItem('demo_offloads');
     localStorage.removeItem('demo_invoices');
+    localStorage.removeItem('demo_contracts');
     localStorage.removeItem('demo_notifications');
     
     setCurrentUser(null);
     setPurchaseOrders(PURCHASE_ORDERS as PurchaseOrder[]);
     setOffloadRecords(OFFLOAD_RECORDS as OffloadRecord[]);
     setInvoices(INVOICES as Invoice[]);
+    setContracts(CONTRACTS);
     setNotifications([]);
     
     setToasts([]);
@@ -413,6 +595,13 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
         submitInvoice,
         postInvoice,
         payInvoice,
+        contracts,
+        assignPOToTransporter,
+        assignPOToDriver,
+        driverConfirmArrival,
+        supervisorLogWeights,
+        driverDepartSiding,
+        customerLogWeights,
         resetDemo,
         showToast,
         removeToast,

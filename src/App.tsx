@@ -11,6 +11,10 @@ import { TransporterInvoices } from './views/TransporterInvoices';
 import { AdminDashboard } from './views/AdminDashboard';
 import { AdminApprovals } from './views/AdminApprovals';
 import { AdminInvoices } from './views/AdminInvoices';
+import { AdminContracts } from './views/AdminContracts';
+import { SupervisorDashboard } from './views/SupervisorDashboard';
+import { CustomerDashboard } from './views/CustomerDashboard';
+import { DriverDashboard } from './views/DriverDashboard';
 import { useDemo, DemoProvider } from './context/DemoContext';
 import { RefreshCw, UserCheck, Settings } from 'lucide-react';
 
@@ -25,8 +29,14 @@ const MainApp: React.FC = () => {
       navigate('/login');
     } else if (currentUser && location.pathname === '/login') {
       const role = currentUser.role;
-      if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN' || role === 'SUPERVISOR' || role === 'CUSTOMER') {
+      if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN') {
         navigate('/admin/dashboard');
+      } else if (role === 'SUPERVISOR') {
+        navigate('/supervisor/dashboard');
+      } else if (role === 'CUSTOMER') {
+        navigate('/customer/dashboard');
+      } else if (role === 'DRIVER') {
+        navigate('/driver/dashboard');
       } else {
         navigate('/transporter/dashboard');
       }
@@ -39,22 +49,9 @@ const MainApp: React.FC = () => {
     if (path.includes('/dashboard')) return 'Portal Dashboard';
     if (path.includes('/purchase-orders')) return 'Transport Purchase Orders';
     if (path.includes('/pods')) return 'Proof of Delivery matching';
-    if (path.includes('/invoices')) return currentUser?.role === 'IKWEZI_ADMIN' ? 'Invoice Control Management' : 'Freight Invoices & Statements';
+    if (path.includes('/invoices')) return currentUser?.role === 'COMPANY_ADMIN' || currentUser?.role === 'IKWEZI_ADMIN' ? 'Invoice Control Management' : 'Freight Invoices & Statements';
     if (path.includes('/approvals')) return 'POD Verification Queue';
     return 'Portal';
-  };
-
-  // Demo toggle helper
-  const toggleRole = () => {
-    if (!currentUser) return;
-    const isCompanySide = currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER';
-    const targetUser = isCompanySide ? 'transporter_admin' : 'company_admin';
-    login(targetUser);
-    if (targetUser === 'company_admin') {
-      navigate('/admin/dashboard');
-    } else {
-      navigate('/transporter/dashboard');
-    }
   };
 
   return (
@@ -85,28 +82,38 @@ const MainApp: React.FC = () => {
 
         <div style={{ display: 'flex', gap: '16px' }}>
           {currentUser && (
-            <button
-              onClick={toggleRole}
-              style={{
-                background: 'rgba(255,255,255,0.08)',
-                border: '1px solid #4b5563',
-                color: '#f3f4f6',
-                padding: '4px 10px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '11px',
-                fontWeight: 700,
-                transition: 'background-color 0.15s'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.15)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)'}
-            >
-              <UserCheck size={12} />
-              Switch to {currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER' ? 'Transporter Admin' : 'Company Admin'}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11px', color: '#9ca3af', fontWeight: 600 }}>ACTIVE ROLE:</span>
+              <select
+                value={currentUser.username}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  login(val);
+                  if (val === 'company_admin') navigate('/admin/dashboard');
+                  else if (val === 'supervisor') navigate('/supervisor/dashboard');
+                  else if (val === 'customer') navigate('/customer/dashboard');
+                  else if (val === 'driver') navigate('/driver/dashboard');
+                  else navigate('/transporter/dashboard');
+                }}
+                style={{
+                  backgroundColor: '#1f2937',
+                  border: '1px solid #4b5563',
+                  color: '#ffffff',
+                  padding: '4px 8px',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="company_admin">Company Admin (Ikwezi)</option>
+                <option value="supervisor">Supervisor (Weighbridge)</option>
+                <option value="customer">Customer (Eskom)</option>
+                <option value="transporter_admin">Transporter Admin</option>
+                <option value="driver">Driver (Austin/Dumisani)</option>
+              </select>
+            </div>
           )}
 
           <button
@@ -150,7 +157,7 @@ const MainApp: React.FC = () => {
             <TopBar title={getPageTitle()} />
             <main className="content-container">
               <Routes>
-                {/* Transporter Routes */}
+                 {/* Transporter Routes */}
                 <Route path="/transporter/dashboard" element={<TransporterDashboard />} />
                 <Route path="/transporter/purchase-orders" element={<TransporterPOs />} />
                 <Route path="/transporter/pods" element={<TransporterPODs />} />
@@ -158,8 +165,18 @@ const MainApp: React.FC = () => {
 
                 {/* Admin Routes */}
                 <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/admin/contracts" element={<AdminContracts />} />
                 <Route path="/admin/approvals" element={<AdminApprovals />} />
                 <Route path="/admin/invoices" element={<AdminInvoices />} />
+
+                {/* Supervisor Routes */}
+                <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
+
+                {/* Customer Routes */}
+                <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+
+                {/* Driver Routes */}
+                <Route path="/driver/dashboard" element={<DriverDashboard />} />
 
                 {/* Catch-all redirect */}
                 <Route 
@@ -167,8 +184,14 @@ const MainApp: React.FC = () => {
                   element={
                     <Navigate 
                       to={
-                        currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER'
-                          ? "/admin/dashboard" 
+                        currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN'
+                          ? "/admin/dashboard"
+                          : currentUser.role === 'SUPERVISOR'
+                          ? "/supervisor/dashboard"
+                          : currentUser.role === 'CUSTOMER'
+                          ? "/customer/dashboard"
+                          : currentUser.role === 'DRIVER'
+                          ? "/driver/dashboard"
                           : "/transporter/dashboard"
                       } 
                       replace 

@@ -68,13 +68,77 @@ export const Sidebar: React.FC = () => {
           Ikwezi Portal
         </h1>
         <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px', textTransform: 'uppercase', fontWeight: 600 }}>
-          {currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER' ? 'Mining Administrator' : 'Transporter Panel'}
+          {currentUser.role.replace('_', ' ')}
         </p>
       </div>
 
       {/* Navigation Links */}
       <nav style={{ flex: 1 }}>
-        {currentUser.role === 'DRIVER' || currentUser.role === 'TRANSPORTER_ADMIN' || currentUser.role === 'TRANSPORTER' ? (
+        {currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' ? (
+          <>
+            <NavLink 
+              to="/admin/dashboard" 
+              style={({ isActive }) => navItemStyle(isActive)}
+            >
+              <LayoutDashboard size={18} />
+              Dashboard
+            </NavLink>
+            
+            <NavLink 
+              to="/admin/contracts" 
+              style={({ isActive }) => navItemStyle(isActive)}
+            >
+              <FileSignature size={18} />
+              Contracts & POs
+            </NavLink>
+            
+            <NavLink 
+              to="/admin/approvals" 
+              style={({ isActive }) => navItemStyle(isActive)}
+            >
+              <ClipboardCheck size={18} />
+              POD Approvals
+            </NavLink>
+            
+            <NavLink 
+              to="/admin/invoices" 
+              style={({ isActive }) => navItemStyle(isActive)}
+            >
+              <FileClock size={18} />
+              Invoices
+            </NavLink>
+          </>
+        ) : currentUser.role === 'SUPERVISOR' ? (
+          <>
+            <NavLink 
+              to="/supervisor/dashboard" 
+              style={({ isActive }) => navItemStyle(isActive)}
+            >
+              <LayoutDashboard size={18} />
+              Weighbridge Gate
+            </NavLink>
+          </>
+        ) : currentUser.role === 'CUSTOMER' ? (
+          <>
+            <NavLink 
+              to="/customer/dashboard" 
+              style={({ isActive }) => navItemStyle(isActive)}
+            >
+              <LayoutDashboard size={18} />
+              Receiving Yard
+            </NavLink>
+          </>
+        ) : currentUser.role === 'DRIVER' ? (
+          <>
+            <NavLink 
+              to="/driver/dashboard" 
+              style={({ isActive }) => navItemStyle(isActive)}
+            >
+              <LayoutDashboard size={18} />
+              Driver Console
+            </NavLink>
+          </>
+        ) : (
           <>
             <NavLink 
               to="/transporter/dashboard" 
@@ -105,32 +169,6 @@ export const Sidebar: React.FC = () => {
               style={({ isActive }) => navItemStyle(isActive)}
             >
               <Receipt size={18} />
-              Invoices
-            </NavLink>
-          </>
-        ) : (
-          <>
-            <NavLink 
-              to="/admin/dashboard" 
-              style={({ isActive }) => navItemStyle(isActive)}
-            >
-              <LayoutDashboard size={18} />
-              Dashboard
-            </NavLink>
-            
-            <NavLink 
-              to="/admin/approvals" 
-              style={({ isActive }) => navItemStyle(isActive)}
-            >
-              <ClipboardCheck size={18} />
-              POD Approvals
-            </NavLink>
-            
-            <NavLink 
-              to="/admin/invoices" 
-              style={({ isActive }) => navItemStyle(isActive)}
-            >
-              <FileClock size={18} />
               Invoices
             </NavLink>
           </>

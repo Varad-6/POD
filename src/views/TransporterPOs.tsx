@@ -8,7 +8,7 @@ import { EmptyState } from '../components/EmptyState';
 import { formatCurrency, formatDate } from '../utils/format';
 
 export const TransporterPOs: React.FC = () => {
-  const { purchaseOrders, acceptPO, offloadRecords } = useDemo();
+  const { purchaseOrders, acceptPO, offloadRecords, assignPOToDriver } = useDemo();
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'PENDING' | 'ACCEPTED'>('ALL');
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   
@@ -16,6 +16,13 @@ export const TransporterPOs: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [typedSignature, setTypedSignature] = useState('');
   const [signatureError, setSignatureError] = useState<string | null>(null);
+
+  // Driver Assignment states
+  const [assigningPO, setAssigningPO] = useState<PurchaseOrder | null>(null);
+  const [selectedDriver, setSelectedDriver] = useState('');
+  const [horseRegNo, setHorseRegNo] = useState('KV44RCGP');
+  const [trailer1RegNo, setTrailer1RegNo] = useState('LD 09 RP GP');
+  const [trailer2RegNo, setTrailer2RegNo] = useState('LD 10 RP GP');
 
   // Filters POs
   const filteredPOs = purchaseOrders.filter((po) => {
@@ -58,6 +65,15 @@ export const TransporterPOs: React.FC = () => {
     setIsSubmitting(false);
     setSelectedPO(null);
     setTypedSignature('');
+  };
+
+  const handleAssignDriverSubmit = async () => {
+    if (!assigningPO || !selectedDriver) return;
+    setIsSubmitting(true);
+    await assignPOToDriver(assigningPO.purchaseOrderNo, selectedDriver, horseRegNo, trailer1RegNo, trailer2RegNo);
+    setIsSubmitting(false);
+    setAssigningPO(null);
+    setSelectedDriver('');
   };
 
   const filterTabStyle = (active: boolean): React.CSSProperties => ({
@@ -137,12 +153,41 @@ export const TransporterPOs: React.FC = () => {
                   <PenTool size={16} />
                   Review & Sign
                 </button>
+              ) : po.status === 'ACCEPTED_SIGNED' || po.status === 'ASSIGNED' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'auto' }}>
+                  <div 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '10px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--success-bg)',
+                      color: 'var(--success-text)',
+                      fontSize: '13px',
+                      fontWeight: 600
+                    }}
+                  >
+                    <CheckCircle2 size={16} />
+                    Signed by {po.signedBy || 'Transporter'}
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setAssigningPO(po);
+                      setSelectedDriver('');
+                    }}
+                    className="btn btn-primary"
+                    style={{ width: '100%' }}
+                  >
+                    Assign Driver & Truck
+                  </button>
+                </div>
               ) : (
                 <div 
                   style={{
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
+                    flexDirection: 'column',
+                    gap: '4px',
                     padding: '10px 16px',
                     borderRadius: '8px',
                     backgroundColor: 'var(--success-bg)',
@@ -152,8 +197,13 @@ export const TransporterPOs: React.FC = () => {
                     marginTop: 'auto'
                   }}
                 >
-                  <CheckCircle2 size={16} />
-                  Signed by {po.signedBy} on {formatDate(po.signedDate || '')}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={16} />
+                    <span>Signed PO #{po.purchaseOrderNo}</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--neutral-secondary)', paddingLeft: '24px' }}>
+                    Assigned to Driver
+                  </div>
                 </div>
               )}
             </Card>
@@ -270,6 +320,116 @@ export const TransporterPOs: React.FC = () => {
                 style={{ minWidth: '150px' }}
               >
                 {isSubmitting ? 'Accepting...' : 'Accept & Sign PO'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Driver Assignment Modal */}
+      <Modal
+        isOpen={!!assigningPO}
+        onClose={() => { if (!isSubmitting) setAssigningPO(null); }}
+        title={assigningPO ? `Assign Logistics & Driver for PO #${assigningPO.purchaseOrderNo}` : ''}
+        width="500px"
+      >
+        {assigningPO && (
+          <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Select Logistics Driver
+                </label>
+                <select
+                  value={selectedDriver}
+                  onChange={(e) => setSelectedDriver(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border-grey)',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    backgroundColor: '#ffffff'
+                  }}
+                >
+                  <option value="">Choose a Driver...</option>
+                  <option value="Dumisani Dlamini">Dumisani Dlamini (STS Driver)</option>
+                  <option value="Austin">Austin (MPL Driver)</option>
+                  <option value="Jan Mokoena">Jan Mokoena (CBS Driver)</option>
+                  <option value="ZWELITHINI DLAMINI">Zwelithini Dlamini (Independent)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Truck registration (Horse)
+                </label>
+                <input
+                  type="text"
+                  value={horseRegNo}
+                  onChange={(e) => setHorseRegNo(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--border-grey)',
+                    borderRadius: '6px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Trailer 1 Plate
+                  </label>
+                  <input
+                    type="text"
+                    value={trailer1RegNo}
+                    onChange={(e) => setTrailer1RegNo(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-grey)',
+                      borderRadius: '6px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Trailer 2 Plate
+                  </label>
+                  <input
+                    type="text"
+                    value={trailer2RegNo}
+                    onChange={(e) => setTrailer2RegNo(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid var(--border-grey)',
+                      borderRadius: '6px',
+                      fontSize: '14px'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={() => setAssigningPO(null)}
+                disabled={isSubmitting}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleAssignDriverSubmit}
+                disabled={isSubmitting || !selectedDriver}
+                className="btn btn-primary"
+              >
+                Confirm Assignment
               </button>
             </div>
           </div>

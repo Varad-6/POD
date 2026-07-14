@@ -8,8 +8,14 @@ import { Modal } from '../components/Modal';
 import { formatCurrency, formatDate } from '../utils/format';
 
 export const AdminInvoices: React.FC = () => {
-  const { invoices, postInvoice, payInvoice } = useDemo();
+  const { invoices, postInvoice, payInvoice, offloadRecords, purchaseOrders } = useDemo();
   const [activeTab, setActiveTab] = useState<'PARKED' | 'POSTED' | 'PAID'>('PARKED');
+
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
+  const [transporterFilter, setTransporterFilter] = useState('');
+  const [contractFilter, setContractFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
 
   // Modal control states
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -18,10 +24,42 @@ export const AdminInvoices: React.FC = () => {
   const [paymentRefInput, setPaymentRefInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filters invoices
-  const parkedInvoices = invoices.filter((inv) => inv.status === 'PARKED');
-  const postedInvoices = invoices.filter((inv) => inv.status === 'POSTED');
-  const paidInvoices = invoices.filter((inv) => inv.status === 'PAID');
+  // Helper to find PO details for an invoice
+  const getPOForInvoice = (inv: Invoice) => {
+    const record = offloadRecords.find((r) => r.waybillNo === inv.waybillNo);
+    if (!record) return null;
+    return purchaseOrders.find((po) => po.purchaseOrderNo === record.poRef);
+  };
+
+  // Filter invoices
+  const filteredInvoices = invoices.filter((inv) => {
+    const po = getPOForInvoice(inv);
+    
+    const matchesSearch = 
+      !searchQuery ||
+      (inv.invoiceNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (inv.waybillNo || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+    const matchesTransporter = 
+      !transporterFilter || 
+      po?.transporter === transporterFilter;
+      
+    const matchesContract = 
+      !contractFilter || 
+      po?.contractRef === contractFilter;
+      
+    const matchesDate = 
+      !dateFilter ||
+      (dateFilter === 'EARLY_JULY' && po && po.poDate <= '2026-07-05') ||
+      (dateFilter === 'MID_JULY' && po && po.poDate > '2026-07-05' && po.poDate <= '2026-07-10') ||
+      (dateFilter === 'LATE_JULY' && po && po.poDate > '2026-07-10');
+
+    return matchesSearch && matchesTransporter && matchesContract && matchesDate;
+  });
+
+  const parkedInvoices = filteredInvoices.filter((inv) => inv.status === 'PARKED');
+  const postedInvoices = filteredInvoices.filter((inv) => inv.status === 'POSTED');
+  const paidInvoices = filteredInvoices.filter((inv) => inv.status === 'PAID');
 
   const handlePostClick = (inv: Invoice) => {
     setSelectedInvoice(inv);
@@ -91,6 +129,72 @@ export const AdminInvoices: React.FC = () => {
         <button onClick={() => setActiveTab('PAID')} style={tabStyle(activeTab === 'PAID')}>
           Paid ({paidInvoices.length})
         </button>
+      </div>
+
+      {/* Invoice Filter Bar */}
+      <div 
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '16px',
+          backgroundColor: '#fafafa',
+          border: '1px solid var(--border-grey)',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '24px'
+        }}
+      >
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--neutral-secondary)', marginBottom: '6px' }}>SEARCH INVOICE / WAYBILL</label>
+          <input 
+            type="text"
+            placeholder="Search number..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '13px', outline: 'none' }}
+          />
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--neutral-secondary)', marginBottom: '6px' }}>TRANSPORTER FILTER</label>
+          <select
+            value={transporterFilter}
+            onChange={(e) => setTransporterFilter(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '13px', backgroundColor: '#ffffff', outline: 'none' }}
+          >
+            <option value="">All Transporters</option>
+            <option value="Sipho Transport Services">Sipho Transport</option>
+            <option value="CBS Logistics">CBS Logistics</option>
+            <option value="MPL Transport">MPL Transport</option>
+            <option value="Reckless Transport">Reckless Transport</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--neutral-secondary)', marginBottom: '6px' }}>CONTRACT FILTER</label>
+          <select
+            value={contractFilter}
+            onChange={(e) => setContractFilter(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '13px', backgroundColor: '#ffffff', outline: 'none' }}
+          >
+            <option value="">All Contracts</option>
+            <option value="40000014">Contract #40000014</option>
+            <option value="40000015">Contract #40000015</option>
+            <option value="40000016">Contract #40000016</option>
+            <option value="40000017">Contract #40000017</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--neutral-secondary)', marginBottom: '6px' }}>PO DATE RANGE</label>
+          <select
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '13px', backgroundColor: '#ffffff', outline: 'none' }}
+          >
+            <option value="">All Dates</option>
+            <option value="EARLY_JULY">Early July (Jul 1 - Jul 5)</option>
+            <option value="MID_JULY">Mid July (Jul 6 - Jul 10)</option>
+            <option value="LATE_JULY">Late July (Jul 11+)</option>
+          </select>
+        </div>
       </div>
 
       {/* Render tables per tab */}
