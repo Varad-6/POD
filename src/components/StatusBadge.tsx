@@ -30,6 +30,55 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
       style.color = 'var(--success-text)';
       style.backgroundColor = 'var(--success-bg)';
       break;
+    case 'UNASSIGNED':
+      style.color = 'var(--neutral-secondary)';
+      style.backgroundColor = '#E5E7EB';
+      text = 'Unassigned';
+      break;
+    case 'ASSIGNED':
+    case 'ASSIGNED_TO_TRANSPORTER':
+      style.color = 'var(--info-text)';
+      style.backgroundColor = 'var(--info-bg)';
+      text = 'Assigned to Transporter';
+      break;
+    case 'DRIVER_ASSIGNED':
+    case 'ASSIGNED_TO_DRIVER':
+      style.color = 'var(--info-text)';
+      style.backgroundColor = 'var(--info-bg)';
+      text = 'Assigned to Driver';
+      break;
+    case 'DRIVER_ARRIVED':
+      style.color = 'var(--warning-text)';
+      style.backgroundColor = 'var(--warning-bg)';
+      text = 'Driver Arrived';
+      break;
+    case 'SUPERVISOR_APPROVED':
+      style.color = 'var(--success-text)';
+      style.backgroundColor = 'var(--success-bg)';
+      text = 'Supervisor Approved';
+      break;
+    case 'SUPERVISOR_REJECTED':
+      style.color = 'var(--error-text)';
+      style.backgroundColor = 'var(--error-bg)';
+      text = 'Supervisor Rejected';
+      break;
+    case 'DELIVERED_STAMPED':
+    case 'CUSTOMER_CONFIRMED':
+      style.color = 'var(--success-text)';
+      style.backgroundColor = 'var(--success-bg)';
+      text = 'Delivered & Stamped';
+      break;
+    case 'DELIVERED_FAILED':
+    case 'CUSTOMER_DEVIATION':
+      style.color = 'var(--error-text)';
+      style.backgroundColor = 'var(--error-bg)';
+      text = 'Delivery Failed';
+      break;
+    case 'EN_ROUTE':
+      style.color = 'var(--teal-text)';
+      style.backgroundColor = 'var(--teal-bg)';
+      text = 'En Route';
+      break;
 
     // POD Statuses
     case 'PENDING_POD':

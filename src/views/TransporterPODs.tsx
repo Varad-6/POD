@@ -72,12 +72,12 @@ export const TransporterPODs: React.FC = () => {
     // delivery-slip-match.jpg -> WB-998821
     // delivery-slip-mismatch.jpg -> WB-998841
     // delivery-slip-blurry.jpg -> WB-998850
-    let key = "WB-998821"; // default happy match
+    let key = "WB-998807"; // default happy match
     
     if (selectedFileName.includes('mismatch')) {
-      key = "WB-998841";
+      key = "WB-998808";
     } else if (selectedFileName.includes('blurry')) {
-      key = "WB-998850";
+      key = "WB-998809";
     }
     
     return OCR_RESULTS[key as keyof typeof OCR_RESULTS];

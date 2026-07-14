@@ -183,34 +183,74 @@ export const CustomerDashboard: React.FC = () => {
                 </div>
 
                 {grossWeight && tareWeight && parseFloat(grossWeight) > parseFloat(tareWeight) && (
-                  <div 
-                    style={{ 
-                      backgroundColor: '#f8fafc', 
-                      border: '1px solid var(--border-grey)', 
-                      borderRadius: '6px', 
-                      padding: '16px', 
-                      marginBottom: '24px',
-                      display: 'grid',
-                      gridTemplateColumns: '1fr 1fr',
-                      gap: '16px'
-                    }}
-                  >
-                    <div>
-                      <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Received Net Payload</p>
-                      <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary-color)', margin: 0 }}>
-                        {((parseFloat(grossWeight) - parseFloat(tareWeight)) / 1000).toFixed(2)} Tons
-                      </p>
-                      <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: '4px 0 0 0' }}>
-                        Mine Siding Weight: {(selectedRecord.netWeightKg / 1000).toFixed(2)} Tons
-                      </p>
-                    </div>
-                    <div>
-                      <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Transit Variance</p>
-                      <p style={{ fontSize: '20px', fontWeight: 800, color: '#b45309', margin: 0 }}>
-                        {(((parseFloat(grossWeight) - parseFloat(tareWeight)) - selectedRecord.netWeightKg) / 1000).toFixed(2)} Tons
-                      </p>
-                    </div>
-                  </div>
+                  (() => {
+                    const gross = parseFloat(grossWeight);
+                    const tare = parseFloat(tareWeight);
+                    if (isNaN(gross) || isNaN(tare) || gross <= tare) return null;
+                    
+                    const receivedNet = (gross - tare) / 1000;
+                    const mineNet = selectedRecord.netWeightKg / 1000;
+                    const variance = receivedNet - mineNet;
+                    const absVariance = Math.abs(variance);
+                    const isMatched = absVariance < 0.05; // within 50 kg variance counts as a match
+
+                    return (
+                      <>
+                        {/* Real-time Match Status Flag Alert */}
+                        <div 
+                          style={{ 
+                            padding: '12px 16px', 
+                            borderRadius: '6px', 
+                            marginBottom: '20px', 
+                            backgroundColor: isMatched ? 'var(--success-bg)' : 'var(--warning-bg)', 
+                            color: isMatched ? 'var(--success-text)' : 'var(--warning-text)', 
+                            border: '1px solid ' + (isMatched ? 'var(--success-text)' : 'var(--warning-text)'),
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          <span style={{ fontSize: '16px' }}>{isMatched ? '✓' : '⚠'}</span>
+                          <span>
+                            {isMatched 
+                              ? "WEIGHTS MATCH: Received payload perfectly matches Mine Siding weight (0.00 Tons difference)." 
+                              : `WEIGHT MISMATCH DETECTED: Variance of ${absVariance.toFixed(2)} Tons compared to Mine Siding.`}
+                          </span>
+                        </div>
+
+                        <div 
+                          style={{ 
+                            backgroundColor: '#f8fafc', 
+                            border: '1px solid var(--border-grey)', 
+                            borderRadius: '6px', 
+                            padding: '16px', 
+                            marginBottom: '24px',
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr',
+                            gap: '16px'
+                          }}
+                        >
+                          <div>
+                            <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Received Net Payload</p>
+                            <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary-color)', margin: 0 }}>
+                              {receivedNet.toFixed(2)} Tons
+                            </p>
+                            <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: '4px 0 0 0' }}>
+                              Mine Siding Weight: {mineNet.toFixed(2)} Tons
+                            </p>
+                          </div>
+                          <div>
+                            <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Transit Variance</p>
+                            <p style={{ fontSize: '20px', fontWeight: 800, color: isMatched ? 'var(--success-text)' : '#b45309', margin: 0 }}>
+                              {variance.toFixed(2)} Tons
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()
                 )}
 
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>

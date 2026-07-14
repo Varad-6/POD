@@ -2,6 +2,17 @@
 
 All notable changes to the Transporter Proof-of-Delivery (POD) Attachment & Invoice Automation Portal will be documented in this file.
 
+## [2026-07-15] Local Portal Refinement & Bug Fixes (varadv13-july Branch)
+- **Problem**: Obsolete OCR keys broke matches on this branch; new status badges lacked colors; the Driver check-in lacked e-sign validation; and role-switching during demo runs took too many steps.
+- **Changed**:
+  - Re-mapped the `getOCRData` waybill keys to active keys `WB-998807`, `WB-998808`, `WB-998809` in `TransporterPODs.tsx`.
+  - Added CSS colors and icons for new workflow statuses in `StatusBadge.tsx`.
+  - Rewrote `DriverDashboard.tsx` to integrate the drag-and-drop `FileUploadBox`, add a signature arrival modal, and add supervisor/customer weigh simulation shortcuts.
+  - Corrected the page title in `index.html`.
+- **Tests added**: Verified successful project compilation locally.
+- **SAP/interface impact**: No.
+- **Known risk/follow-up**: None.
+
 ## [2026-07-14] Update Project SOP and Demo Scope Documentation
 - **Problem**: The project's SOP and Demo Scope specifications did not account for the new 5-persona roles and the two manual weight-check gates (pre-dispatch and customer-site).
 - **Changed**:
