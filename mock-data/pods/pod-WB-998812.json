@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998812",
+  "poRef": "PO-41000012",
+  "loadingWaySlipNo": "EL-100412",
+  "horseRegNo": "MR48RLGP",
+  "trailer1RegNo": "DP76KBGP",
+  "trailer2RegNo": "DP76KDGP",
+  "driverName": "SANELE KHUMALO",
+  "driverIdNo": "9211045612089",
+  "tareWeightKg": 22100,
+  "grossWeightKg": 55200,
+  "netWeightKg": 33100,
+  "loadingKm": 122850,
+  "offloadingKm": 123180,
+  "operatorName": "Manager",
+  "site": "3002 BCD_Coal Fields",
+  "productDescription": "10-SL-ANTH-SPIRAL",
+  "offloadDate": "2026-07-12",
+  "podStatus": "APPROVED",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998812.jpg"
+}

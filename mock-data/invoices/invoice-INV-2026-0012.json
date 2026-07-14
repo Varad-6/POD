@@ -1,0 +1,11 @@
+{
+  "invoiceNo": null,
+  "waybillNo": "WB-998812",
+  "quantity": 33.1,
+  "rate": 151.5,
+  "amount": 5014.650000000001,
+  "status": "AWAITING_INVOICE_SUBMISSION",
+  "postingDate": null,
+  "paymentRef": null,
+  "fileName": null
+}

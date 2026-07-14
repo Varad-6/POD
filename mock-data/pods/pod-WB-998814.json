@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998814",
+  "poRef": "PO-41000014",
+  "loadingWaySlipNo": "EL-100414",
+  "horseRegNo": "FBX221MP",
+  "trailer1RegNo": "TR-402-GP",
+  "trailer2RegNo": "TR-403-GP",
+  "driverName": "K. VAN WYK",
+  "driverIdNo": "8706145612081",
+  "tareWeightKg": 20450,
+  "grossWeightKg": 56250,
+  "netWeightKg": 35800,
+  "loadingKm": 211200,
+  "offloadingKm": 211560,
+  "operatorName": "Lucky",
+  "site": "Belfast Coal Pit",
+  "productDescription": "BC_FP_RB3",
+  "offloadDate": "2026-07-14",
+  "podStatus": "APPROVED",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998814.jpg"
+}

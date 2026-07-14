@@ -1,0 +1,17 @@
+{
+  "purchaseOrderNo": "PO-41000008",
+  "contractRef": "40000017",
+  "transporter": "MPL Transport",
+  "productDescription": "SPIRAL",
+  "rate": 151.5,
+  "unit": "TON",
+  "targetQuantity": 4000,
+  "costCenter": "CC-MINE-01",
+  "fromLocation": "Ilima Plant",
+  "toLocation": "RICHARDSBAY MPT707",
+  "paymentTerms": "30 days from invoice posting",
+  "poDate": "2026-07-08",
+  "status": "ACCEPTED_SIGNED",
+  "signedBy": "R. NAIDOO",
+  "signedDate": "2026-07-08"
+}

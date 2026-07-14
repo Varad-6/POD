@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998803",
+  "poRef": "PO-41000003",
+  "loadingWaySlipNo": "EL-100403",
+  "horseRegNo": "KWH278MP",
+  "trailer1RegNo": "TR-402-GP",
+  "trailer2RegNo": "TR-403-GP",
+  "driverName": "MUZI VILAKAZI",
+  "driverIdNo": "8902146110087",
+  "tareWeightKg": 19650,
+  "grossWeightKg": 57730,
+  "netWeightKg": 38080,
+  "loadingKm": 310500,
+  "offloadingKm": 310780,
+  "operatorName": "Mirriam Nyoka",
+  "site": "3002 BCD_Coal Fields",
+  "productDescription": "10-SL-ANTH-SPIRAL",
+  "offloadDate": "2026-07-13",
+  "podStatus": "PENDING_POD",
+  "preDispatch": "PASSED",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998803.jpg"
+}

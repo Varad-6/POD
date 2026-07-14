@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998808",
+  "poRef": "PO-41000008",
+  "loadingWaySlipNo": "EL-100408",
+  "horseRegNo": "JCP665MP",
+  "trailer1RegNo": "JYJ307MP",
+  "trailer2RegNo": "JYJ308MP",
+  "driverName": "R. NAIDOO",
+  "driverIdNo": "9005125679085",
+  "tareWeightKg": 20450,
+  "grossWeightKg": 55250,
+  "netWeightKg": 34800,
+  "loadingKm": 105400,
+  "offloadingKm": 105650,
+  "operatorName": "Tsebe Herman",
+  "site": "Ilima Plant",
+  "productDescription": "SPIRAL",
+  "offloadDate": "2026-07-13",
+  "podStatus": "SUBMITTED_AWAITING_APPROVAL",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998808.jpg"
+}

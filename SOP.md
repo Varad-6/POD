@@ -30,72 +30,74 @@ The primary objectives are:
 
 ## 3. Roles & Responsibilities
 
-### A. Transporter
-*   Reviews active transport POs on the portal.
-*   Signs PO acceptances with a digital signature (Aadhaar or certificate-based).
-*   Monitors weighbridge offload records awaiting documentation.
-*   Uploads scanned PDFs of signed Proof-of-Delivery (POD) slips.
-*   Raises tax invoices on the portal, providing metadata (number, date) and uploading scans.
-*   Monitors live status updates and outstanding ledgers.
+### A. Company Admin
+*   Uploads signed contracts and synchronizes them to SAP S/4HANA.
+*   Assigns Transport Admins and distributes Purchase Orders (POs) to them.
+*   Reviews automated invoice calculations and grants final invoice approvals.
 
-### B. Ikwezi Portal Admin
-*   Reviews POD uploads flagged by the system (e.g. low OCR confidence score or weight mismatch).
-*   Manually overrides validation errors after physically inspecting scanned documents.
-*   Grants the final "Approved" status to waybills, unlocking them for transporter invoicing.
+### B. Transporter Admin
+*   Reviews incoming POs from the Company Admin.
+*   Assigns physical delivery tasks and PO runs to Drivers.
+*   Monitors live shipment and dispatch statuses.
 
-### C. Ikwezi Creditor Clerk / Accountant
-*   Logs in directly to SAP S/4HANA GUI.
-*   Reviews "Parked" invoice entries in standard transaction `MIRO`.
-*   Verifies matches with standard PO and Service Entry Sheet (SES) records, then posts the invoice for payment execution.
+### C. Driver
+*   Reviews and signs PO task acceptances using the portal's signature canvas.
+*   Transports consignments and hands over PO documents physically to customers.
+*   Uploads signed/stamped Proof-of-Delivery (POD) slips via the portal.
 
-### D. Ikwezi BASIS & IT SAP Team
-*   Maintains connectivity via the SAP Web Dispatcher / DMZ.
-*   Manages OAuth 2.0/token authentications and TLS network security.
-*   Maintains the SAP Gateway Hub and standard OData/ICF services.
+### D. Supervisor / Site Manager
+*   Performs empty and loaded weight checks on trucks before dispatch.
+*   Verifies weight logs against the PO to approve or halt dispatches.
+
+### E. Customer
+*   Conducts on-site verification weight checks on arrival.
+*   Issues stamped confirmations or files defect/deviation reports.
+*   Uploads customer invoice records to the Company Admin.
 
 ---
 
 ## 4. Standard Process Flow (Production Lifecycle)
 
+> [!IMPORTANT]
+> **REVISION NOTE**: This process flow supersedes the previously documented flow. The new version introduces two additional physical/manual verification checkpoints (**pre-dispatch weight check** and **customer-site weight check**) that were not part of the original SAP proposal's scope.
+
 ```mermaid
 sequenceDiagram
     autonumber
-    actor T as Transporter
+    actor CA as Company Admin
+    actor TA as Transporter Admin
+    actor DR as Driver
+    actor SV as Supervisor
+    actor CU as Customer
     participant P as Portal Engine
     participant S as SAP S/4HANA
-    actor A as Ikwezi Admin
-    actor C as Creditor Clerk
 
-    S->>P: 1. PO Sync OData Service (Status: Released)
-    T->>P: 2. Reviews & Signs PO (E-signature capture)
-    P->>S: 3. PO Acceptance e-Sign metadata writeback
-    Note over S: Delivery takes place;<br/>Weighbridge logs offload weight
-    S->>P: 4. Daily Offload Log Sync (Waybill, SRN, Truck, Weight)
-    T->>P: 5. Uploads scanned POD PDF
-    Note over P: OCR Engine extracts:<br/>Waybill, Truck No, Weight
-    alt OCR Validation Match (Tolerance ±0.5%)
-        P->>P: Auto-Flagged: Matched
-    else OCR Validation Mismatch
-        P->>P: Auto-Flagged: Discrepancy (Requires Admin)
-        A->>P: Reviews scan, applies manual override
-    end
-    A->>P: 6. Grants Final POD Approval
-    P->>S: 7. Syncs POD scan binary to SAP SRN via GOS/ArchiveLink
-    T->>P: 8. Enters invoice metadata & uploads invoice scan
-    Note over P: System auto-calculates total:<br/>Offload Weight * PO Rate
-    P->>S: 9. Calls BAPI_INCOMINGINVOICE_CREATE (Parks MIRO)
-    C->>S: 10. Reviews parked MIRO invoice & Posts in SAP
-    S->>P: 11. Payment Clearing sync (Updates Ledger to Paid)
+    CA->>S: 1. Uploads signed contract & syncs to SAP
+    S->>P: 2. Syncs contract data back to Portal
+    CA->>P: 3. Assigns Transport Admin & distributes POs
+    TA->>P: 4. Reviews POs & assigns work to Drivers
+    DR->>P: 5. Accepts PO with e-signature
+    Note over SV: 6. Pre-dispatch weight checks (empty & loaded)
+    SV->>P: 7. Logs weights and verifies against PO
+    Note over DR: 8. Delivery dispatched to Customer Gate
+    DR->>CU: 9. Hands over PO copy
+    Note over CU: 10. Customer weight check (loaded)
+    CU->>CU: 11. Stamp given or Report raised
+    DR->>P: 12. Uploads stamped POD slip
+    Note over P: 13. Auto-calculates freight invoice
+    P->>CA: 14. Sends calculated invoice for review
+    CU->>CA: 15. Uploads own invoice for comparison
+    CA->>P: 16. Reviews and gives final approval
+    P->>S: 17. Creates Parked Invoice (MIRO)
 ```
 
 ### Detailed Execution Steps:
-1.  **PO Sync**: Transport PO is approved in SAP, triggering an OData service to expose PO conditions and rate agreements to the Portal.
-2.  **PO E-Signature**: The Transporter reviews terms and registers a signature on the Portal. The signature metadata (User, timestamp, IP address) writes back directly to a custom Z-table in SAP.
-3.  **Offload Synchronization**: Daily offload batch runs in SAP, copying weighbridge waybills, truck IDs, and registered weights to the Portal.
-4.  **POD Submission & OCR**: Transporter uploads the signed POD PDF. The OCR service parses the document to match values (Truck Number, Waybill ID, Offload Weight) with the pre-synced SAP records.
-5.  **Admin Verification Gate**: Deliveries with validation issues are queued. The Ikwezi Admin must review and resolve discrepancies. Once approved, the document is attached to standard SAP business object records (SRN/weighbridge logs) via DMS or Generic Object Services (GOS).
-6.  **Invoice Parking (MIRO)**: The portal multiplies the verified offload weight by the PO rate condition. The transporter uploads their physical invoice and enters the date and number. The Portal backend submits this to SAP, creating a standard Parked Invoice (`MIRO`).
-7.  **Payment Clearing**: Following payment release by the finance team in SAP, clearing documents sync back to the Portal, updating outstanding transporter ledgers.
+1.  **Contract Seeding**: The Company Admin uploads the signed contract, synchronizing it with SAP to generate corresponding Purchase Orders (POs) and transport rates.
+2.  **PO Assignment**: The Transporter Admin reviews active POs and assigns deliveries to specific drivers. The Driver reviews details and captures their e-signature on the Portal.
+3.  **Weighbridge Verification (Pre-dispatch)**: The Weighbridge Supervisor checks the empty truck weight, loads the cargo, and checks the loaded truck weight. If the weights match the PO tolerances, the truck is allowed to dispatch.
+4.  **Customer Site Weight Check**: Upon delivery, the customer performs their own weighbridge verification. If correct, they stamp the PO; if incorrect, they raise a report. The Driver scans and uploads this stamped POD to the Portal.
+5.  **Auto Invoicing & Review**: The Portal automatically runs rate calculations and routes the invoice to the Company Admin. The Customer uploads their own invoice copy for comparison.
+6.  **Final Approval & Parked Invoice**: Once verified by the Company Admin, the portal executes SAP billing RFCs to create a parked MIRO invoice in SAP.
 
 ---
 

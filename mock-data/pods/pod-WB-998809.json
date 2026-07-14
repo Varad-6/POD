@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998809",
+  "poRef": "PO-41000009",
+  "loadingWaySlipNo": "EL-100409",
+  "horseRegNo": "NJD982GP",
+  "trailer1RegNo": "TR-402-GP",
+  "trailer2RegNo": "TR-403-GP",
+  "driverName": "M. DLAMINI",
+  "driverIdNo": "8509125679084",
+  "tareWeightKg": 21100,
+  "grossWeightKg": 53600,
+  "netWeightKg": 32500,
+  "loadingKm": 331850,
+  "offloadingKm": 332150,
+  "operatorName": "Tsebe Herman",
+  "site": "Ilima Plant",
+  "productDescription": "SPIRAL",
+  "offloadDate": "2026-07-14",
+  "podStatus": "SUBMITTED_AWAITING_APPROVAL",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998809.jpg"
+}

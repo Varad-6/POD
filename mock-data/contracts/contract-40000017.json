@@ -1,0 +1,14 @@
+{
+  "contractNumber": "40000017",
+  "qualityType": "SPIRAL",
+  "targetQuantity": 4000,
+  "uom": "TON",
+  "netValue": 606000.0,
+  "rate": 151.5,
+  "validFrom": "2026-07-14",
+  "validTo": "2026-11-15",
+  "soldToParty": "131 - Company KK limited",
+  "currency": "ZAR",
+  "fromLocation": "Ilima Plant",
+  "toLocation": "RICHARDSBAY MPT707"
+}

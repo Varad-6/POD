@@ -134,17 +134,17 @@ export const TransporterPODs: React.FC = () => {
               <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                 <div>
                   <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Material</p>
-                  <p style={{ fontWeight: 600 }}>{rec.material}</p>
+                  <p style={{ fontWeight: 600 }}>{rec.productDescription}</p>
                 </div>
                 <div>
                   <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Weighbridge Weight</p>
-                  <p style={{ fontWeight: 600 }}>{rec.sapWeight.toFixed(2)} Tons</p>
+                  <p style={{ fontWeight: 600 }}>{(rec.netWeightKg / 1000.0).toFixed(2)} Tons</p>
                 </div>
                 <div>
                   <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Truck Number</p>
                   <p style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Truck size={14} style={{ color: 'var(--neutral-secondary)' }} />
-                    {rec.truckNo}
+                    {rec.horseRegNo}
                   </p>
                 </div>
                 <div>
@@ -319,8 +319,8 @@ export const TransporterPODs: React.FC = () => {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>SAP SYSTEM</p>
-                      <p style={{ fontWeight: 600, fontSize: '13px', color: ocrData.extracted.truckNo === uploadingRecord.truckNo ? 'var(--success-text)' : 'var(--error-text)' }}>
-                        {uploadingRecord.truckNo}
+                      <p style={{ fontWeight: 600, fontSize: '13px', color: ocrData.extracted.truckNo === uploadingRecord.horseRegNo ? 'var(--success-text)' : 'var(--error-text)' }}>
+                        {uploadingRecord.horseRegNo}
                       </p>
                     </div>
                   </div>
@@ -337,7 +337,7 @@ export const TransporterPODs: React.FC = () => {
                     }}
                   >
                     <div>
-                      <p style={{ fontSize: '10px', color: ocrData.mismatchField === 'weight' ? 'var(--error-text)' : 'var(--neutral-secondary)', fontWeight: 600 }}>DELIVERED WEIGHT</p>
+                       <p style={{ fontSize: '10px', color: ocrData.mismatchField === 'weight' ? 'var(--error-text)' : 'var(--neutral-secondary)', fontWeight: 600 }}>DELIVERED WEIGHT</p>
                       <p style={{ fontWeight: 700, fontSize: '13px', color: ocrData.mismatchField === 'weight' ? 'var(--error-text)' : 'var(--neutral-primary)' }}>
                         {ocrData.extracted.weight.toFixed(2)} Tons
                       </p>
@@ -345,7 +345,7 @@ export const TransporterPODs: React.FC = () => {
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontSize: '10px', color: ocrData.mismatchField === 'weight' ? 'var(--error-text)' : 'var(--neutral-secondary)', fontWeight: 600 }}>SAP SYSTEM</p>
                       <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-text)' }}>
-                        {uploadingRecord.sapWeight.toFixed(2)} Tons
+                        {(uploadingRecord.netWeightKg / 1000.0).toFixed(2)} Tons
                       </p>
                     </div>
                   </div>

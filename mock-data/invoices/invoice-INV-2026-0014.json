@@ -1,0 +1,11 @@
+{
+  "invoiceNo": "INV-2026-0014",
+  "waybillNo": "WB-998814",
+  "quantity": 35.8,
+  "rate": 151.5,
+  "amount": 5423.7,
+  "status": "POSTED",
+  "postingDate": "2026-07-15",
+  "paymentRef": null,
+  "fileName": "/demo-files/INV-2026-0014.pdf"
+}

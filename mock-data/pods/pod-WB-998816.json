@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998816",
+  "poRef": "PO-41000016",
+  "loadingWaySlipNo": "EL-100416",
+  "horseRegNo": "MF20PGGP",
+  "trailer1RegNo": "MS17ZKGP",
+  "trailer2RegNo": "MS17ZSGP",
+  "driverName": "JAN MOKOENA",
+  "driverIdNo": "7809186110087",
+  "tareWeightKg": 18160,
+  "grossWeightKg": 56660,
+  "netWeightKg": 38500,
+  "loadingKm": 88900,
+  "offloadingKm": 89250,
+  "operatorName": "Lucky",
+  "site": "Ilima Plant",
+  "productDescription": "SPIRAL",
+  "offloadDate": "2026-07-11",
+  "podStatus": "APPROVED",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998816.jpg"
+}

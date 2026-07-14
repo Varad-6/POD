@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998810",
+  "poRef": "PO-41000010",
+  "loadingWaySlipNo": "EL-100410",
+  "horseRegNo": "KWH278MP",
+  "trailer1RegNo": "DP76KBGP",
+  "trailer2RegNo": "DP76KDGP",
+  "driverName": "MUZI VILAKAZI",
+  "driverIdNo": "8902146110087",
+  "tareWeightKg": 20680,
+  "grossWeightKg": 55880,
+  "netWeightKg": 35200,
+  "loadingKm": 115200,
+  "offloadingKm": 115510,
+  "operatorName": "Lucky",
+  "site": "Emoyeni Washplant",
+  "productDescription": "SL BIT 20%ASH",
+  "offloadDate": "2026-07-15",
+  "podStatus": "REJECTED",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998810.jpg"
+}

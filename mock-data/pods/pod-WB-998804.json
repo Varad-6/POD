@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998804",
+  "poRef": "PO-41000004",
+  "loadingWaySlipNo": "EL-100404",
+  "horseRegNo": "LK13KPGP",
+  "trailer1RegNo": "MS17ZKGP",
+  "trailer2RegNo": "MS17ZSGP",
+  "driverName": "JAN MOKOENA",
+  "driverIdNo": "7809186110087",
+  "tareWeightKg": 20980,
+  "grossWeightKg": 56660,
+  "netWeightKg": 35680,
+  "loadingKm": 88410,
+  "offloadingKm": 88720,
+  "operatorName": "Manager",
+  "site": "3002 BCD_Coal Fields",
+  "productDescription": "10-SL-ANTH-SPIRAL",
+  "offloadDate": "2026-07-14",
+  "podStatus": "PENDING_POD",
+  "preDispatch": "FAILED",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998804.jpg"
+}

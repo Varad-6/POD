@@ -34,17 +34,17 @@ export const AdminApprovals: React.FC = () => {
   // Get simulated OCR data based on record uploadedFileName
   const getOCRData = (record: OffloadRecord) => {
     const fileName = record.uploadedFileName || "";
-    let key = "WB-998821"; // default
-    if (fileName.includes('mismatch') || record.waybillNo === 'WB-998841') {
-      key = "WB-998841";
-    } else if (fileName.includes('blurry') || record.waybillNo === 'WB-998850') {
-      key = "WB-998850";
-    } else if (record.waybillNo === 'WB-998830') {
+    let key = "WB-998807"; // default
+    if (fileName.includes('mismatch') || record.waybillNo === 'WB-998808') {
+      key = "WB-998808";
+    } else if (fileName.includes('blurry') || record.waybillNo === 'WB-998809') {
+      key = "WB-998809";
+    } else if (record.waybillNo === 'WB-998807') {
       return {
-        fileName: "delivery-slip-match.jpg",
-        confidence: 0.96,
-        extracted: { waybillNo: "WB-998830", truckNo: "FBX221MP", weight: 40.00 },
-        sapRecord: { waybillNo: "WB-998830", truckNo: "FBX221MP", weight: 40.00 },
+        fileName: "WB-998807.jpg",
+        confidence: 0.98,
+        extracted: { waybillNo: "WB-998807", truckNo: "NJD982GP", weight: 33.75 },
+        sapRecord: { waybillNo: "WB-998807", truckNo: "NJD982GP", weight: 33.75 },
         matchResult: "MATCH",
       };
     }
@@ -287,7 +287,7 @@ export const AdminApprovals: React.FC = () => {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>SAP WEIGHBRIDGE RECORD</p>
-                        <p style={{ fontWeight: 600, fontSize: '13px', color: 'var(--success-text)' }}>{selectedRecord.truckNo}</p>
+                        <p style={{ fontWeight: 600, fontSize: '13px', color: 'var(--success-text)' }}>{selectedRecord.horseRegNo}</p>
                       </div>
                     </div>
 
@@ -311,7 +311,7 @@ export const AdminApprovals: React.FC = () => {
                       <div style={{ textAlign: 'right' }}>
                         <p style={{ fontSize: '9px', color: ocr.matchResult === 'MISMATCH' ? 'var(--error-text)' : 'var(--neutral-secondary)', fontWeight: 600 }}>SAP WEIGHBRIDGE RECORD</p>
                         <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-text)' }}>
-                          {selectedRecord.sapWeight.toFixed(2)} Tons
+                          {(selectedRecord.netWeightKg / 1000.0).toFixed(2)} Tons
                         </p>
                       </div>
                     </div>

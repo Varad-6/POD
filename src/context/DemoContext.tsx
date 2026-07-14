@@ -18,14 +18,15 @@ export interface User {
 }
 
 export interface PurchaseOrder {
-  poNumber: string;
+  purchaseOrderNo: string;
   transporter: string;
-  material: string;
+  productDescription: string;
   rate: number;
   unit: string;
-  estimatedQuantity: number;
+  targetQuantity: number;
   costCenter: string;
-  route: string;
+  fromLocation: string;
+  toLocation: string;
   paymentTerms: string;
   poDate: string;
   status: 'PENDING_SIGNATURE' | 'ACCEPTED_SIGNED';
@@ -36,10 +37,20 @@ export interface PurchaseOrder {
 export interface OffloadRecord {
   waybillNo: string;
   poRef: string;
-  truckNo: string;
-  driver: string;
-  sapWeight: number;
-  material: string;
+  loadingWaySlipNo: string;
+  horseRegNo: string;
+  trailer1RegNo: string;
+  trailer2RegNo: string;
+  driverName: string;
+  driverIdNo: string;
+  tareWeightKg: number;
+  grossWeightKg: number;
+  netWeightKg: number;
+  loadingKm: number;
+  offloadingKm: number;
+  operatorName: string;
+  site: string;
+  productDescription: string;
   offloadDate: string;
   podStatus: 'PENDING_POD' | 'SUBMITTED_AWAITING_APPROVAL' | 'APPROVED' | 'APPROVED_MISMATCH_OVERRIDE' | 'REJECTED' | 'LOW_CONFIDENCE' | 'APPROVED_INVOICE_PENDING';
   rejectionReason?: string;
@@ -81,7 +92,7 @@ interface DemoContextType {
   notifications: DemoNotification[];
   login: (username: string) => boolean;
   logout: () => void;
-  acceptPO: (poNumber: string, signatureDataUrl: string) => Promise<void>;
+  acceptPO: (purchaseOrderNo: string, signatureDataUrl: string) => Promise<void>;
   uploadPOD: (waybillNo: string, fileName: string) => Promise<void>;
   approvePOD: (waybillNo: string, override?: boolean) => Promise<void>;
   rejectPOD: (waybillNo: string, reason: string) => Promise<void>;
@@ -179,12 +190,12 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Business Action Creators (with Simulated Delays)
-  const acceptPO = async (poNumber: string, signatureDataUrl: string) => {
+  const acceptPO = async (purchaseOrderNo: string, signatureDataUrl: string) => {
     await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate processing delay
     
     setPurchaseOrders((prev) =>
       prev.map((po) =>
-        po.poNumber === poNumber
+        po.purchaseOrderNo === purchaseOrderNo
           ? {
               ...po,
               status: 'ACCEPTED_SIGNED',
@@ -194,7 +205,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           : po
       )
     );
-    showToast(`PO #${poNumber} signed and accepted`, 'success');
+    showToast(`PO #${purchaseOrderNo} signed and accepted`, 'success');
   };
 
   const uploadPOD = async (waybillNo: string, fileName: string) => {
@@ -240,9 +251,9 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setInvoices((prev) => {
       // Find the record using the latest state of offloadRecords
       const record = recordToInvoice || offloadRecords.find((r) => r.waybillNo === waybillNo);
-      const associatedPO = purchaseOrders.find((po) => po.poNumber === record?.poRef);
+      const associatedPO = purchaseOrders.find((po) => po.purchaseOrderNo === record?.poRef);
       const rate = associatedPO?.rate || 245.50;
-      const weight = record?.sapWeight || 30.00;
+      const weight = record ? (record.netWeightKg / 1000.0) : 30.00;
 
       const newInvoice: Invoice = {
         invoiceNo: null,

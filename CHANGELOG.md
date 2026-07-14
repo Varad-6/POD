@@ -2,6 +2,16 @@
 
 All notable changes to the Transporter Proof-of-Delivery (POD) Attachment & Invoice Automation Portal will be documented in this file.
 
+## [2026-07-14] Update Project SOP and Demo Scope Documentation
+- **Problem**: The project's SOP and Demo Scope specifications did not account for the new 5-persona roles and the two manual weight-check gates (pre-dispatch and customer-site).
+- **Changed**:
+  - Replaced the roles and process sections in `SOP.md` and `C:\Users\Varad\Downloads\Transporter-Portal-SOP.docx` to map the 5 new stakeholder roles and the 21-step delivery workflow.
+  - Copied and updated the `Transporter-Portal-Demo-Scope.md` inside both the downloads folder and the project root directory.
+  - Integrated custom Mermaid sequence flow diagrams in the project `SOP.md` mapping weight thresholds.
+- **Tests added**: Verified successful project compilation.
+- **SAP/interface impact**: No.
+- **Known risk/follow-up**: None.
+
 ## [2026-07-14] Support 5 Portal Logins and Persona-Based Quick Access
 - **Problem**: The portal only supported a simple toggle between two pre-loaded transporter/admin accounts, whereas the senior's notes require 5 distinct stakeholder roles (Company Admin, Transporter Admin, Driver, Customer, and Weighbridge Supervisor).
 - **Changed**:

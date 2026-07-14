@@ -30,7 +30,7 @@ export const TransporterDashboard: React.FC = () => {
     signedPOs.forEach((po, index) => {
       list.unshift({
         id: `po-${index}`,
-        text: `Purchase Order #${po.poNumber} accepted and e-signed`,
+        text: `Purchase Order #${po.purchaseOrderNo} accepted and e-signed`,
         date: po.signedDate?.split('T')[0] || '2026-07-14',
         icon: <FileSignature size={14} style={{ color: 'var(--success-text)' }} />
       });

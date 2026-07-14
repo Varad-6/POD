@@ -1,0 +1,17 @@
+{
+  "purchaseOrderNo": "PO-41000004",
+  "contractRef": "40000015",
+  "transporter": "CBS Logistics",
+  "productDescription": "10-SL-ANTH-SPIRAL",
+  "rate": 151.5,
+  "unit": "TON",
+  "targetQuantity": 2000,
+  "costCenter": "CC-MINE-01",
+  "fromLocation": "3002 BCD_Coal Fields",
+  "toLocation": "BCD_RICHARDS BAY",
+  "paymentTerms": "30 days from invoice posting",
+  "poDate": "2026-07-04",
+  "status": "ACCEPTED_SIGNED",
+  "signedBy": "JAN MOKOENA",
+  "signedDate": "2026-07-04"
+}

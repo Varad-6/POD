@@ -1,0 +1,14 @@
+{
+  "contractNumber": "40000016",
+  "qualityType": "BC_FP_RB3",
+  "targetQuantity": 3000,
+  "uom": "TON",
+  "netValue": 454500.0,
+  "rate": 151.5,
+  "validFrom": "2026-07-14",
+  "validTo": "2026-10-15",
+  "soldToParty": "131 - Company KK limited",
+  "currency": "ZAR",
+  "fromLocation": "Belfast Coal Pit",
+  "toLocation": "Woestalleen Siding"
+}

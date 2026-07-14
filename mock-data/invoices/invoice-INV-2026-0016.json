@@ -1,0 +1,11 @@
+{
+  "invoiceNo": "INV-2026-0016",
+  "waybillNo": "WB-998816",
+  "quantity": 38.5,
+  "rate": 151.5,
+  "amount": 5832.75,
+  "status": "PAID",
+  "postingDate": "2026-07-12",
+  "paymentRef": "PMT-90025",
+  "fileName": "/demo-files/INV-2026-0016.pdf"
+}

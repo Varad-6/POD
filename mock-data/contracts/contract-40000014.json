@@ -1,0 +1,14 @@
+{
+  "contractNumber": "40000014",
+  "qualityType": "SL BIT 20%ASH",
+  "targetQuantity": 1000,
+  "uom": "TON",
+  "netValue": 151500.0,
+  "rate": 151.5,
+  "validFrom": "2026-07-14",
+  "validTo": "2026-08-15",
+  "soldToParty": "131 - Company KK limited",
+  "currency": "ZAR",
+  "fromLocation": "2004 Ikw_Emoyeni Wash Plant",
+  "toLocation": "IKW_RICHARDS BAY(RB_Storage loc)"
+}

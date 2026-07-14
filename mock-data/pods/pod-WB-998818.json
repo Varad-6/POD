@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998818",
+  "poRef": "PO-41000018",
+  "loadingWaySlipNo": "EL-100418",
+  "horseRegNo": "KPJ607MP",
+  "trailer1RegNo": "JYJ307MP",
+  "trailer2RegNo": "JYJ308MP",
+  "driverName": "ZWELITHINI DLAMINI",
+  "driverIdNo": "8509125679082",
+  "tareWeightKg": 21250,
+  "grossWeightKg": 55250,
+  "netWeightKg": 34000,
+  "loadingKm": 467600,
+  "offloadingKm": 467900,
+  "operatorName": "Tsebe Herman",
+  "site": "Emoyeni Washplant",
+  "productDescription": "SL BIT 20%ASH",
+  "offloadDate": "2026-07-13",
+  "podStatus": "PENDING_POD",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998818.jpg"
+}

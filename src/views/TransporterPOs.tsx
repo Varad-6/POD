@@ -8,15 +8,14 @@ import { EmptyState } from '../components/EmptyState';
 import { formatCurrency, formatDate } from '../utils/format';
 
 export const TransporterPOs: React.FC = () => {
-  const { purchaseOrders, acceptPO } = useDemo();
+  const { purchaseOrders, acceptPO, offloadRecords } = useDemo();
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'PENDING' | 'ACCEPTED'>('ALL');
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   
-  // Signature pad states
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [isCanvasEmpty, setIsCanvasEmpty] = useState(true);
+  // Signature states
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [typedSignature, setTypedSignature] = useState('');
+  const [signatureError, setSignatureError] = useState<string | null>(null);
 
   // Filters POs
   const filteredPOs = purchaseOrders.filter((po) => {
@@ -25,94 +24,40 @@ export const TransporterPOs: React.FC = () => {
     return true;
   });
 
-  // Canvas drawing handlers
-  useEffect(() => {
-    if (selectedPO && canvasRef.current) {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.strokeStyle = '#1F4E79';
-        ctx.lineWidth = 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-      }
-    }
-  }, [selectedPO]);
-
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault();
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    setIsDrawing(true);
-    setIsCanvasEmpty(false);
-
-    const pos = getCoordinates(e, canvas);
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !canvasRef.current) return;
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const pos = getCoordinates(e, canvas);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const getCoordinates = (
-    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>,
-    canvas: HTMLCanvasElement
-  ) => {
-    const rect = canvas.getBoundingClientRect();
-    
-    // Check if touch event
-    if ('touches' in e) {
-      if (e.touches.length === 0) return { x: 0, y: 0 };
-      return {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top
-      };
-    }
-    
-    return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    };
-  };
-
-  const clearCanvas = () => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setIsCanvasEmpty(true);
-  };
-
   const handleAcceptPO = async () => {
-    if (!selectedPO || isCanvasEmpty || !canvasRef.current) return;
+    if (!selectedPO || !typedSignature) return;
+    
+    // Find assigned driver from matching offload records
+    const matchingPod = offloadRecords.find((r) => r.poRef === selectedPO.purchaseOrderNo);
+    const assignedDriver = matchingPod ? matchingPod.driverName : "ZWELITHINI DLAMINI";
+
+    if (typedSignature.trim().toLowerCase() !== assignedDriver.toLowerCase()) {
+      setSignatureError(`Incorrect signature name. The signature must match the assigned driver's full name: "${assignedDriver}"`);
+      return;
+    }
+
     setIsSubmitting(true);
+    setSignatureError(null);
     
-    // Capture signature image
-    const dataUrl = canvasRef.current.toDataURL();
+    // Draw typed signature on an in-memory canvas to generate the dataUrl image
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = 400;
+    tempCanvas.height = 100;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (tempCtx) {
+      tempCtx.fillStyle = '#ffffff';
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tempCtx.font = 'italic 32px Georgia';
+      tempCtx.fillStyle = '#1F4E79';
+      tempCtx.fillText(typedSignature, 30, 58);
+    }
+    const dataUrl = tempCanvas.toDataURL();
     
-    await acceptPO(selectedPO.poNumber, dataUrl);
+    await acceptPO(selectedPO.purchaseOrderNo, dataUrl);
     
     setIsSubmitting(false);
     setSelectedPO(null);
-    setIsCanvasEmpty(true);
+    setTypedSignature('');
   };
 
   const filterTabStyle = (active: boolean): React.CSSProperties => ({
@@ -145,12 +90,12 @@ export const TransporterPOs: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
           {filteredPOs.map((po) => (
-            <Card key={po.poNumber} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Card key={po.purchaseOrderNo} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               {/* Header block with flex to avoid badge collisions */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary-color)', marginBottom: '4px' }}>
-                    PO #{po.poNumber}
+                    PO #{po.purchaseOrderNo}
                   </h3>
                   <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', fontWeight: 500 }}>
                     Date: {formatDate(po.poDate)}
@@ -162,7 +107,7 @@ export const TransporterPOs: React.FC = () => {
               <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                 <div>
                   <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Material</p>
-                  <p style={{ fontWeight: 600 }}>{po.material}</p>
+                  <p style={{ fontWeight: 600 }}>{po.productDescription}</p>
                 </div>
                 <div>
                   <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Rate Agreement</p>
@@ -170,7 +115,7 @@ export const TransporterPOs: React.FC = () => {
                 </div>
                 <div>
                   <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Est. Volume</p>
-                  <p style={{ fontWeight: 600 }}>{po.estimatedQuantity} {po.unit}s</p>
+                  <p style={{ fontWeight: 600 }}>{po.targetQuantity} {po.unit}s</p>
                 </div>
                 <div>
                   <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Cost Center</p>
@@ -178,7 +123,7 @@ export const TransporterPOs: React.FC = () => {
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
                   <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Route Details</p>
-                  <p style={{ fontWeight: 500, fontSize: '13px' }}>{po.route}</p>
+                  <p style={{ fontWeight: 500, fontSize: '13px' }}>{po.fromLocation} → {po.toLocation}</p>
                 </div>
               </div>
 
@@ -220,7 +165,7 @@ export const TransporterPOs: React.FC = () => {
       <Modal
         isOpen={!!selectedPO}
         onClose={() => { if (!isSubmitting) setSelectedPO(null); }}
-        title={selectedPO ? `Review PO #${selectedPO.poNumber}` : ''}
+        title={selectedPO ? `Review PO #${selectedPO.purchaseOrderNo}` : ''}
         width="680px"
       >
         {selectedPO && (
@@ -234,13 +179,13 @@ export const TransporterPOs: React.FC = () => {
               <div>
                 <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>ESTIMATED TOTAL VALUE</p>
                 <p style={{ fontWeight: 700, color: 'var(--success-text)', fontSize: '16px' }}>
-                  {formatCurrency(selectedPO.estimatedQuantity * selectedPO.rate)}
+                  {formatCurrency(selectedPO.targetQuantity * selectedPO.rate)}
                 </p>
               </div>
               <div style={{ gridColumn: 'span 2', height: '1px', backgroundColor: 'var(--border-grey)' }}></div>
               <div>
                 <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>MATERIAL TYPE</p>
-                <p style={{ fontWeight: 500 }}>{selectedPO.material}</p>
+                <p style={{ fontWeight: 500 }}>{selectedPO.productDescription}</p>
               </div>
               <div>
                 <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>CONTRACT RATE</p>
@@ -248,7 +193,7 @@ export const TransporterPOs: React.FC = () => {
               </div>
               <div>
                 <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>ROUTE DEFINITION</p>
-                <p style={{ fontWeight: 500, fontSize: '13px' }}>{selectedPO.route}</p>
+                <p style={{ fontWeight: 500, fontSize: '13px' }}>{selectedPO.fromLocation} → {selectedPO.toLocation}</p>
               </div>
               <div>
                 <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>PAYMENT CONTRACT TERMS</p>
@@ -258,72 +203,61 @@ export const TransporterPOs: React.FC = () => {
 
             {/* Signature Area */}
             <div style={{ borderTop: '1px solid var(--border-grey)', paddingTop: '20px', marginBottom: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary-color)' }}>DIGITAL SIGNATURE</h4>
-                <button 
-                  onClick={clearCanvas} 
-                  disabled={isCanvasEmpty || isSubmitting}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: isCanvasEmpty ? 'var(--neutral-secondary)' : 'var(--error-text)',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <RotateCcw size={12} />
-                  Clear Sign
-                </button>
+              <div style={{ marginBottom: '16px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--primary-color)', margin: '0 0 4px 0' }}>DIGITAL SIGNATURE</h4>
+                <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: 0, fontWeight: 500 }}>
+                  Date Stamped: {formatDate(new Date())}
+                </p>
               </div>
 
-              {/* Drawing Box */}
-              <div style={{ position: 'relative', width: '100%', height: '150px', border: '2px solid var(--border-grey)', borderRadius: '8px', backgroundColor: '#fafafa', overflow: 'hidden' }}>
-                {isCanvasEmpty && (
-                  <div 
-                    style={{ 
-                      position: 'absolute', 
-                      top: 0, 
-                      left: 0, 
-                      right: 0, 
-                      bottom: 0, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      pointerEvents: 'none',
-                      color: 'var(--neutral-secondary)',
-                      fontSize: '13px'
-                    }}
-                  >
-                    Draw signature here with mouse or touch
+              {/* Typed Signature Input */}
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Type Assigned Driver Name to Confirm (Verification Gate)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter assigned driver name to sign..."
+                  value={typedSignature}
+                  onChange={(e) => {
+                    setTypedSignature(e.target.value);
+                    if (signatureError) setSignatureError(null);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: signatureError ? '2px solid var(--error-text)' : '1px solid var(--border-grey)',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    backgroundColor: '#ffffff'
+                  }}
+                />
+                {signatureError && (
+                  <div style={{ marginTop: '8px', padding: '8px 12px', backgroundColor: 'var(--error-bg)', borderRadius: '6px', border: '1px solid var(--error-text)' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--error-text)', fontWeight: 600, margin: 0 }}>
+                      {signatureError}
+                    </p>
                   </div>
                 )}
-                <canvas 
-                  ref={canvasRef}
-                  width={630}
-                  height={146}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDrawing}
-                  style={{ display: 'block', cursor: 'crosshair', width: '100%', height: '100%' }}
-                />
+
+                {/* Script font preview */}
+                {typedSignature && (
+                  <div style={{ marginTop: '12px', padding: '12px', border: '1px dashed var(--border-grey)', borderRadius: '6px', backgroundColor: '#fcfcfc', textAlign: 'center' }}>
+                    <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 600 }}>E-SIGNATURE PREVIEW</p>
+                    <p style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '24px', color: 'var(--primary-color)', margin: 0, letterSpacing: '1px' }}>
+                      {typedSignature}
+                    </p>
+                  </div>
+                )}
               </div>
-              <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', marginTop: '8px', fontWeight: 500 }}>
-                Date Stamped: {formatDate(new Date())}
-              </p>
             </div>
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button 
-                onClick={() => setSelectedPO(null)} 
+                onClick={() => { setSelectedPO(null); setSignatureError(null); setTypedSignature(''); }} 
                 disabled={isSubmitting}
                 className="btn btn-secondary"
               >
@@ -331,7 +265,7 @@ export const TransporterPOs: React.FC = () => {
               </button>
               <button 
                 onClick={handleAcceptPO} 
-                disabled={isCanvasEmpty || isSubmitting}
+                disabled={!typedSignature || isSubmitting}
                 className="btn btn-primary"
                 style={{ minWidth: '150px' }}
               >

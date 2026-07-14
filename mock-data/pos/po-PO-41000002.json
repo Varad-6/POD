@@ -1,0 +1,17 @@
+{
+  "purchaseOrderNo": "PO-41000002",
+  "contractRef": "40000014",
+  "transporter": "VDM Transport",
+  "productDescription": "SL BIT 20%ASH",
+  "rate": 151.5,
+  "unit": "TON",
+  "targetQuantity": 1000,
+  "costCenter": "CC-MINE-01",
+  "fromLocation": "2004 Ikw_Emoyeni Wash Plant",
+  "toLocation": "IKW_RICHARDS BAY(RB_Storage loc)",
+  "paymentTerms": "30 days from invoice posting",
+  "poDate": "2026-07-02",
+  "status": "ACCEPTED_SIGNED",
+  "signedBy": "SANELE KHUMALO",
+  "signedDate": "2026-07-02"
+}

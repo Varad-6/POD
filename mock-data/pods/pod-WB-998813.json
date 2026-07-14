@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998813",
+  "poRef": "PO-41000013",
+  "loadingWaySlipNo": "EL-100413",
+  "horseRegNo": "HTS445GP",
+  "trailer1RegNo": "JYJ307MP",
+  "trailer2RegNo": "JYJ308MP",
+  "driverName": "T. MOKOENA",
+  "driverIdNo": "9005125679083",
+  "tareWeightKg": 21660,
+  "grossWeightKg": 56260,
+  "netWeightKg": 34600,
+  "loadingKm": 154700,
+  "offloadingKm": 155050,
+  "operatorName": "Tsebe Herman",
+  "site": "3002 BCD_Coal Fields",
+  "productDescription": "10-SL-ANTH-SPIRAL",
+  "offloadDate": "2026-07-13",
+  "podStatus": "APPROVED",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998813.jpg"
+}

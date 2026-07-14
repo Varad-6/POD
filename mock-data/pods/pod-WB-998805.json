@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998805",
+  "poRef": "PO-41000005",
+  "loadingWaySlipNo": "EL-100405",
+  "horseRegNo": "HTS445GP",
+  "trailer1RegNo": "JYJ307MP",
+  "trailer2RegNo": "JYJ308MP",
+  "driverName": "T. MOKOENA",
+  "driverIdNo": "9005125679083",
+  "tareWeightKg": 20400,
+  "grossWeightKg": 55220,
+  "netWeightKg": 34820,
+  "loadingKm": 154210,
+  "offloadingKm": 154490,
+  "operatorName": "Tsebe Herman",
+  "site": "Belfast Coal Pit",
+  "productDescription": "BC_FP_RB3",
+  "offloadDate": "2026-07-15",
+  "podStatus": "PENDING_POD",
+  "preDispatch": "PASSED",
+  "customerCheck": "STAMPED_CONFIRMED",
+  "uploadedFileName": "/demo-files/WB-998805.jpg"
+}

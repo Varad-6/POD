@@ -1,0 +1,23 @@
+{
+  "waybillNo": "WB-998802",
+  "poRef": "PO-41000002",
+  "loadingWaySlipNo": "EL-100402",
+  "horseRegNo": "MR48RLGP",
+  "trailer1RegNo": "DP76KBGP",
+  "trailer2RegNo": "DP76KDGP",
+  "driverName": "SANELE KHUMALO",
+  "driverIdNo": "9211045612089",
+  "tareWeightKg": 19700,
+  "grossWeightKg": 56660,
+  "netWeightKg": 36960,
+  "loadingKm": 122401,
+  "offloadingKm": 122680,
+  "operatorName": "Lucky",
+  "site": "Emoyeni Washplant",
+  "productDescription": "SL BIT 20%ASH",
+  "offloadDate": "2026-07-12",
+  "podStatus": "PENDING_POD",
+  "preDispatch": "PENDING",
+  "customerCheck": "PENDING",
+  "uploadedFileName": "/demo-files/WB-998802.jpg"
+}
