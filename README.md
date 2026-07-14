@@ -10,7 +10,7 @@ It is designed as a concept demo for **Ikwezi Mining Limited** to showcase the p
 
 To demonstrate the end-to-end operational flow of transporter management—from purchase order (PO) acceptance, offload verification, and OCR-based POD validation, through to automated invoice generation and outstanding visibility. 
 
-This prototype runs on a **React (Vite) + Node.js + CSS** stack, utilizing a local **Excel workbook** (`mock_database.xlsx`) to simulate standard SAP ERP tables.
+This prototype runs on a **React (Vite) + Node.js + CSS** stack, utilizing a local **Excel workbook** (`mock_database.xlsx`) and an in-memory configuration file (`mockData.js`) to simulate standard SAP ERP tables.
 
 ---
 
@@ -67,7 +67,7 @@ graph TD
 *   **Frontend**: React (Vite)
 *   **Styling**: Pure CSS (Modern dark/light themes, card layouts, responsive layouts)
 *   **Backend**: Node.js & Express
-*   **Mock Database**: Microsoft Excel (`mock_database.xlsx`) powered by the `xlsx` or `exceljs` library on the backend
+*   **Mock Database**: Microsoft Excel (`mock_database.xlsx`) powered by the `xlsx` or `exceljs` library on the backend, pre-loaded using `mockData.js`
 *   **OCR Simulation**: Custom file-reading simulator mapping uploaded PDF/Images to SAP Waybill metadata
 
 ---
@@ -84,6 +84,8 @@ POD/
 │   └── package.json               # Node dependencies (express, xlsx, multer)
 ├── frontend/
 │   ├── src/
+│   │   ├── data/
+│   │   │   └── mockData.js        # Baseline static data in project
 │   │   ├── components/            # Reusable UI widgets (Canvas, Uploaders)
 │   │   ├── views/                 # Prototype screens (Login, Admin, Dashboards)
 │   │   ├── App.jsx
@@ -97,65 +99,69 @@ POD/
 
 ---
 
-## 5. Installation & Setup
+## 5. Demo Setup & Credentials
 
-Follow these steps to run the prototype locally on your system.
+### A. Demo Logins (Static Credentials)
+The prototype features two static profiles to demonstrate the workflows without database auth setup:
 
-### Step 1: Set Up the Mock Database
-1. Navigate to the `backend/database/` directory.
-2. Ensure you have the `mock_database.xlsx` file. (If initializing from scratch, run the database initialization script included in the backend directory).
-3. The spreadsheet contains the following sheets representing SAP tables:
-   *   `transporters`
-   *   `purchase_orders`
-   *   `offloads`
-   *   `pod_submissions`
-   *   `invoices`
+| Username | Password | Role / Entity |
+| :--- | :--- | :--- |
+| **`transporter`** | `password123` | Transporter (Sipho Transport Services) |
+| **`admin`** | `password123` | Ikwezi Portal Manager (Mine Administrator) |
 
-### Step 2: Configure & Run the Backend API
-1. Open your terminal and change directory to the backend folder:
-   ```bash
-   cd backend
-   ```
-2. Install the required Node packages:
-   ```bash
-   npm install
-   ```
-3. Start the mock integration API server:
-   ```bash
-   npm run dev
-   ```
-   *The server will spin up on `http://localhost:5000`.*
+### B. Demo Assets / Upload Files
+Ensure you have the following files saved on your laptop before starting the presentation. You will manually upload these files during the walkthrough:
 
-### Step 3: Configure & Run the React Frontend
-1. Open a new terminal window and change directory to the frontend folder:
-   ```bash
-   cd frontend
-   ```
-2. Install the frontend dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite React local development server:
-   ```bash
-   npm run dev
-   ```
-   *The Vite server will start. Open `http://localhost:5173` in your browser.*
+| File Name | Purpose / What it Shows | When to Upload |
+| :--- | :--- | :--- |
+| **`delivery-slip-match.jpg`** | Clean match scenario: OCR readings match system records perfectly (shown in Green). | **Step 5** |
+| **`delivery-slip-mismatch.jpg`** | Mismatch scenario: Weight read (32.5 tons) differs from recorded 34.8 tons (shown in Red). | **Step 10** |
+| **`delivery-slip-blurry.jpg`** | Low-confidence scenario: File is too blurry; system forces manual Admin review. | **Step 11** |
+| **`tax-bill-sample.pdf`** | Transporter invoice bill for auto-calculated payment step. | **Step 12** |
 
 ---
 
-## 6. Simulated Flow Walkthrough (9 Click-Through Screens)
+## 6. Detailed 14-Step Demo Walkthrough
 
-To demonstrate the application, proceed through these 9 distinct views:
+Proceed through the following steps in sequence during the demo presentation:
 
-1.  **Login screen**: Choose between logging in as a **Transporter** or **Ikwezi Portal Admin**.
-2.  **Transporter PO Dashboard**: View active Purchase Orders synced from the Excel DB. Select an open PO.
-3.  **PO Acceptance & E-Sign**: Sign the PO using the interactive drawing canvas. Submit to save e-sign metadata back to the PO sheet in the Excel DB.
-4.  **Pending POD Dashboard**: View weighbridge offloads synced from SAP that are missing Proof-of-Delivery documents.
-5.  **POD Document Upload**: Upload a simulated PDF scan or image of the POD.
-6.  **OCR Matching Screen**: View extracted data (Truck No, Waybill No, Offload weight) side-by-side with SAP entries. If weights match within tolerance, it flags green; discrepancies trigger warning tags.
-7.  **Admin Review Dashboard**: Log in as Ikwezi Admin to inspect the match confidence logs, view the physical document, and hit Approve to unlock invoicing.
-8.  **Automated Invoice Creation**: Select approved deliveries. The system pulls rates from the PO sheet, auto-calculates total values, captures the Transporter's invoice details, and posts a "Parked" MIRO invoice back to the Excel DB.
-9.  **Status & Outstanding Dashboard**: Monitor real-time status updates (e.g. Parked $\rightarrow$ Approved $\rightarrow$ Paid) and view outstanding balance ledgers.
+### Phase 1: Transporter PO Acceptance & POD Upload
+1.  **Step 1: Login as Truck Company**: Log in using the username `transporter` and password `password123`.
+2.  **Step 2: Homepage Overview**: View your dashboard. It displays 3 key summary metrics:
+    *   *Pending POs* (Awaiting Signature)
+    *   *Deliveries Awaiting Paperwork*
+    *   *Bill / Payment Ledger Status*
+3.  **Step 3: Accept & E-Sign PO**: Click on a pending Purchase Order (showing rate per ton and total quantity). Draw your signature on the interactive signature canvas, and click **Accept**. The PO status changes to `Signed`.
+4.  **Step 4: Go to Delivery Proof**: Navigate to the deliveries page. You will see a list of completed trips that are missing Proof-of-Delivery documents.
+5.  **Step 5: Upload Match Document**: Click **Upload** next to the first weighbridge trip and select `delivery-slip-match.jpg`. A "Reading document..." spinner will run, and then the OCR extracted data (Waybill, Weight, Truck No) will display side-by-side with the system data. Since they match, it highlights in **Green**.
+6.  **Step 6: Submit**: Click **Submit** to forward the verified POD to the mine manager.
+
+### Phase 2: Mine Manager Approval
+7.  **Step 7: Switch to Ikwezi Manager**: Log out and log back in using username `admin` and password `password123`.
+8.  **Step 8: View Submitted Proofs**: Open the pending approval queue. You will see the POD submitted in Step 6.
+9.  **Step 9: Review & Approve Match**: Select the entry. Verify the green side-by-side matching checklist and click **Approve**.
+
+### Phase 3: Exception Handling (Mismatch & Blurry slips)
+10. **Step 10: (Optional) Mismatch Demo**:
+    *   Log back in as `transporter` and upload `delivery-slip-mismatch.jpg`.
+    *   Log in as `admin`. The weight field will highlight in **Red** (discrepancy). 
+    *   Demonstrate the two Admin options: **"Approve anyway"** (manual override) or **"Reject & Send Back"** (with reasons).
+11. **Step 11: (Optional) Blurry Document Demo**:
+    *   Log in as `transporter` and upload `delivery-slip-blurry.jpg`.
+    *   The system flags a warning: *"Unclear text - manual verification required"*, preventing automatic pass-through.
+
+### Phase 4: Auto-Invoicing & Payment
+12. **Step 12: Raise Invoice**:
+    *   Log back in as `transporter`. Locate the approved delivery.
+    *   The system displays the auto-calculated amount:
+        $$\text{Delivered Weight (Tons)} \times \text{Rate Per Ton}$$
+    *   Enter your Tax Invoice Number, upload `tax-bill-sample.pdf`, and click **Submit**.
+13. **Step 13: Approve Payment**:
+    *   Log back in as `admin`. Locate the new invoice entry.
+    *   Click **Post / Approve Payment** to simulate the standard SAP MIRO invoice posting and clearing loop.
+14. **Step 14: Confirm Paid Status**:
+    *   Log back in as `transporter` and navigate to the ledger.
+    *   Observe your invoice status change from `Parked` $\rightarrow$ `Paid`, showing the payment reference transaction number and date.
 
 ---
 
