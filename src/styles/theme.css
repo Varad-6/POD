@@ -1,0 +1,36 @@
+:root {
+  /* Color Palette */
+  --primary-color: #1F4E79;
+  --primary-hover: #173D5E;
+  --secondary-bg: #EAF1F8;
+  
+  --success-text: #2E7D32;
+  --success-bg: #E8F5E9;
+  
+  --error-text: #C62828;
+  --error-bg: #FDECEA;
+  
+  --warning-text: #B26A00;
+  --warning-bg: #FFF4E0;
+  
+  --info-text: #1565C0;
+  --info-bg: #E3F2FD;
+  
+  --teal-text: #00695C;
+  --teal-bg: #E0F2F1;
+  
+  --neutral-primary: #1A1A1A;
+  --neutral-secondary: #6B7280;
+  --border-grey: #E0E0E0;
+  --page-bg: #F7F9FB;
+  --card-bg: #FFFFFF;
+  
+  /* Shadows */
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --modal-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  
+  /* Layout sizes */
+  --sidebar-width: 240px;
+  --topbar-height: 64px;
+  --demo-bar-height: 38px;
+}
