@@ -1,0 +1,9 @@
+---
+applications:
+  - name: ikwezi-transporter-portal
+    memory: 64M
+    disk_quota: 128M
+    buildpacks:
+      - staticfile_buildpack
+    path: ./dist
+    random-route: true

@@ -267,6 +267,12 @@ export const AdminApprovals: React.FC = () => {
 
                   {/* Fields */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Bilty & Driver License Metadata */}
+                    <div style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>📋 Bilty #: <strong>{selectedRecord.biltyNo || 'BLT-770101'}</strong></span>
+                      <span>🪪 Driver: <strong>{selectedRecord.driverName}</strong> ({selectedRecord.driverLicenseNo || 'DL-850912-EC'})</span>
+                    </div>
+
                     {/* Waybill */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#fafafa', borderRadius: '6px', border: '1px solid var(--border-grey)' }}>
                       <div>
@@ -279,19 +285,46 @@ export const AdminApprovals: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Truck */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#fafafa', borderRadius: '6px', border: '1px solid var(--border-grey)' }}>
+                    {/* 4-Point Weighbridge Comparison */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid var(--border-grey)' }}>
                       <div>
-                        <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>OCR EXTRACTED TRUCK</p>
-                        <p style={{ fontWeight: 600, fontSize: '13px' }}>{ocr.extracted.truckNo}</p>
+                        <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>DISPATCH NET (MINE SIDING)</p>
+                        <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--primary-color)' }}>
+                          {( (selectedRecord.dispatchNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} Tons
+                        </p>
+                        <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)' }}>
+                          T: {selectedRecord.dispatchTareWeightKg || selectedRecord.tareWeightKg}kg | G: {selectedRecord.dispatchGrossWeightKg || selectedRecord.grossWeightKg}kg
+                        </p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>SAP WEIGHBRIDGE RECORD</p>
-                        <p style={{ fontWeight: 600, fontSize: '13px', color: 'var(--success-text)' }}>{selectedRecord.horseRegNo}</p>
+                        <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>ARRIVAL NET (CUSTOMER YARD)</p>
+                        <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-text)' }}>
+                          {( (selectedRecord.arrivalNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} Tons
+                        </p>
+                        <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)' }}>
+                          G: {selectedRecord.arrivalGrossWeightKg || selectedRecord.grossWeightKg}kg | T: {selectedRecord.arrivalTareWeightKg || selectedRecord.tareWeightKg}kg
+                        </p>
                       </div>
                     </div>
 
-                    {/* Weight */}
+                    {/* Damaged Goods & Net Payable Cargo */}
+                    {selectedRecord.damagedUnits !== undefined && selectedRecord.damagedUnits > 0 && (
+                      <div style={{ padding: '8px 12px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', borderRadius: '6px', fontSize: '11px', color: '#c2410c' }}>
+                        <strong>⚠️ Damaged Cargo Audit:</strong> {selectedRecord.damagedUnits} units damaged ({selectedRecord.damagedWeightKg || 0} kg loss). Reason: {selectedRecord.damageReason || 'Spillage'}
+                        <div style={{ fontWeight: 800, marginTop: '2px', fontSize: '12px', color: '#9a3412' }}>
+                          Net Billable Payload: {( (selectedRecord.acceptedNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} Tons
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Weight Exception Categorization Badge */}
+                    {selectedRecord.weightExceptionReason && selectedRecord.weightExceptionReason !== 'NONE' && (
+                      <div style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', color: '#0369a1' }}>
+                        <strong>⚙️ Exception Classification:</strong> {selectedRecord.weightExceptionReason.replace('_', ' ')}
+                      </div>
+                    )}
+
+                    {/* OCR Weight vs SAP Record */}
                     <div 
                       style={{ 
                         display: 'flex', 

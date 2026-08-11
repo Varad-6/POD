@@ -16,6 +16,7 @@ import { SupervisorDashboard } from './views/SupervisorDashboard';
 import { CustomerDashboard } from './views/CustomerDashboard';
 import { DriverDashboard } from './views/DriverDashboard';
 import { useDemo, DemoProvider } from './context/DemoContext';
+import { USERS } from './data/mockData';
 import { RefreshCw, UserCheck, Settings } from 'lucide-react';
 
 const MainApp: React.FC = () => {
@@ -77,7 +78,7 @@ const MainApp: React.FC = () => {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8' }}>
           <Settings size={14} className="animate-spin" />
-          <span>IKWEZI DEMO CONTROLLER</span>
+          <span>LOGISTICS DEMO CONTROLLER</span>
         </div>
 
         <div style={{ display: 'flex', gap: '16px' }}>
@@ -88,12 +89,19 @@ const MainApp: React.FC = () => {
                 value={currentUser.username}
                 onChange={(e) => {
                   const val = e.target.value;
+                  const u = USERS.find((user) => user.username === val);
                   login(val);
-                  if (val === 'company_admin') navigate('/admin/dashboard');
-                  else if (val === 'supervisor') navigate('/supervisor/dashboard');
-                  else if (val === 'customer') navigate('/customer/dashboard');
-                  else if (val === 'driver') navigate('/driver/dashboard');
-                  else navigate('/transporter/dashboard');
+                  if (u?.role === 'COMPANY_ADMIN' || u?.role === 'IKWEZI_ADMIN') {
+                    navigate('/admin/dashboard');
+                  } else if (u?.role === 'SUPERVISOR') {
+                    navigate('/supervisor/dashboard');
+                  } else if (u?.role === 'CUSTOMER') {
+                    navigate('/customer/dashboard');
+                  } else if (u?.role === 'DRIVER') {
+                    navigate('/driver/dashboard');
+                  } else {
+                    navigate('/transporter/dashboard');
+                  }
                 }}
                 style={{
                   backgroundColor: '#1f2937',
@@ -107,11 +115,11 @@ const MainApp: React.FC = () => {
                   outline: 'none'
                 }}
               >
-                <option value="company_admin">Company Admin (Ikwezi)</option>
-                <option value="supervisor">Supervisor (Weighbridge)</option>
-                <option value="customer">Customer (Eskom)</option>
-                <option value="transporter_admin">Transporter Admin</option>
-                <option value="driver">Driver (Austin/Dumisani)</option>
+                {USERS.map((user) => (
+                  <option key={user.username} value={user.username}>
+                    {user.displayName}
+                  </option>
+                ))}
               </select>
             </div>
           )}

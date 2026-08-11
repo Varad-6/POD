@@ -14,11 +14,11 @@ export const Login: React.FC = () => {
   const [error, setError] = useState('');
 
   const personas = [
-    { username: 'company_admin', role: 'COMPANY_ADMIN', label: 'Company Admin', desc: 'Thandiwe Nkosi (Ikwezi)', color: '#1e3a8a', bg: '#dbeafe' },
-    { username: 'transporter_admin', role: 'TRANSPORTER_ADMIN', label: 'Transporter Admin', desc: 'Sipho Kumalo (Sipho)', color: '#0f766e', bg: '#ccfbf1' },
-    { username: 'driver', role: 'DRIVER', label: 'Transporter (Driver)', desc: 'Dumisani Dlamini (Sipho Driver)', color: '#d97706', bg: '#fef3c7' },
-    { username: 'customer', role: 'CUSTOMER', label: 'Customer / Client', desc: 'John Ndlovu (Eskom)', color: '#7c3aed', bg: '#ede9fe' },
-    { username: 'supervisor', role: 'SUPERVISOR', label: 'Weighbridge Supervisor', desc: 'Pieter Botha (Weighbridge)', color: '#2563eb', bg: '#dbeafe' }
+    { username: 'company_admin', role: 'COMPANY_ADMIN', label: 'Company Admin', desc: 'Thandiwe Nkosi (Admin)', color: '#1e3a8a', bg: '#dbeafe' },
+    { username: 'transporter_admin', role: 'TRANSPORTER_ADMIN', label: 'Transporter Admin', desc: 'Sipho Kumalo (Transporter)', color: '#0f766e', bg: '#ccfbf1' },
+    { username: 'driver', role: 'DRIVER', label: 'Transporter (Driver)', desc: 'Dumisani Dlamini (Driver)', color: '#d97706', bg: '#fef3c7' },
+    { username: 'customer', role: 'CUSTOMER', label: 'Customer / Client', desc: 'John Ndlovu (Client)', color: '#7c3aed', bg: '#ede9fe' },
+    { username: 'supervisor', role: 'SUPERVISOR', label: 'Weighbridge Supervisor', desc: 'Pieter Botha (Supervisor)', color: '#2563eb', bg: '#dbeafe' }
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -82,7 +82,7 @@ export const Login: React.FC = () => {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <h1 style={{ color: 'var(--primary-color)', fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>
-            Ikwezi Mining
+            Apex Logistics
           </h1>
           <p style={{ color: 'var(--neutral-secondary)', fontSize: '14px', marginTop: '4px', fontWeight: '500' }}>
             Transporter & Invoice Portal

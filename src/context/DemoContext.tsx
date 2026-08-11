@@ -16,6 +16,10 @@ export interface User {
   role: 'COMPANY_ADMIN' | 'TRANSPORTER_ADMIN' | 'DRIVER' | 'CUSTOMER' | 'SUPERVISOR' | 'TRANSPORTER' | 'IKWEZI_ADMIN';
   companyName?: string;
   displayName?: string;
+  driverLicenseNo?: string;
+  licenseExpiryDate?: string;
+  prdpPermitNo?: string;
+  isLicenseValid?: boolean;
 }
 
 export interface PurchaseOrder {
@@ -34,6 +38,11 @@ export interface PurchaseOrder {
   status: 'PENDING_SIGNATURE' | 'ACCEPTED_SIGNED' | 'PENDING_ASSIGNMENT' | 'ASSIGNED' | 'DRIVER_ASSIGNED' | 'DRIVER_ARRIVED' | 'SUPERVISOR_APPROVED' | 'SUPERVISOR_REJECTED' | 'EN_ROUTE' | 'DELIVERED_STAMPED' | 'DELIVERED_FAILED' | 'POD_SUBMITTED' | 'POD_APPROVED' | 'INVOICE_SUBMITTED' | 'PAID';
   signedBy?: string;
   signedDate?: string;
+  biltyNo?: string;
+  biltyDate?: string;
+  consignorName?: string;
+  consigneeName?: string;
+  declaredValue?: number;
 }
 
 export interface OffloadRecord {
@@ -45,9 +54,35 @@ export interface OffloadRecord {
   trailer2RegNo: string;
   driverName: string;
   driverIdNo: string;
+  driverLicenseNo?: string;
+  licenseExpiryDate?: string;
+  isLicenseValid?: boolean;
+  // Bilty / Lorry Receipt Details
+  biltyNo?: string;
+  biltyDate?: string;
+  consignorName?: string;
+  consigneeName?: string;
+  declaredValue?: number;
+  // 4-Point Weighbridge Records
+  dispatchTareWeightKg: number;
+  dispatchGrossWeightKg: number;
+  dispatchNetWeightKg: number;
+  arrivalGrossWeightKg: number;
+  arrivalTareWeightKg: number;
+  arrivalNetWeightKg: number;
+  // Deprecated legacy fields kept for backward compatibility
   tareWeightKg: number;
   grossWeightKg: number;
   netWeightKg: number;
+  // Damaged Goods / Loss Consideration
+  totalUnits?: number;
+  damagedUnits?: number;
+  damagedWeightKg?: number;
+  damageReason?: string;
+  acceptedNetWeightKg?: number;
+  // Operational Weight Exceptions
+  weightExceptionReason?: 'NONE' | 'MOISTURE_EVAPORATION' | 'RAIN_ABSORPTION' | 'SCALE_CALIBRATION_OFFSET' | 'UNLOAD_SPILLAGE';
+  exceptionNotes?: string;
   loadingKm: number;
   offloadingKm: number;
   operatorName: string;
@@ -103,11 +138,34 @@ interface DemoContextType {
   payInvoice: (invoiceNo: string, paymentRef: string) => Promise<void>;
   contracts: any[];
   assignPOToTransporter: (purchaseOrderNo: string, transporterName: string) => Promise<void>;
-  assignPOToDriver: (purchaseOrderNo: string, driverName: string, horseRegNo: string, trailer1RegNo: string, trailer2RegNo: string) => Promise<void>;
+  assignPOToDriver: (
+    purchaseOrderNo: string,
+    driverName: string,
+    horseRegNo: string,
+    trailer1RegNo: string,
+    trailer2RegNo: string,
+    biltyNo?: string,
+    driverLicenseNo?: string,
+    licenseExpiryDate?: string
+  ) => Promise<void>;
   driverConfirmArrival: (purchaseOrderNo: string) => Promise<void>;
-  supervisorLogWeights: (waybillNo: string, tareWeightKg: number, grossWeightKg: number, isApproved: boolean) => Promise<void>;
+  supervisorLogWeights: (
+    waybillNo: string,
+    dispatchTareWeightKg: number,
+    dispatchGrossWeightKg: number,
+    isApproved: boolean
+  ) => Promise<void>;
   driverDepartSiding: (waybillNo: string) => Promise<void>;
-  customerLogWeights: (waybillNo: string, grossWeightKg: number, tareWeightKg: number, isApproved: boolean) => Promise<void>;
+  customerLogWeights: (
+    waybillNo: string,
+    arrivalGrossWeightKg: number,
+    arrivalTareWeightKg: number,
+    damagedUnits: number,
+    damagedWeightKg: number,
+    damageReason: string,
+    weightExceptionReason: OffloadRecord['weightExceptionReason'],
+    isApproved: boolean
+  ) => Promise<void>;
   resetDemo: () => void;
   showToast: (message: string, type?: 'success' | 'error' | 'warning') => void;
   removeToast: (id: string) => void;
@@ -395,7 +453,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setPurchaseOrders((prev) =>
       prev.map((po) =>
         po.purchaseOrderNo === purchaseOrderNo
-          ? { ...po, status: 'ASSIGNED', transporter: transporterName }
+          ? { ...po, status: 'PENDING_SIGNATURE', transporter: transporterName }
           : po
       )
     );
@@ -407,15 +465,25 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     driverName: string,
     horseRegNo: string,
     trailer1RegNo: string,
-    trailer2RegNo: string
+    trailer2RegNo: string,
+    biltyNo?: string,
+    driverLicenseNo?: string,
+    licenseExpiryDate?: string
   ) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     
+    const assignedBilty = biltyNo || `BLT-${Math.floor(100000 + Math.random() * 900000)}`;
+
     // Update PO status
     setPurchaseOrders((prev) =>
       prev.map((po) =>
         po.purchaseOrderNo === purchaseOrderNo
-          ? { ...po, status: 'DRIVER_ASSIGNED' }
+          ? {
+              ...po,
+              status: 'DRIVER_ASSIGNED',
+              biltyNo: assignedBilty,
+              biltyDate: new Date().toISOString().split('T')[0]
+            }
           : po
       )
     );
@@ -432,6 +500,11 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 horseRegNo,
                 trailer1RegNo,
                 trailer2RegNo,
+                biltyNo: assignedBilty,
+                biltyDate: new Date().toISOString().split('T')[0],
+                driverLicenseNo: driverLicenseNo || 'DL-908234-EC',
+                licenseExpiryDate: licenseExpiryDate || '2028-06-30',
+                isLicenseValid: true,
                 podStatus: 'DRIVER_ASSIGNED' as any
               }
             : r
@@ -447,9 +520,29 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
           trailer2RegNo,
           driverName,
           driverIdNo: '8509125679082',
+          driverLicenseNo: driverLicenseNo || 'DL-908234-EC',
+          licenseExpiryDate: licenseExpiryDate || '2028-06-30',
+          isLicenseValid: true,
+          biltyNo: assignedBilty,
+          biltyDate: new Date().toISOString().split('T')[0],
+          consignorName: matchingPO?.fromLocation || 'Ikwezi Mine Siding',
+          consigneeName: matchingPO?.toLocation || 'Power Utility Yard',
+          declaredValue: matchingPO ? matchingPO.targetQuantity * matchingPO.rate : 150000,
+          dispatchTareWeightKg: 0,
+          dispatchGrossWeightKg: 0,
+          dispatchNetWeightKg: 0,
+          arrivalGrossWeightKg: 0,
+          arrivalTareWeightKg: 0,
+          arrivalNetWeightKg: 0,
           tareWeightKg: 0,
           grossWeightKg: 0,
           netWeightKg: 0,
+          totalUnits: 1000,
+          damagedUnits: 0,
+          damagedWeightKg: 0,
+          damageReason: 'None',
+          acceptedNetWeightKg: 0,
+          weightExceptionReason: 'NONE',
           loadingKm: 89000,
           offloadingKm: 89200,
           operatorName: 'Lucky',
@@ -462,7 +555,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
     
-    showToast(`PO #${purchaseOrderNo} assigned to driver ${driverName}`, 'success');
+    showToast(`PO #${purchaseOrderNo} assigned to driver ${driverName} (Bilty: ${assignedBilty})`, 'success');
   };
 
   const driverConfirmArrival = async (purchaseOrderNo: string) => {
@@ -489,29 +582,33 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const supervisorLogWeights = async (
     waybillNo: string,
-    tareWeightKg: number,
-    grossWeightKg: number,
+    dispatchTareWeightKg: number,
+    dispatchGrossWeightKg: number,
     isApproved: boolean
   ) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     
     const status: any = isApproved ? 'SUPERVISOR_APPROVED' : 'SUPERVISOR_REJECTED';
+    const dispatchNetWeightKg = dispatchGrossWeightKg - dispatchTareWeightKg;
     
     setOffloadRecords((prev) =>
       prev.map((r) =>
         r.waybillNo === waybillNo
           ? {
               ...r,
-              tareWeightKg,
-              grossWeightKg,
-              netWeightKg: grossWeightKg - tareWeightKg,
+              dispatchTareWeightKg,
+              dispatchGrossWeightKg,
+              dispatchNetWeightKg,
+              tareWeightKg: dispatchTareWeightKg,
+              grossWeightKg: dispatchGrossWeightKg,
+              netWeightKg: dispatchNetWeightKg,
               podStatus: status
             }
           : r
       )
     );
 
-    showToast(isApproved ? `Pre-dispatch weights approved for Waybill ${waybillNo}` : `Pre-dispatch weights rejected`, isApproved ? 'success' : 'error');
+    showToast(isApproved ? `Pre-dispatch weights approved for Waybill ${waybillNo} (${(dispatchNetWeightKg / 1000).toFixed(2)} Tons)` : `Pre-dispatch weights rejected`, isApproved ? 'success' : 'error');
   };
 
   const driverDepartSiding = async (waybillNo: string) => {
@@ -530,26 +627,45 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const customerLogWeights = async (
     waybillNo: string,
-    grossWeightKg: number,
-    tareWeightKg: number,
-    isApproved: boolean
+    arrivalGrossWeightKg: number,
+    arrivalTareWeightKg: number,
+    damagedUnits: number = 0,
+    damagedWeightKg: number = 0,
+    damageReason: string = 'None',
+    weightExceptionReason: OffloadRecord['weightExceptionReason'] = 'NONE',
+    isApproved: boolean = true
   ) => {
     await new Promise((resolve) => setTimeout(resolve, 500));
     
     const status: any = isApproved ? 'DELIVERED_STAMPED' : 'DELIVERED_FAILED';
+    const arrivalNetWeightKg = arrivalGrossWeightKg - arrivalTareWeightKg;
+    const acceptedNetWeightKg = Math.max(0, arrivalNetWeightKg - damagedWeightKg);
     
     setOffloadRecords((prev) =>
       prev.map((r) =>
         r.waybillNo === waybillNo
           ? {
               ...r,
+              arrivalGrossWeightKg,
+              arrivalTareWeightKg,
+              arrivalNetWeightKg,
+              damagedUnits,
+              damagedWeightKg,
+              damageReason,
+              acceptedNetWeightKg,
+              weightExceptionReason,
               podStatus: status
             }
           : r
       )
     );
 
-    showToast(isApproved ? `Delivery verified and e-stamped!` : `Delivery verification failed`, isApproved ? 'success' : 'error');
+    showToast(
+      isApproved 
+        ? `Delivery verified! Arrival Net: ${(arrivalNetWeightKg / 1000).toFixed(2)}T, Accepted Net: ${(acceptedNetWeightKg / 1000).toFixed(2)}T` 
+        : `Delivery verification failed`, 
+      isApproved ? 'success' : 'error'
+    );
   };
 
   const markNotificationRead = (id: string) => {

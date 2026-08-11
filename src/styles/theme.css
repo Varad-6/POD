@@ -1,36 +1,36 @@
 :root {
   /* Color Palette */
-  --primary-color: #1F4E79;
-  --primary-hover: #173D5E;
-  --secondary-bg: #EAF1F8;
+  --primary-color: #0F172A; /* Slate 900 - Dark Premium */
+  --primary-hover: #1E293B; /* Slate 800 */
+  --secondary-bg: #F1F5F9; /* Slate 100 */
   
-  --success-text: #2E7D32;
-  --success-bg: #E8F5E9;
+  --success-text: #059669; /* Emerald 600 */
+  --success-bg: #ECFDF5; /* Emerald 50 */
   
-  --error-text: #C62828;
-  --error-bg: #FDECEA;
+  --error-text: #DC2626; /* Red 600 */
+  --error-bg: #FEF2F2; /* Red 50 */
   
-  --warning-text: #B26A00;
-  --warning-bg: #FFF4E0;
+  --warning-text: #D97706; /* Amber 600 */
+  --warning-bg: #FFFBEB; /* Amber 50 */
   
-  --info-text: #1565C0;
-  --info-bg: #E3F2FD;
+  --info-text: #2563EB; /* Blue 600 */
+  --info-bg: #EFF6FF; /* Blue 50 */
   
-  --teal-text: #00695C;
-  --teal-bg: #E0F2F1;
+  --teal-text: #0D9488; /* Teal 600 */
+  --teal-bg: #F0FDFA; /* Teal 50 */
   
-  --neutral-primary: #1A1A1A;
-  --neutral-secondary: #6B7280;
-  --border-grey: #E0E0E0;
-  --page-bg: #F7F9FB;
+  --neutral-primary: #1E293B; /* Slate 800 */
+  --neutral-secondary: #64748B; /* Slate 500 */
+  --border-grey: #E2E8F0; /* Slate 200 */
+  --page-bg: #F8FAFC; /* Slate 50 */
   --card-bg: #FFFFFF;
   
   /* Shadows */
-  --card-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  --modal-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  --modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.05);
   
   /* Layout sizes */
-  --sidebar-width: 240px;
+  --sidebar-width: 260px; /* Expanded slightly for better breathing room */
   --topbar-height: 64px;
-  --demo-bar-height: 38px;
+  --demo-bar-height: 42px;
 }

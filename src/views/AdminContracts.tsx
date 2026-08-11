@@ -91,14 +91,14 @@ export const AdminContracts: React.FC = () => {
 
         {/* PO Distribution Desk */}
         <Card title="Purchase Orders Siding Distribution Queue">
-          {purchaseOrders.filter(po => po.status === 'PENDING_SIGNATURE').length === 0 ? (
+          {purchaseOrders.filter(po => po.status === 'PENDING_ASSIGNMENT').length === 0 ? (
             <p style={{ textAlign: 'center', padding: '20px', color: 'var(--neutral-secondary)', fontSize: '13px' }}>
               All purchase orders have been dispatched and assigned.
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {purchaseOrders
-                .filter(po => po.status === 'PENDING_SIGNATURE')
+                .filter(po => po.status === 'PENDING_ASSIGNMENT')
                 .map((po) => (
                   <div 
                     key={po.purchaseOrderNo}

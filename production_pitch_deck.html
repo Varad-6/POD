@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ikwezi Transporter Portal | Production Pitch Deck — Abhiyanta India Solutions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0B1120;
+      --bg-card: #151F32;
+      --bg-card-hover: #1E293B;
+      --border-color: #26334D;
+      --primary-accent: #0284C7;
+      --secondary-accent: #38BDF8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --text-main: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+      --success: #10B981;
+      --warning: #F59E0B;
+      --danger: #EF4444;
+      --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+    }
+
+    /* Presentation Deck Container */
+    .deck-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Slide Stage */
+    .slide-stage {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 48px;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 48px 64px 32px 64px;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.98) translateY(10px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1) translateY(0);
+      z-index: 2;
+    }
+
+    /* Slide Content Wrappers */
+    .slide-header {
+      margin-bottom: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+
+    .slide-num-badge {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--secondary-accent);
+      background: var(--accent-glow);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      letter-spacing: 0.5px;
+    }
+
+    .slide-title {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+
+    .slide-subtitle {
+      font-size: 15px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      font-weight: 400;
+    }
+
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      overflow-y: auto;
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      height: 56px;
+      background: #070D18;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      z-index: 10;
+    }
+
+    .brand-tag {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .brand-tag span.highlight {
+      color: var(--secondary-accent);
+      font-weight: 700;
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-nav {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-nav:hover {
+      background: var(--primary-accent);
+      border-color: var(--secondary-accent);
+      color: #fff;
+    }
+
+    .btn-nav:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      background: var(--bg-card);
+      border-color: var(--border-color);
+    }
+
+    .counter-display {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-muted);
+      min-width: 90px;
+      text-align: center;
+    }
+
+    .progress-bar-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: var(--bg-card);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 6.25%;
+      background: linear-gradient(90deg, var(--primary-accent), var(--secondary-accent));
+      transition: width 0.3s ease;
+    }
+
+    /* Utility Cards & Grid Systems */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .grid-5 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 24px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+    }
+
+    .card-header-badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--secondary-accent);
+      margin-bottom: 8px;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .card-desc {
+      font-size: 13.5px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Specific Slide Layouts */
+    /* Title Slide */
+    .title-slide {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      background: radial-gradient(circle at center, rgba(14, 165, 233, 0.12) 0%, transparent 70%);
+    }
+
+    .title-tagline {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--secondary-accent);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      background: var(--accent-glow);
+      padding: 6px 18px;
+      border-radius: 30px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+
+    .title-main {
+      font-size: 52px;
+      font-weight: 800;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      max-width: 900px;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .title-sub {
+      font-size: 22px;
+      color: var(--text-muted);
+      max-width: 750px;
+      font-weight: 400;
+      margin-bottom: 48px;
+    }
+
+    .title-meta {
+      display: flex;
+      gap: 40px;
+      font-size: 14px;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border-color);
+      padding-top: 24px;
+    }
+
+    .title-meta-item strong {
+      color: var(--text-main);
+    }
+
+    /* Flow Diagrams */
+    .flow-sequence {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px 20px;
+      gap: 20px;
+    }
+
+    .flow-actor {
+      min-width: 170px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--secondary-accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .flow-action {
+      flex: 1;
+      font-size: 13.5px;
+      color: var(--text-main);
+    }
+
+    .flow-arrow {
+      color: var(--text-dim);
+      font-weight: 700;
+    }
+
+    /* Screenshot Frames */
+    .screenshot-placeholder-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      height: 100%;
+    }
+
+    .screenshot-frame {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .screenshot-label {
+      background: #0F172A;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--secondary-accent);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .screenshot-img-wrapper {
+      flex: 1;
+      position: relative;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .screenshot-img-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top left;
+      transition: transform 0.3s;
+    }
+
+    .screenshot-img-wrapper img:hover {
+      transform: scale(1.03);
+    }
+
+    .placeholder-badge {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+      border: 1px solid var(--secondary-accent);
+      color: var(--secondary-accent);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+
+    /* Interface Table Cards */
+    .interface-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .interface-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .interface-direction {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--secondary-accent);
+      margin-bottom: 8px;
+    }
+
+    .interface-trigger {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Key Value Highlight Callout */
+    .stat-callout {
+      text-align: center;
+      padding: 20px;
+      background: rgba(2, 132, 199, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 12px;
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--secondary-accent);
+      font-family: var(--font-mono);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+    }
+
+    /* Modal / Drawer for Navigation */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      width: 80%;
+      max-width: 900px;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 32px;
+    }
+
+    .modal-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .thumb-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+
+    .thumb-card:hover {
+      border-color: var(--secondary-accent);
+      background: var(--bg-card-hover);
+    }
+  </style>
+</head>
+<body>
+
+<div class="deck-container">
+  <div class="progress-bar-container">
+    <div class="progress-bar-fill" id="progressFill"></div>
+  </div>
+
+  <!-- SLIDE STAGE -->
+  <div class="slide-stage">
+
+    <!-- SLIDE 1: Title -->
+    <div class="slide active" id="slide-1">
+      <div class="title-slide">
+        <div class="title-tagline">Client Presentation | Production Rollout Overview</div>
+        <h1 class="title-main">Ikwezi Transporter Portal</h1>
+        <p class="title-sub">Proof-of-Delivery (POD) Automation & SAP S/4HANA Integration Blueprint</p>
+        
+        <div class="title-meta">
+          <div class="title-meta-item">Prepared For: <strong>Ikwezi Mining Limited</strong></div>
+          <div class="title-meta-item">Delivered By: <strong>Abhiyanta India Solutions Pvt. Ltd.</strong></div>
+          <div class="title-meta-item">Environment: <strong>SAP BTP / Cloud Foundry</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Executive Summary -->
+    <div class="slide" id="slide-2">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Executive Summary</h2>
+          <p class="slide-subtitle">Project core mission, architectural solution, and current deployment status</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 02 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3" style="margin-bottom: 24px;">
+          <div class="card" style="border-left: 4px solid var(--danger);">
+            <div class="card-header-badge" style="color: var(--danger);">The Core Problem</div>
+            <div class="card-title">Paper Bottleneck</div>
+            <div class="card-desc">Manual PO, weighbridge slip, and invoice reconciliation creates 30+ day payment delays, lost physical tickets, and unverified weight-mismatch disputes.</div>
+          </div>
+
+          <div class="card" style="border-left: 4px solid var(--primary-accent);">
+            <div class="card-header-badge">The Digital Solution</div>
+            <div class="card-title">Automated Portal</div>
+            <div class="card-desc">End-to-end Transporter Portal connecting drivers, weighbridges, and mine admins with SAP S/4HANA via 7 secure REST/OData interfaces and OCR validation.</div>
+          </div>
+
+          <div class="card" style="border-left: 4px solid var(--success);">
+            <div class="card-header-badge" style="color: var(--success);">Current Status</div>
+            <div class="card-title">Live Demonstration</div>
+            <div class="card-desc">Production-ready React SPA prototype successfully compiled and running live on SAP BTP Cloud Foundry with full 14-step operational workflow.</div>
+          </div>
+        </div>
+
+        <div class="stat-callout" style="display: flex; justify-content: space-around; align-items: center;">
+          <div>
+            <div class="stat-number">7</div>
+            <div class="stat-label">SAP OData Interfaces</div>
+          </div>
+          <div>
+            <div class="stat-number">±0.5%</div>
+            <div class="stat-label">Weight Tolerance Gate</div>
+          </div>
+          <div>
+            <div class="stat-number">85%</div>
+            <div class="stat-label">OCR Confidence Gate</div>
+          </div>
+          <div>
+            <div class="stat-number">100%</div>
+            <div class="stat-label">Digital Audit Trail</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: The Problem -->
+    <div class="slide" id="slide-3">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">The Operational Challenge</h2>
+          <p class="slide-subtitle">Friction points in current manual transport & invoice reconciliation workflows</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 03 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-header-badge">01. Manual Reconciliation</div>
+            <div class="card-title">Paper PO & Waybill Matching</div>
+            <div class="card-desc">Transporters submit paper Proof-of-Delivery slips and paper invoices manually. Accounts teams manually cross-check line items against SAP purchase orders, creating extreme processing backlogs.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">02. Audit Gaps</div>
+            <div class="card-title">Missing Digital Audit Trail</div>
+            <div class="card-desc">Without immutable digital timestamps or driver e-signatures at point of order acceptance and receipt, disputes over dispatch authorization and delivery timelines cannot be conclusively resolved.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">03. Weight Disputes</div>
+            <div class="card-title">Mine vs Customer Mismatches</div>
+            <div class="card-desc">Weight discrepancies between the mine weighbridge exit log and customer destination receiving tickets trigger protracted disputes, blocking invoice parking in SAP MIRO.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">04. Vendor Cash Flow</div>
+            <div class="card-title">Delayed Transporter Payments</div>
+            <div class="card-desc">Processing delays extend payment cycles to 30–60 days, straining transporter working capital, damaging vendor relations, and risking freight operational continuity.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: The Solution -->
+    <div class="slide" id="slide-4">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">The Solution Overview</h2>
+          <p class="slide-subtitle">Unified side-by-side Transporter Portal integrating operational logistics with SAP core</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 04 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="card" style="padding: 32px; background: linear-gradient(135deg, #151F32 0%, #0F172A 100%); border-color: rgba(56, 189, 248, 0.3); margin-bottom: 24px;">
+          <h3 style="font-size: 20px; font-weight: 700; color: var(--secondary-accent); margin-bottom: 12px;">Digitized End-to-End Freight Lifecycle</h3>
+          <p style="font-size: 15px; color: var(--text-main); line-height: 1.7;">
+            The <strong>Ikwezi Transporter Portal</strong> establishes a seamless digital bridge between field transport execution and SAP S/4HANA ERP core. Transporters digitally review and accept Purchase Orders via interactive canvas e-signatures; dual weighbridge checkpoints (pre-dispatch empty/loaded and customer receiving) record verified payload weights; drivers upload scanned POD slips directly from mobile devices; an integrated OCR engine validates document metadata against SAP records within strict tolerance thresholds ($\pm 0.5\% / 0.1\text{ Ton}$); and approved deliveries automatically generate freight invoices posted directly as parked MIRO invoices in SAP.
+          </p>
+        </div>
+
+        <div class="grid-4">
+          <div class="card" style="text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">✍️</div>
+            <div class="card-title" style="font-size: 15px;">1. E-Sign PO</div>
+            <div class="card-desc" style="font-size: 12px;">Digital acceptance & immutable audit hash</div>
+          </div>
+          <div class="card" style="text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">⚖️</div>
+            <div class="card-title" style="font-size: 15px;">2. Weighbridge</div>
+            <div class="card-desc" style="font-size: 12px;">Dual empty & loaded verification checks</div>
+          </div>
+          <div class="card" style="text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">🔍</div>
+            <div class="card-title" style="font-size: 15px;">3. OCR POD Match</div>
+            <div class="card-desc" style="font-size: 12px;">Automated tolerance & confidence validation</div>
+          </div>
+          <div class="card" style="text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 8px;">⚡</div>
+            <div class="card-title" style="font-size: 15px;">4. SAP MIRO Park</div>
+            <div class="card-desc" style="font-size: 12px;">Auto-calculated freight & ERP posting</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Process Flow Diagram -->
+    <div class="slide" id="slide-5">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Process Flow Diagram</h2>
+          <p class="slide-subtitle">Sequence diagram mapping the 6 operational actors across the delivery lifecycle</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 05 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="flow-sequence">
+          <div class="flow-step">
+            <div class="flow-actor">1. Company Admin</div>
+            <div class="flow-action">Uploads signed contract → Syncs to SAP S/4HANA → Allocates Purchase Orders to Transporter Admin</div>
+            <div class="flow-arrow">➜</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-actor">2. Transporter Admin</div>
+            <div class="flow-action">Reviews incoming PO rate agreements → Assigns transport runs and vehicles to specific Drivers</div>
+            <div class="flow-arrow">➜</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-actor">3. Driver</div>
+            <div class="flow-action">Accepts assigned PO with digital signature canvas → Navigates delivery run to customer site</div>
+            <div class="flow-arrow">➜</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-actor">4. Weighbridge Supervisor</div>
+            <div class="flow-action">Logs empty tare & loaded gross weighbridge checks → Validates payload weight against PO limits</div>
+            <div class="flow-arrow">➜</div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-actor">5. Customer (Receiving)</div>
+            <div class="flow-action">Performs on-site weight verification → Issues physical stamp on POD slip → Driver uploads scanned POD</div>
+            <div class="flow-arrow">➜</div>
+          </div>
+          <div class="flow-step" style="border-color: var(--secondary-accent); background: rgba(2, 132, 199, 0.1);">
+            <div class="flow-actor" style="color: var(--text-main);">6. SAP S/4HANA Core</div>
+            <div class="flow-action">OCR matches waybill text → Admin approves → System auto-posts parked MIRO invoice & archives POD</div>
+            <div class="flow-arrow" style="color: var(--secondary-accent);">✔</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Roles & Personas -->
+    <div class="slide" id="slide-6">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Roles & Personas</h2>
+          <p class="slide-subtitle">5 distinct portal login personas with clear operational responsibilities</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 06 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-5">
+          <div class="card" style="padding: 16px;">
+            <div class="card-header-badge" style="color: #60A5FA;">Ikwezi Mining</div>
+            <div class="card-title" style="font-size: 15px;">Company Admin</div>
+            <div class="card-desc" style="font-size: 12px; margin-top: 8px;">Uploads contracts, distributes PO allocations, reviews OCR discrepancy overrides, and grants final invoice clearance.</div>
+          </div>
+
+          <div class="card" style="padding: 16px;">
+            <div class="card-header-badge" style="color: #2DD4BF;">Logistics Vendor</div>
+            <div class="card-title" style="font-size: 15px;">Transporter Admin</div>
+            <div class="card-desc" style="font-size: 12px; margin-top: 8px;">Accepts transport POs, assigns dispatches to drivers, tracks live trip statuses, and submits freight billing invoices.</div>
+          </div>
+
+          <div class="card" style="padding: 16px;">
+            <div class="card-header-badge" style="color: #FBBF24;">Transport Ops</div>
+            <div class="card-title" style="font-size: 15px;">Driver</div>
+            <div class="card-desc" style="font-size: 12px; margin-top: 8px;">E-signs PO task acceptances, hands over physical waybills, and scans/uploads stamped POD slips via mobile interface.</div>
+          </div>
+
+          <div class="card" style="padding: 16px;">
+            <div class="card-header-badge" style="color: #A78BFA;">Mine Operations</div>
+            <div class="card-title" style="font-size: 15px;">Weighbridge Supervisor</div>
+            <div class="card-desc" style="font-size: 12px; margin-top: 8px;">Executes empty/loaded weighments before dispatch, logs weighbridge tickets, and enforces payload tolerance rules.</div>
+          </div>
+
+          <div class="card" style="padding: 16px;">
+            <div class="card-header-badge" style="color: #F472B6;">Client Site</div>
+            <div class="card-title" style="font-size: 15px;">Customer (Client)</div>
+            <div class="card-desc" style="font-size: 12px; margin-top: 8px;">Performs destination weight checks upon delivery, applies official receiving stamp, and files receiving reports.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: Tech Stack -->
+    <div class="slide" id="slide-7">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Technology Stack</h2>
+          <p class="slide-subtitle">Enterprise production architecture components and integration layers</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 07 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header-badge">Frontend Application</div>
+            <div class="card-title">React 19 & TypeScript</div>
+            <div class="card-desc">Built with React 19.2, Vite 8 build engine, React Router v7, Lucide icons, and modern CSS Grid design tokens for clean, responsive UI execution.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">Backend & Microservices</div>
+            <div class="card-title">Node.js / SAP CAP</div>
+            <div class="card-desc">Target Node.js / Express microservices or SAP BTP Cloud Application Programming (CAP) model executing custom ABAP OData endpoints.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">Cloud Hosting</div>
+            <div class="card-title">SAP BTP Cloud Foundry</div>
+            <div class="card-desc">Deployed via SAP BTP staticfile buildpack with Nginx web server, SSL edge termination, and seamless enterprise domain mapping.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">SAP Gateway Layer</div>
+            <div class="card-title">7 REST / OData Interfaces</div>
+            <div class="card-desc">Exposes 7 standard OData v2/v4 endpoints for real-time bi-directional synchronization with SAP S/4HANA core ERP tables.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">OCR Intelligence Engine</div>
+            <div class="card-title">SAP BTP DIX Service</div>
+            <div class="card-desc">Document Information Extraction engine with automated text parsing, $\pm 0.5\% / 0.1\text{T}$ weight matching, and 85% confidence score validation.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">Enterprise Database</div>
+            <div class="card-title">SAP S/4HANA DB (HANA)</div>
+            <div class="card-desc">Native SAP HANA database backend utilizing standard vendor master tables (`LFA1`, `EKKO`, `EKPO`, `RBKP`, `RSEG`).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: SAP Integration Architecture -->
+    <div class="slide" id="slide-8">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">SAP Integration Architecture</h2>
+          <p class="slide-subtitle">The 7 OData & REST interfaces connecting the portal to SAP S/4HANA</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 08 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-4" style="gap: 12px; margin-bottom: 12px;">
+          <div class="interface-card">
+            <div>
+              <div class="interface-name">1. PO Sync</div>
+              <div class="interface-direction">SAP ➔ Portal | OData GET</div>
+            </div>
+            <div class="interface-trigger">Triggered when transport Purchase Orders are released in SAP.</div>
+          </div>
+
+          <div class="interface-card">
+            <div>
+              <div class="interface-name">2. PO Acceptance & E-Sign</div>
+              <div class="interface-direction">Portal ➔ SAP | REST POST</div>
+            </div>
+            <div class="interface-trigger">Triggered when Driver/Transporter signs acceptance on canvas.</div>
+          </div>
+
+          <div class="interface-card">
+            <div>
+              <div class="interface-name">3. Offload / SRN Sync</div>
+              <div class="interface-direction">SAP ➔ Portal | OData GET</div>
+            </div>
+            <div class="interface-trigger">Triggered daily on scheduled batch extraction of weighbridge logs.</div>
+          </div>
+
+          <div class="interface-card">
+            <div>
+              <div class="interface-name">4. POD Attachment Sync</div>
+              <div class="interface-direction">Portal ➔ SAP | REST POST</div>
+            </div>
+            <div class="interface-trigger">Triggered upon Admin approval of verified scanned POD document.</div>
+          </div>
+        </div>
+
+        <div class="grid-3" style="gap: 12px;">
+          <div class="interface-card">
+            <div>
+              <div class="interface-name">5. Invoice Park (MIRO)</div>
+              <div class="interface-direction">Portal ➔ SAP | REST POST</div>
+            </div>
+            <div class="interface-trigger">Triggered when transporter submits auto-calculated freight invoice.</div>
+          </div>
+
+          <div class="interface-card">
+            <div>
+              <div class="interface-name">6. Payment & Ledger Sync</div>
+              <div class="interface-direction">SAP ➔ Portal | OData GET</div>
+            </div>
+            <div class="interface-trigger">Triggered when Accounts clearing updates occur in SAP FI-AP.</div>
+          </div>
+
+          <div class="interface-card">
+            <div>
+              <div class="interface-name">7. Master Data Sync</div>
+              <div class="interface-direction">SAP ➔ Portal | OData GET</div>
+            </div>
+            <div class="interface-trigger">Triggered on incremental updates to Vendor (`LFA1`) tables.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: OCR Validation Logic -->
+    <div class="slide" id="slide-9">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">OCR Validation & Verification Logic</h2>
+          <p class="slide-subtitle">Automated tolerance gates, confidence scoring, and fraud interception</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 09 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card" style="border-top: 4px solid var(--secondary-accent);">
+            <div class="card-header-badge">Rule 01. Weight Tolerance Gate</div>
+            <div class="card-title">±0.5% or 0.1 Ton Threshold</div>
+            <div class="card-desc">Extracted offload weight from scanned POD slip must match SAP weighbridge log within <strong>±0.5%</strong> or <strong>0.1 Ton</strong> (whichever is lower). Discrepancies exceeding threshold automatically flag the trip and generate a debit note draft.</div>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--warning);">
+            <div class="card-header-badge">Rule 02. Confidence Score Intercept</div>
+            <div class="card-title">85% Text Extraction Gate</div>
+            <div class="card-desc">If character recognition confidence score for key fields (Waybill #, Truck Registration #, Net Weight) falls below <strong>85%</strong> (e.g. blurry/damaged slip), automatic pass is blocked and document routes to Admin for manual review.</div>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--success);">
+            <div class="card-header-badge">Rule 03. Fraud & Typo Interception</div>
+            <div class="card-title">Automated String Matching</div>
+            <div class="card-desc">Exact case-insensitive cross-checks verify truck registration text against authorized dispatch master records, intercepting altered documents, duplicate uploads, and typographical entry errors prior to SAP posting.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 10: Screenshots — Login & Dashboards -->
+    <div class="slide" id="slide-10">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Portal Interface — Login & Dashboards</h2>
+          <p class="slide-subtitle">Live system screenshots: Persona Selection & Core Management Dashboards</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 10 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="screenshot-placeholder-container">
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>01. Multi-Persona Login</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/01_login.png" alt="Login Screen" onerror="this.src='./demo-files/login_fallback.png'">
+              <div class="placeholder-badge">LOGIN SCREEN</div>
+            </div>
+          </div>
+
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>02. Transporter Dashboard</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/02_transporter_dashboard.png" alt="Transporter Dashboard" onerror="this.src='./demo-files/transporter_dashboard.png'">
+              <div class="placeholder-badge">TRANSPORTER DASHBOARD</div>
+            </div>
+          </div>
+
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>03. Mine Admin Dashboard</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/06_admin_dashboard.png" alt="Admin Dashboard" onerror="this.src='./demo-files/admin_dashboard.png'">
+              <div class="placeholder-badge">ADMIN DASHBOARD</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 11: Screenshots — PO Accept / Weighbridge / POD Upload -->
+    <div class="slide" id="slide-11">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Portal Interface — Logistics Execution</h2>
+          <p class="slide-subtitle">Live system screenshots: PO E-Signature, Weighbridge Entry, & POD OCR Matching</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 11 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="screenshot-placeholder-container">
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>01. PO Accept & E-Sign</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/03_po_accept_esign.png" alt="PO Acceptance Canvas" onerror="this.src='./demo-files/po_esign.png'">
+              <div class="placeholder-badge">E-SIGN CANVAS</div>
+            </div>
+          </div>
+
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>02. Weighbridge Supervisor</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/09_weighbridge_entry.png" alt="Weighbridge Entry" onerror="this.src='./demo-files/weighbridge.png'">
+              <div class="placeholder-badge">WEIGHBRIDGE LOG</div>
+            </div>
+          </div>
+
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>03. POD Upload & OCR Match</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/04_pod_upload_ocr.png" alt="POD OCR Verification" onerror="this.src='./demo-files/pod_ocr.png'">
+              <div class="placeholder-badge">OCR MATCH VIEW</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 12: Screenshots — Admin Approval & Invoice Clearance -->
+    <div class="slide" id="slide-12">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Portal Interface — Verification & Billing</h2>
+          <p class="slide-subtitle">Live system screenshots: Admin Approval Queue, Transporter Invoices, & SAP MIRO Clearance</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 12 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="screenshot-placeholder-container">
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>01. Admin Approval Queue</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/07_admin_approvals.png" alt="Admin Verification Queue" onerror="this.src='./demo-files/admin_approvals.png'">
+              <div class="placeholder-badge">APPROVAL QUEUE</div>
+            </div>
+          </div>
+
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>02. Transporter Freight Invoices</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/05_transporter_invoices.png" alt="Transporter Invoices" onerror="this.src='./demo-files/transporter_invoices.png'">
+              <div class="placeholder-badge">FREIGHT INVOICES</div>
+            </div>
+          </div>
+
+          <div class="screenshot-frame">
+            <div class="screenshot-label">
+              <span>03. SAP MIRO Control</span>
+              <span style="font-size: 10px; color: var(--text-dim);">Live UI View</span>
+            </div>
+            <div class="screenshot-img-wrapper">
+              <img src="./screenshots/08_admin_invoices.png" alt="SAP MIRO Clearance" onerror="this.src='./demo-files/admin_invoices.png'">
+              <div class="placeholder-badge">MIRO CLEARANCE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 13: Exception Handling -->
+    <div class="slide" id="slide-13">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Exception Handling Framework</h2>
+          <p class="slide-subtitle">Automated resolution protocols for edge cases and system discrepancies</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 13 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card" style="border-left: 4px solid var(--warning);">
+            <div class="card-header-badge" style="color: var(--warning);">Exception 01</div>
+            <div class="card-title">OCR Data Discrepancy</div>
+            <div class="card-desc">Scanned POD weight differs from SAP weighbridge record. System flags entry with <code>Discrepancy</code> badge and routes to Admin for visual inspection, manual entry override, or formal rejection back to transporter.</div>
+          </div>
+
+          <div class="card" style="border-left: 4px solid var(--danger);">
+            <div class="card-header-badge" style="color: var(--danger);">Exception 02</div>
+            <div class="card-title">SAP Gateway Timeout</div>
+            <div class="card-desc">S/4HANA server downtime blocks immediate MIRO posting. System saves payload locally in <code>Pending Sync</code> status and executes 5 automatic retries (30-min intervals) before triggering IT alert.</div>
+          </div>
+
+          <div class="card" style="border-left: 4px solid var(--primary-accent);">
+            <div class="card-header-badge">Exception 03</div>
+            <div class="card-title">Weight Tolerance Breach</div>
+            <div class="card-desc">Transit material loss exceeds $\pm 0.5\%$ weight tolerance limit. Portal automatically generates a debit note draft matching net difference for Accounts team review prior to clearing invoice payment.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 14: Current Status / What's Live -->
+    <div class="slide" id="slide-14">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Current Status — Production Prototype</h2>
+          <p class="slide-subtitle">Distinguishing live deployed functionality from target SAP integration layers</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 14 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card" style="border-top: 4px solid var(--success);">
+            <div class="card-header-badge" style="color: var(--success);">Live Capabilities Today</div>
+            <ul style="list-style-type: none; font-size: 13.5px; color: var(--text-main); display: flex; flex-direction: column; gap: 10px;">
+              <li>✔ Deployed live on SAP BTP Cloud Foundry via Nginx static buildpack.</li>
+              <li>✔ Complete 5-persona role switching (Company Admin, Transporter Admin, Driver, Supervisor, Customer).</li>
+              <li>✔ Interactive signature drawing canvas for PO acceptance.</li>
+              <li>✔ Side-by-side OCR matching interface with color-coded green/red validation states.</li>
+              <li>✔ Auto-calculation of freight billing totals ($\text{Tons} \times \text{Rate/Ton}$).</li>
+            </ul>
+          </div>
+
+          <div class="card" style="border-top: 4px solid var(--secondary-accent);">
+            <div class="card-header-badge">Target SAP Integration Layer</div>
+            <ul style="list-style-type: none; font-size: 13.5px; color: var(--text-main); display: flex; flex-direction: column; gap: 10px;">
+              <li>⏳ Replacing local Excel mock database with live PostgreSQL / SAP HANA database.</li>
+              <li>⏳ Connecting the 7 REST/OData API payload endpoints (SOP v1.0 schema) to SAP Gateway sandbox.</li>
+              <li>⏳ Activating live SAP BTP Document Information Extraction API for real-time PDF scanning.</li>
+              <li>⏳ Enabling OAuth2 / SAP Identity Authentication Service (IAS) SSO login.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 15: Roadmap / Next Steps -->
+    <div class="slide" id="slide-15">
+      <div class="slide-header">
+        <div>
+          <h2 class="slide-title">Implementation Roadmap</h2>
+          <p class="slide-subtitle">Phased execution plan for full SAP S/4HANA production rollout</p>
+        </div>
+        <div class="slide-num-badge">SLIDE 15 / 16</div>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <div class="card-header-badge">Phase 1 (Months 1–2)</div>
+            <div class="card-title">Database & Auth Core</div>
+            <div class="card-desc">Migrate mock state to enterprise PostgreSQL/HANA database; implement SAP IAS (Identity Authentication Service) for secure OAuth2 single sign-on across all 5 user roles.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">Phase 2 (Months 3–4)</div>
+            <div class="card-title">Live SAP OData Sync</div>
+            <div class="card-desc">Connect the 7 REST/OData interface endpoints to SAP S/4HANA Gateway sandbox; activate real-time MIRO invoice posting RFCs and SAP ArchiveLink document storage.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-header-badge">Phase 3 (Months 5–6)</div>
+            <div class="card-title">Mobile OCR & GPS</div>
+            <div class="card-desc">Deploy native PWA mobile scanning app with camera OCR capability for drivers on site; integrate real-time GPS telemetry feed for live transit monitoring and automated gate check-ins.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 16: Closing / Contact -->
+    <div class="slide" id="slide-16">
+      <div class="title-slide">
+        <div class="title-tagline">Thank You</div>
+        <h1 class="title-main" style="font-size: 44px;">Empowering Ikwezi Mining's Freight Logistics</h1>
+        <p class="title-sub" style="font-size: 18px; max-width: 700px; margin-bottom: 36px;">
+          Transforming manual paper reconciliation into an automated, auditable, and seamless SAP-integrated transporter platform.
+        </p>
+
+        <div class="card" style="padding: 24px 40px; text-align: center; border-color: var(--secondary-accent); background: var(--bg-card);">
+          <div style="font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Abhiyanta India Solutions Pvt. Ltd.</div>
+          <div style="font-size: 13px; color: var(--text-muted);">Engineering & Delivery Project Team</div>
+          <div style="font-size: 13px; color: var(--secondary-accent); margin-top: 8px; font-family: var(--font-mono);">contact@abhiyanta.in | www.abhiyanta.in</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONTROLS BAR -->
+  <div class="controls-bar">
+    <div class="brand-tag">
+      <span class="highlight">Ikwezi Transporter Portal</span> | Abhiyanta India Solutions
+    </div>
+
+    <div class="nav-controls">
+      <button class="btn-nav" id="btnPrev" onclick="prevSlide()">‹ Prev</button>
+      <div class="counter-display" id="slideCounter">Slide 1 of 16</div>
+      <button class="btn-nav" id="btnNext" onclick="nextSlide()">Next ›</button>
+      <button class="btn-nav" onclick="toggleModal()">☰ All Slides</button>
+    </div>
+  </div>
+</div>
+
+<!-- ALL SLIDES MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h3 style="font-size: 18px; font-weight: 700; color: var(--text-main);">Slide Directory</h3>
+      <button class="btn-nav" onclick="toggleModal()">✕ Close</button>
+    </div>
+    <div class="modal-grid" id="modalGrid"></div>
+  </div>
+</div>
+
+<script>
+  let currentSlide = 1;
+  const totalSlides = 16;
+
+  const slideTitles = [
+    "01. Title & Presentation Info",
+    "02. Executive Summary",
+    "03. The Operational Challenge",
+    "04. The Solution Overview",
+    "05. Process Flow Diagram",
+    "06. Roles & Personas",
+    "07. Technology Stack",
+    "08. SAP Integration Architecture",
+    "09. OCR Validation Logic",
+    "10. Login & Dashboards Screenshots",
+    "11. PO Accept & Weighbridge Screenshots",
+    "12. Admin Approval & Invoices Screenshots",
+    "13. Exception Handling Framework",
+    "14. Current Status & Capabilities",
+    "15. Implementation Roadmap",
+    "16. Closing & Contact Info"
+  ];
+
+  function updateSlideDisplay() {
+    document.querySelectorAll('.slide').forEach((slide, idx) => {
+      if (idx + 1 === currentSlide) {
+        slide.classList.add('active');
+      } else {
+        slide.classList.remove('active');
+      }
+    });
+
+    document.getElementById('slideCounter').textContent = `Slide ${currentSlide} of ${totalSlides}`;
+    document.getElementById('btnPrev').disabled = currentSlide === 1;
+    document.getElementById('btnNext').disabled = currentSlide === totalSlides;
+
+    const progressPct = (currentSlide / totalSlides) * 100;
+    document.getElementById('progressFill').style.width = `${progressPct}%`;
+  }
+
+  function nextSlide() {
+    if (currentSlide < totalSlides) {
+      currentSlide++;
+      updateSlideDisplay();
+    }
+  }
+
+  function prevSlide() {
+    if (currentSlide > 1) {
+      currentSlide--;
+      updateSlideDisplay();
+    }
+  }
+
+  function goToSlide(slideNum) {
+    currentSlide = slideNum;
+    updateSlideDisplay();
+    toggleModal();
+  }
+
+  function toggleModal() {
+    const modal = document.getElementById('modalOverlay');
+    modal.classList.toggle('active');
+  }
+
+  // Populate Modal Grid
+  const modalGrid = document.getElementById('modalGrid');
+  slideTitles.forEach((title, idx) => {
+    const card = document.createElement('div');
+    card.className = 'thumb-card';
+    card.textContent = title;
+    card.onclick = () => goToSlide(idx + 1);
+    modalGrid.appendChild(card);
+  });
+
+  // Keyboard navigation
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'Space') {
+      nextSlide();
+    } else if (e.key === 'ArrowLeft') {
+      prevSlide();
+    } else if (e.key === 'Escape') {
+      const modal = document.getElementById('modalOverlay');
+      if (modal.classList.contains('active')) modal.classList.remove('active');
+    }
+  });
+
+  // Initialize
+  updateSlideDisplay();
+</script>
+
+</body>
+</html>

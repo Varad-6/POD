@@ -21,7 +21,7 @@ export const TransporterDashboard: React.FC = () => {
   const getActivities = () => {
     const list = [
       { id: '1', text: 'Invoice INV-2026-0091 posted (MIRO clearing completed)', date: '2026-07-10', icon: <Receipt size={14} /> },
-      { id: '2', text: 'POD WB-998800 approved by Ikwezi Logistics Admin', date: '2026-07-05', icon: <CheckCircle size={14} style={{ color: 'var(--success-text)' }} /> },
+      { id: '2', text: 'POD WB-998800 approved by Logistics Admin', date: '2026-07-05', icon: <CheckCircle size={14} style={{ color: 'var(--success-text)' }} /> },
       { id: '3', text: 'Purchase Order #4500012350 signed and accepted', date: '2026-06-26', icon: <FileSignature size={14} /> },
     ];
 

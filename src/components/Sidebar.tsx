@@ -65,7 +65,7 @@ export const Sidebar: React.FC = () => {
       {/* Logo Area */}
       <div style={{ marginBottom: '32px', paddingLeft: '8px' }}>
         <h1 style={{ fontSize: '18px', fontWeight: '700', color: '#ffffff', letterSpacing: '0.5px' }}>
-          Ikwezi Portal
+          Logistics Portal
         </h1>
         <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '2px', textTransform: 'uppercase', fontWeight: 600 }}>
           {currentUser.role.replace('_', ' ')}

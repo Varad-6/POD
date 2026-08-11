@@ -185,9 +185,50 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
           <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--neutral-primary)' }}>
             {currentUser.displayName || currentUser.companyName}
           </p>
-          <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', fontWeight: 500 }}>
-            {currentUser.role === 'COMPANY_ADMIN' || currentUser.role === 'IKWEZI_ADMIN' || currentUser.role === 'SUPERVISOR' || currentUser.role === 'CUSTOMER' ? (currentUser.role === 'SUPERVISOR' ? 'Supervisor' : currentUser.role === 'CUSTOMER' ? 'Customer' : 'Company Admin') : (currentUser.role === 'DRIVER' ? 'Driver' : 'Transporter Admin')}
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+            <span 
+              style={(() => {
+                const role = currentUser.role;
+                let bg = '#f1f5f9';
+                let color = '#475569';
+                if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN') {
+                  bg = '#EFF6FF';
+                  color = '#2563EB';
+                } else if (role === 'SUPERVISOR') {
+                  bg = '#E0F2FE';
+                  color = '#0284C7';
+                } else if (role === 'CUSTOMER') {
+                  bg = '#F5F3FF';
+                  color = '#7C3AED';
+                } else if (role === 'DRIVER') {
+                  bg = '#FEF3C7';
+                  color = '#B45309';
+                } else if (role === 'TRANSPORTER_ADMIN' || role === 'TRANSPORTER') {
+                  bg = '#F0FDFA';
+                  color = '#0D9488';
+                }
+                return {
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  backgroundColor: bg,
+                  color: color,
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  border: `1px solid ${color}33`,
+                  display: 'inline-block'
+                };
+              })()}
+            >
+              {(() => {
+                const role = currentUser.role;
+                if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN') return 'Company Admin';
+                if (role === 'SUPERVISOR') return 'Supervisor';
+                if (role === 'CUSTOMER') return 'Customer';
+                if (role === 'DRIVER') return 'Truck Driver';
+                return 'Transporter Admin';
+              })()}
+            </span>
+          </div>
         </div>
 
         {/* Avatar */}

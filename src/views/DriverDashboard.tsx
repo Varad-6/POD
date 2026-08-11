@@ -141,6 +141,8 @@ export const DriverDashboard: React.FC = () => {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
           backgroundColor: 'var(--primary-color)',
           color: '#ffffff',
           borderRadius: '12px',
@@ -150,11 +152,22 @@ export const DriverDashboard: React.FC = () => {
         }}
       >
         <div>
-          <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px' }}>Welcome back, Dumisani!</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px', color: '#ffffff' }}>Welcome back, Dumisani!</h2>
           <p style={{ fontSize: '14px', color: '#e2e8f0' }}>Manage your active deliveries, e-sign PO arrival, and upload verified POD slips.</p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <span style={{ fontSize: '12px', fontWeight: 'bold', border: '1px solid #ffffff', padding: '4px 10px', borderRadius: '999px' }}>
+          <span 
+            style={{ 
+              fontSize: '12px', 
+              fontWeight: 700, 
+              backgroundColor: 'rgba(255, 255, 255, 0.15)', 
+              color: '#ffffff', 
+              padding: '6px 14px', 
+              borderRadius: '999px',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}
+          >
             Role: Truck Driver
           </span>
         </div>

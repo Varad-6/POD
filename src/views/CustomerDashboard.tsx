@@ -10,9 +10,13 @@ export const CustomerDashboard: React.FC = () => {
   const [selectedRecord, setSelectedRecord] = useState<OffloadRecord | null>(null);
   const [selectedBillingRecord, setSelectedBillingRecord] = useState<OffloadRecord | null>(null);
 
-  // Form states (Weights)
+  // Form states (Weights & Exceptions)
   const [grossWeight, setGrossWeight] = useState('');
   const [tareWeight, setTareWeight] = useState('');
+  const [damagedUnits, setDamagedUnits] = useState('0');
+  const [damagedWeightKg, setDamagedWeightKg] = useState('0');
+  const [damageReason, setDamageReason] = useState('None');
+  const [weightExceptionReason, setWeightExceptionReason] = useState<OffloadRecord['weightExceptionReason']>('NONE');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states (Invoice)
@@ -30,14 +34,20 @@ export const CustomerDashboard: React.FC = () => {
 
   const handleSelectRecord = (rec: OffloadRecord) => {
     setSelectedRecord(rec);
-    setGrossWeight('');
-    setTareWeight('');
+    setGrossWeight(rec.dispatchGrossWeightKg ? rec.dispatchGrossWeightKg.toString() : '55100');
+    setTareWeight(rec.dispatchTareWeightKg ? rec.dispatchTareWeightKg.toString() : '21100');
+    setDamagedUnits('0');
+    setDamagedWeightKg('0');
+    setDamageReason('None');
+    setWeightExceptionReason('NONE');
   };
 
   const handleVerifyWeights = async (approve: boolean) => {
     if (!selectedRecord) return;
     const gross = parseFloat(grossWeight);
     const tare = parseFloat(tareWeight);
+    const damUnits = parseInt(damagedUnits) || 0;
+    const damW = parseFloat(damagedWeightKg) || 0;
 
     if (isNaN(gross) || gross <= 0 || isNaN(tare) || tare <= 0 || gross <= tare) {
       alert('Please enter valid positive gross and tare weights where Gross exceeds Tare.');
@@ -45,7 +55,16 @@ export const CustomerDashboard: React.FC = () => {
     }
 
     setIsSubmitting(true);
-    await customerLogWeights(selectedRecord.waybillNo, gross, tare, approve);
+    await customerLogWeights(
+      selectedRecord.waybillNo,
+      gross,
+      tare,
+      damUnits,
+      damW,
+      damageReason,
+      weightExceptionReason,
+      approve
+    );
     setIsSubmitting(false);
     setSelectedRecord(null);
   };
@@ -155,14 +174,14 @@ export const CustomerDashboard: React.FC = () => {
                 title={`Customer Siding Offload Check — Waybill #${selectedRecord.waybillNo}`}
                 style={{ border: '2px solid var(--primary-color)', marginTop: '24px', animation: 'fadeIn 0.2s' }}
               >
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Arrival Loaded Weight (Gross in kg)
+                      Arrival Gross Weight (Loaded Truck in kg)
                     </label>
                     <input
                       type="number"
-                      placeholder="e.g. 71600"
+                      placeholder="e.g. 55100"
                       value={grossWeight}
                       onChange={(e) => setGrossWeight(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
@@ -170,16 +189,86 @@ export const CustomerDashboard: React.FC = () => {
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Post-Unload Empty Weight (Tare in kg)
+                      Arrival Tare Weight (Empty Truck in kg)
                     </label>
                     <input
                       type="number"
-                      placeholder="e.g. 22800"
+                      placeholder="e.g. 21100"
                       value={tareWeight}
                       onChange={(e) => setTareWeight(e.target.value)}
                       style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
                     />
                   </div>
+                </div>
+
+                {/* Damaged Units & Cargo Loss Consideration */}
+                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '16px', borderRadius: '6px', marginBottom: '20px' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#c2410c', margin: '0 0 12px 0' }}>
+                    📦 Damaged Cargo & Unit Loss Inspection
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#9a3412', fontWeight: 600, marginBottom: '4px' }}>
+                        Damaged Units (Count)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={damagedUnits}
+                        onChange={(e) => setDamagedUnits(e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #fdba74', borderRadius: '4px', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#9a3412', fontWeight: 600, marginBottom: '4px' }}>
+                        Damaged Weight (kg)
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="0"
+                        value={damagedWeightKg}
+                        onChange={(e) => setDamagedWeightKg(e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #fdba74', borderRadius: '4px', fontSize: '13px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: '#9a3412', fontWeight: 600, marginBottom: '4px' }}>
+                        Damage Reason / Defect Category
+                      </label>
+                      <select
+                        value={damageReason}
+                        onChange={(e) => setDamageReason(e.target.value)}
+                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #fdba74', borderRadius: '4px', fontSize: '13px', backgroundColor: '#ffffff' }}
+                      >
+                        <option value="None">None / Fully Intact</option>
+                        <option value="Torn packaging spillage">Torn Packaging Spillage</option>
+                        <option value="Moisture & Contamination">Moisture & Contamination</option>
+                        <option value="Physical Handling Destruction">Physical Handling Damage</option>
+                        <option value="Missing Units / Short Delivery">Missing Units / Shortage</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weight Exception Reason Categorization */}
+                <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', padding: '16px', borderRadius: '6px', marginBottom: '20px' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0369a1', margin: '0 0 8px 0' }}>
+                    ⚙️ Operational Weight Exception Audit
+                  </h4>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#0369a1', fontWeight: 600, marginBottom: '4px' }}>
+                    Select Exception Classification (if Arrival Net differs from Mine Net):
+                  </label>
+                  <select
+                    value={weightExceptionReason}
+                    onChange={(e) => setWeightExceptionReason(e.target.value as any)}
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #7dd3fc', borderRadius: '4px', fontSize: '13px', backgroundColor: '#ffffff' }}
+                  >
+                    <option value="NONE">NONE — Net Weight Matches Siding</option>
+                    <option value="MOISTURE_EVAPORATION">Moisture Evaporation (Dry En-route Shrinkage)</option>
+                    <option value="RAIN_ABSORPTION">Rainwater Absorption (Open-top Transit Gain)</option>
+                    <option value="SCALE_CALIBRATION_OFFSET">Weighbridge Scale Calibration Difference</option>
+                    <option value="UNLOAD_SPILLAGE">Unloading Hopper Spillage</option>
+                  </select>
                 </div>
 
                 {grossWeight && tareWeight && parseFloat(grossWeight) > parseFloat(tareWeight) && (
@@ -313,7 +402,7 @@ export const CustomerDashboard: React.FC = () => {
                     boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
                   }}
                 >
-                  <span style={{ fontSize: '14px', letterSpacing: '1px' }}>IKWEZI</span>
+                  <span style={{ fontSize: '14px', letterSpacing: '1px' }}>APEX</span>
                   <span>VERIFIED</span>
                   <span style={{ fontSize: '8px' }}>GATE-PASS</span>
                 </div>
