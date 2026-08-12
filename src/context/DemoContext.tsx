@@ -13,7 +13,7 @@ import {
 // Types
 export interface User {
   username: string;
-  role: 'COMPANY_ADMIN' | 'TRANSPORTER_ADMIN' | 'DRIVER' | 'CUSTOMER' | 'SUPERVISOR' | 'TRANSPORTER' | 'IKWEZI_ADMIN';
+  role: 'COMPANY_ADMIN' | 'TRANSPORTER_ADMIN' | 'DRIVER' | 'CUSTOMER' | 'SUPERVISOR' | 'TRANSPORTER' | 'IKWEZI_ADMIN' | 'MM_ADMIN';
   companyName?: string;
   displayName?: string;
   driverLicenseNo?: string;
