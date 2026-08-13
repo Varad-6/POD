@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ClipboardCheck, FileText, AlertCircle, AlertTriangle, CheckCircle2, X } from 'lucide-react';
+import { ClipboardCheck, FileText, AlertCircle, AlertTriangle, CheckCircle2, ShieldCheck, Scale, FileSpreadsheet, RefreshCw } from 'lucide-react';
 import { useDemo, OffloadRecord } from '../context/DemoContext';
 import { Card } from '../components/Card';
 import { Modal } from '../components/Modal';
@@ -101,86 +101,130 @@ export const AdminApprovals: React.FC = () => {
     setRejectComment('');
   };
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '8px 16px',
-    fontSize: '13px',
-    fontWeight: 600,
-    backgroundColor: active ? 'var(--primary-color)' : 'transparent',
-    color: active ? '#ffffff' : 'var(--neutral-secondary)',
-    border: '1px solid ' + (active ? 'var(--primary-color)' : 'var(--border-grey)'),
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'all 0.15s'
-  });
-
   const awaitingCount = offloadRecords.filter(r => r.podStatus === 'SUBMITTED_AWAITING_APPROVAL').length;
   const reviewCount = offloadRecords.filter(r => r.podStatus === 'LOW_CONFIDENCE').length;
 
   return (
-    <div>
-      {/* Queue Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-        <button onClick={() => setActiveTab('AWAITING')} style={tabStyle(activeTab === 'AWAITING')}>
-          Awaiting Approval ({awaitingCount})
-        </button>
-        <button onClick={() => setActiveTab('REVIEW')} style={tabStyle(activeTab === 'REVIEW')}>
-          Flagged for Review ({reviewCount})
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      
+      {/* Header section */}
+      <div className="page-header__row">
+        <div>
+          <h1 className="page-header__title">POD Verification Queue</h1>
+          <p className="page-header__subtitle">
+            Inspect physical weighbridge tickets, AI OCR match confidence, 4-point weights, and exception clearances.
+          </p>
+        </div>
+        
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '8px', background: 'var(--neutral-100)', padding: '4px', borderRadius: '10px', border: '1px solid var(--neutral-200)' }}>
+          <button 
+            onClick={() => setActiveTab('AWAITING')} 
+            className={`btn btn-sm ${activeTab === 'AWAITING' ? 'btn-dark' : 'btn-ghost'}`}
+            style={{ borderRadius: '6px' }}
+          >
+            Awaiting Approval ({awaitingCount})
+          </button>
+          <button 
+            onClick={() => setActiveTab('REVIEW')} 
+            className={`btn btn-sm ${activeTab === 'REVIEW' ? 'btn-dark' : 'btn-ghost'}`}
+            style={{ borderRadius: '6px' }}
+          >
+            Flagged for Audit ({reviewCount})
+          </button>
+        </div>
       </div>
 
       {queue.length === 0 ? (
         <EmptyState 
-          message={activeTab === 'AWAITING' ? "No pending approvals" : "No flagged documents under review"} 
-          submessage="Outstanding PODs have been completely verified and approved."
+          message={activeTab === 'AWAITING' ? "Verification Queue Clean" : "No Flagged Scans"} 
+          submessage="All submitted Proof-of-Delivery documents have been processed and approved for SAP invoice creation."
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
           {queue.map((rec) => {
             const ocr = getOCRData(rec);
             const matchStatus = ocr ? ocr.matchResult : 'MATCH';
 
             return (
-              <Card key={rec.waybillNo} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div 
+                key={rec.waybillNo} 
+                className="card"
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  height: '100%',
+                  borderLeft: matchStatus === 'MATCH' ? '4px solid var(--success-500)' : matchStatus === 'MISMATCH' ? '4px solid var(--error-600)' : '4px solid var(--warning-500)'
+                }}
+              >
+                <div className="card-header">
                   <div>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary-color)' }}>
-                      Waybill #{rec.waybillNo}
+                    <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--neutral-500)', textTransform: 'uppercase' }}>WAYBILL DOCUMENT</span>
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)' }}>
+                      #{rec.waybillNo}
                     </h3>
-                    <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)' }}>
-                      Transporter: Sipho Transport Services
-                    </p>
                   </div>
                   <StatusBadge status={rec.podStatus} />
                 </div>
 
-                <div 
-                  style={{ 
-                    backgroundColor: 'var(--page-bg)', 
-                    padding: '12px 16px', 
-                    borderRadius: '8px', 
-                    marginBottom: '20px',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}
-                >
-                  <div>
-                    <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)' }}>OCR SCAN MATCH STATUS</p>
-                    <p style={{ fontWeight: 700, marginTop: '2px', color: matchStatus === 'MATCH' ? 'var(--success-text)' : matchStatus === 'MISMATCH' ? 'var(--error-text)' : 'var(--warning-text)' }}>
-                      {matchStatus === 'MATCH' ? '✅ Full Match' : matchStatus === 'MISMATCH' ? '⚠ Discrepancy Found' : '❔ Low Confidence'}
-                    </p>
+                <div className="card-body" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div className="data-grid-2">
+                    <div>
+                      <div className="data-pair__label">Transporter</div>
+                      <div className="data-pair__value">{rec.driverName ? 'Sipho Transport Services' : 'MPL Transport'}</div>
+                    </div>
+                    <div>
+                      <div className="data-pair__label">Driver / Vehicle</div>
+                      <div className="data-pair__value">{rec.driverName} ({rec.horseRegNo})</div>
+                    </div>
                   </div>
-                  <StatusBadge status={matchStatus} />
+
+                  <div className="data-grid-2">
+                    <div>
+                      <div className="data-pair__label">Product Material</div>
+                      <div className="data-pair__value">{rec.productDescription}</div>
+                    </div>
+                    <div>
+                      <div className="data-pair__label">Dispatch Net Vol</div>
+                      <div className="data-pair__value mono" style={{ fontWeight: 700 }}>
+                        {((rec.dispatchNetWeightKg || rec.netWeightKg || 34000) / 1000).toFixed(2)} TON
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* OCR Match Status Indicator */}
+                  <div 
+                    style={{ 
+                      backgroundColor: 'var(--neutral-50)', 
+                      padding: '10px 14px', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--neutral-200)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: '4px'
+                    }}
+                  >
+                    <div>
+                      <p style={{ fontSize: '10px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>OCR VERIFICATION SCORE</p>
+                      <p style={{ fontWeight: 700, fontSize: '13px', marginTop: '2px', color: matchStatus === 'MATCH' ? 'var(--success-600)' : matchStatus === 'MISMATCH' ? 'var(--error-600)' : 'var(--warning-600)' }}>
+                        {matchStatus === 'MATCH' ? '✅ Full Match (98%)' : matchStatus === 'MISMATCH' ? '⚠ Discrepancy Flagged' : '❔ Low Confidence Scan'}
+                      </p>
+                    </div>
+                    <StatusBadge status={matchStatus} />
+                  </div>
                 </div>
 
-                <button 
-                  onClick={() => setSelectedRecord(rec)}
-                  className="btn btn-primary"
-                  style={{ width: '100%', marginTop: 'auto' }}
-                >
-                  Review Delivery Note
-                </button>
-              </Card>
+                <div className="card-footer" style={{ background: 'var(--neutral-50)' }}>
+                  <button 
+                    onClick={() => setSelectedRecord(rec)}
+                    className="btn btn-dark"
+                    style={{ width: '100%', padding: '9px 16px', fontSize: '13px' }}
+                  >
+                    Inspect Delivery Slip & Audit Details
+                  </button>
+                </div>
+              </div>
             );
           })}
         </div>
@@ -190,8 +234,8 @@ export const AdminApprovals: React.FC = () => {
       <Modal
         isOpen={!!selectedRecord && !showConfirmOverride && !showRejectModal}
         onClose={() => { if (!isSubmitting) setSelectedRecord(null); }}
-        title={selectedRecord ? `Verification — Waybill ${selectedRecord.waybillNo}` : ''}
-        width="760px"
+        title={selectedRecord ? `Verification Audit — Waybill #${selectedRecord.waybillNo}` : ''}
+        width="820px"
       >
         {selectedRecord && (() => {
           const ocr = getOCRData(selectedRecord);
@@ -200,160 +244,157 @@ export const AdminApprovals: React.FC = () => {
           return (
             <div>
               {/* Split Panels */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-                {/* Left Panel: Scanned Slip */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: '24px', marginBottom: '24px' }}>
+                
+                {/* Left Panel: Scanned Document Preview */}
                 <div>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--neutral-secondary)', marginBottom: '12px' }}>PHYSICAL DELIVERY SLIP</h4>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-500)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>PHYSICAL DELIVERY NOTE SCAN</h4>
+                    <span className="mono" style={{ fontSize: '11px', color: 'var(--neutral-500)' }}>{ocr.fileName}</span>
+                  </div>
                   <div 
                     style={{ 
                       width: '100%', 
-                      height: '260px', 
-                      border: '1px solid var(--border-grey)', 
-                      borderRadius: '8px', 
+                      height: '320px', 
+                      border: '1px solid var(--neutral-200)', 
+                      borderRadius: '12px', 
                       backgroundColor: '#f8fafc',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      overflow: 'hidden'
+                      padding: '20px',
+                      textAlign: 'center',
+                      backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)',
+                      backgroundSize: '16px 16px'
                     }}
                   >
-                    <div 
-                      style={{ 
-                        width: '100%', 
-                        height: '100%', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        color: 'var(--neutral-secondary)',
-                        padding: '16px',
-                        textAlign: 'center',
-                        backgroundImage: 'linear-gradient(45deg, #f1f5f9 25%, transparent 25%), linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f1f5f9 75%), linear-gradient(-45deg, transparent 75%, #f1f5f9 75%)',
-                        backgroundSize: '20px 20px',
-                        backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
-                      }}
-                    >
-                      <FileText size={48} style={{ color: 'var(--primary-color)', marginBottom: '12px' }} />
-                      <p style={{ fontWeight: 600, fontSize: '13px', color: 'var(--neutral-primary)' }}>{ocr.fileName}</p>
-                      <p style={{ fontSize: '11px' }}>Simulated scan preview loaded into reader</p>
+                    <FileText size={48} style={{ color: 'var(--brand-navy)', marginBottom: '12px' }} />
+                    <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--neutral-900)' }}>{ocr.fileName}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--neutral-500)', marginTop: '4px', maxWidth: '220px' }}>
+                      Stamped Proof of Delivery image read into AI OCR pipeline.
+                    </p>
+                    <div style={{ marginTop: '16px', display: 'flex', gap: '6px' }}>
+                      <span className="badge badge-neutral">Resolution: 300 DPI</span>
+                      <span className="badge badge-blue">Confidence: {((ocr.confidence || 0.95) * 100).toFixed(0)}%</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Panel: Side by Side Table */}
+                {/* Right Panel: Side by Side Verification Checklist */}
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                    <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--neutral-secondary)' }}>MATCH VERIFICATION CHECKLIST</h4>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--neutral-secondary)' }}>
-                      OCR Confidence: {(ocr.confidence * 100).toFixed(0)}%
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-500)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>COMPLIANCE CHECKLIST</h4>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--neutral-500)' }}>
+                      SAP PO: {selectedRecord.poRef}
                     </span>
                   </div>
 
-                  {/* Red Mismatch Box */}
+                  {/* Warning Alerts */}
                   {ocr.matchResult === 'MISMATCH' && (
-                    <div style={{ padding: '8px 12px', backgroundColor: 'var(--error-bg)', color: 'var(--error-text)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                      <AlertTriangle size={14} />
-                      Weight variance detected. Action required.
-                    </div>
-                  )}
-
-                  {/* Yellow Blurry Box */}
-                  {ocr.matchResult === 'LOW_CONFIDENCE' && (
-                    <div style={{ padding: '8px 12px', backgroundColor: 'var(--warning-bg)', color: 'var(--warning-text)', borderRadius: '6px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px' }}>
-                      <AlertCircle size={14} />
-                      Low resolution read. Please audit manually.
-                    </div>
-                  )}
-
-                  {/* Fields */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {/* Bilty & Driver License Metadata */}
-                    <div style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>📋 Bilty #: <strong>{selectedRecord.biltyNo || 'BLT-770101'}</strong></span>
-                      <span>🪪 Driver: <strong>{selectedRecord.driverName}</strong> ({selectedRecord.driverLicenseNo || 'DL-850912-EC'})</span>
-                    </div>
-
-                    {/* Waybill */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#fafafa', borderRadius: '6px', border: '1px solid var(--border-grey)' }}>
+                    <div className="alert alert-error" style={{ marginBottom: '12px', padding: '10px 12px', fontSize: '12px' }}>
+                      <AlertTriangle size={16} />
                       <div>
-                        <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>OCR EXTRACTED WAYBILL</p>
-                        <p style={{ fontWeight: 600, fontSize: '13px' }}>{ocr.extracted.waybillNo}</p>
+                        <strong>Discrepancy Detected:</strong> Extracted weight differs from SAP Weighbridge log. Require manual override or rejection.
+                      </div>
+                    </div>
+                  )}
+
+                  {ocr.matchResult === 'LOW_CONFIDENCE' && (
+                    <div className="alert alert-warning" style={{ marginBottom: '12px', padding: '10px 12px', fontSize: '12px' }}>
+                      <AlertCircle size={16} />
+                      <div>
+                        <strong>Low Confidence Scan:</strong> Document scan clarity is below 85%. Audit physical slip manually before approving.
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    
+                    {/* Carrier & Bilty Details */}
+                    <div style={{ padding: '10px 12px', backgroundColor: 'var(--neutral-50)', border: '1px solid var(--neutral-200)', borderRadius: '8px', fontSize: '11.5px', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>📋 Bilty #: <strong className="mono">{selectedRecord.biltyNo || 'BLT-770101'}</strong></span>
+                      <span>🪪 License: <strong className="mono">{selectedRecord.driverLicenseNo || 'DL-850912-EC'}</strong> (Valid)</span>
+                    </div>
+
+                    {/* Waybill Match Row */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: 'var(--neutral-0)', borderRadius: '8px', border: '1px solid var(--neutral-200)' }}>
+                      <div>
+                        <p style={{ fontSize: '9px', color: 'var(--neutral-500)', fontWeight: 700 }}>OCR EXTRACTED WAYBILL</p>
+                        <p className="mono" style={{ fontWeight: 700, fontSize: '13px' }}>{ocr.extracted.waybillNo}</p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>SAP WEIGHBRIDGE RECORD</p>
-                        <p style={{ fontWeight: 600, fontSize: '13px', color: 'var(--success-text)' }}>{selectedRecord.waybillNo}</p>
+                        <p style={{ fontSize: '9px', color: 'var(--neutral-500)', fontWeight: 700 }}>SAP WEIGHBRIDGE SYSTEM RECORD</p>
+                        <p className="mono" style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-600)' }}>{selectedRecord.waybillNo}</p>
                       </div>
                     </div>
 
                     {/* 4-Point Weighbridge Comparison */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid var(--border-grey)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: 'var(--neutral-50)', borderRadius: '8px', border: '1px solid var(--neutral-200)' }}>
                       <div>
-                        <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>DISPATCH NET (MINE SIDING)</p>
-                        <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--primary-color)' }}>
-                          {( (selectedRecord.dispatchNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} Tons
+                        <p style={{ fontSize: '9px', color: 'var(--neutral-500)', fontWeight: 700 }}>DISPATCH NET (MINE SIDING)</p>
+                        <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--brand-navy)' }}>
+                          {( (selectedRecord.dispatchNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} TON
                         </p>
-                        <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)' }}>
-                          T: {selectedRecord.dispatchTareWeightKg || selectedRecord.tareWeightKg}kg | G: {selectedRecord.dispatchGrossWeightKg || selectedRecord.grossWeightKg}kg
+                        <p style={{ fontSize: '10px', color: 'var(--neutral-500)' }}>
+                          Tare: {selectedRecord.dispatchTareWeightKg || selectedRecord.tareWeightKg}kg | Gross: {selectedRecord.dispatchGrossWeightKg || selectedRecord.grossWeightKg}kg
                         </p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '9px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>ARRIVAL NET (CUSTOMER YARD)</p>
-                        <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-text)' }}>
-                          {( (selectedRecord.arrivalNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} Tons
+                        <p style={{ fontSize: '9px', color: 'var(--neutral-500)', fontWeight: 700 }}>ARRIVAL NET (CUSTOMER YARD)</p>
+                        <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-600)' }}>
+                          {( (selectedRecord.arrivalNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} TON
                         </p>
-                        <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)' }}>
-                          G: {selectedRecord.arrivalGrossWeightKg || selectedRecord.grossWeightKg}kg | T: {selectedRecord.arrivalTareWeightKg || selectedRecord.tareWeightKg}kg
+                        <p style={{ fontSize: '10px', color: 'var(--neutral-500)' }}>
+                          Gross: {selectedRecord.arrivalGrossWeightKg || selectedRecord.grossWeightKg}kg | Tare: {selectedRecord.arrivalTareWeightKg || selectedRecord.tareWeightKg}kg
                         </p>
                       </div>
                     </div>
 
-                    {/* Damaged Goods & Net Payable Cargo */}
+                    {/* Damaged Goods Audit */}
                     {selectedRecord.damagedUnits !== undefined && selectedRecord.damagedUnits > 0 && (
-                      <div style={{ padding: '8px 12px', backgroundColor: '#fff7ed', border: '1px solid #ffedd5', borderRadius: '6px', fontSize: '11px', color: '#c2410c' }}>
-                        <strong>⚠️ Damaged Cargo Audit:</strong> {selectedRecord.damagedUnits} units damaged ({selectedRecord.damagedWeightKg || 0} kg loss). Reason: {selectedRecord.damageReason || 'Spillage'}
-                        <div style={{ fontWeight: 800, marginTop: '2px', fontSize: '12px', color: '#9a3412' }}>
-                          Net Billable Payload: {( (selectedRecord.acceptedNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} Tons
+                      <div className="alert alert-warning" style={{ padding: '8px 12px', fontSize: '11px' }}>
+                        <div>
+                          <strong>Damaged Cargo Recorded:</strong> {selectedRecord.damagedUnits} units damaged ({selectedRecord.damagedWeightKg || 0} kg loss). Reason: {selectedRecord.damageReason || 'Spillage'}
+                          <div style={{ fontWeight: 800, marginTop: '2px', fontSize: '12px' }}>
+                            Net Billable Payload: {( (selectedRecord.acceptedNetWeightKg || selectedRecord.netWeightKg) / 1000.0).toFixed(2)} TON
+                          </div>
                         </div>
                       </div>
                     )}
 
-                    {/* Weight Exception Categorization Badge */}
-                    {selectedRecord.weightExceptionReason && selectedRecord.weightExceptionReason !== 'NONE' && (
-                      <div style={{ padding: '8px 12px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '11px', color: '#0369a1' }}>
-                        <strong>⚙️ Exception Classification:</strong> {selectedRecord.weightExceptionReason.replace('_', ' ')}
-                      </div>
-                    )}
-
-                    {/* OCR Weight vs SAP Record */}
+                    {/* Weight Discrepancy Row */}
                     <div 
                       style={{ 
                         display: 'flex', 
                         justifyContent: 'space-between', 
                         padding: '10px 12px', 
-                        backgroundColor: ocr.matchResult === 'MISMATCH' ? 'var(--error-bg)' : '#fafafa', 
-                        borderRadius: '6px', 
-                        border: ocr.matchResult === 'MISMATCH' ? '1px solid var(--error-text)' : '1px solid var(--border-grey)' 
+                        backgroundColor: ocr.matchResult === 'MISMATCH' ? 'var(--error-50)' : 'var(--neutral-0)', 
+                        borderRadius: '8px', 
+                        border: ocr.matchResult === 'MISMATCH' ? '1px solid var(--error-600)' : '1px solid var(--neutral-200)' 
                       }}
                     >
                       <div>
-                        <p style={{ fontSize: '9px', color: ocr.matchResult === 'MISMATCH' ? 'var(--error-text)' : 'var(--neutral-secondary)', fontWeight: 600 }}>OCR EXTRACTED WEIGHT</p>
-                        <p style={{ fontWeight: 700, fontSize: '13px', color: ocr.matchResult === 'MISMATCH' ? 'var(--error-text)' : 'var(--neutral-primary)' }}>
-                          {ocr.extracted.weight.toFixed(2)} Tons
+                        <p style={{ fontSize: '9px', color: ocr.matchResult === 'MISMATCH' ? 'var(--error-600)' : 'var(--neutral-500)', fontWeight: 700 }}>OCR EXTRACTED NET</p>
+                        <p style={{ fontWeight: 700, fontSize: '13px', color: ocr.matchResult === 'MISMATCH' ? 'var(--error-600)' : 'var(--neutral-800)' }}>
+                          {ocr.extracted.weight.toFixed(2)} TON
                         </p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '9px', color: ocr.matchResult === 'MISMATCH' ? 'var(--error-text)' : 'var(--neutral-secondary)', fontWeight: 600 }}>SAP WEIGHBRIDGE RECORD</p>
-                        <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-text)' }}>
-                          {(selectedRecord.netWeightKg / 1000.0).toFixed(2)} Tons
+                        <p style={{ fontSize: '9px', color: ocr.matchResult === 'MISMATCH' ? 'var(--error-600)' : 'var(--neutral-500)', fontWeight: 700 }}>SAP WEIGHBRIDGE NET</p>
+                        <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-600)' }}>
+                          {(selectedRecord.netWeightKg / 1000.0).toFixed(2)} TON
                         </p>
                       </div>
                     </div>
+
                   </div>
                 </div>
+
               </div>
 
               {/* Actions Footer */}
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-grey)', paddingTop: '20px' }}>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1px solid var(--neutral-200)', paddingTop: '16px' }}>
                 <button 
                   onClick={() => setSelectedRecord(null)} 
                   disabled={isSubmitting} 
@@ -366,10 +407,10 @@ export const AdminApprovals: React.FC = () => {
                   <button 
                     onClick={handleApprove} 
                     disabled={isSubmitting} 
-                    className="btn btn-primary"
-                    style={{ backgroundColor: 'var(--success-text)', borderColor: 'var(--success-text)', minWidth: '120px' }}
+                    className="btn btn-success"
+                    style={{ minWidth: '130px' }}
                   >
-                    {isSubmitting ? 'Approving...' : 'Approve POD'}
+                    {isSubmitting ? 'Approving...' : 'Approve & Pass POD'}
                   </button>
                 )}
 
@@ -386,17 +427,14 @@ export const AdminApprovals: React.FC = () => {
                       onClick={handleManualReviewFlag} 
                       disabled={isSubmitting} 
                       className="btn btn-secondary"
-                      style={{ minWidth: '130px' }}
                     >
-                      Send for Review
+                      Flag for Review
                     </button>
                     <button 
                       onClick={() => setShowConfirmOverride(true)} 
                       disabled={isSubmitting} 
                       className="btn btn-primary"
-                      style={{ border: '2px solid var(--warning-text)', backgroundColor: 'transparent', color: 'var(--warning-text)' }}
-                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--warning-bg)'}
-                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                      style={{ backgroundColor: 'var(--warning-600)', borderColor: 'var(--warning-600)' }}
                     >
                       Override & Approve
                     </button>
@@ -415,8 +453,7 @@ export const AdminApprovals: React.FC = () => {
                     <button 
                       onClick={handleManualReviewFlag} 
                       disabled={isSubmitting} 
-                      className="btn btn-secondary"
-                      style={{ minWidth: '150px' }}
+                      className="btn btn-primary"
                     >
                       Send for Manual Review
                     </button>
@@ -428,20 +465,20 @@ export const AdminApprovals: React.FC = () => {
         })()}
       </Modal>
 
-      {/* Override Confirm Sub-step Modal */}
+      {/* Override Confirm Modal */}
       <Modal
         isOpen={showConfirmOverride}
         onClose={() => setShowConfirmOverride(false)}
-        title="Verify Manual Override"
-        width="450px"
+        title="Confirm Manual Override"
+        width="460px"
       >
         <div style={{ textAlign: 'center' }}>
-          <AlertTriangle size={36} style={{ color: 'var(--warning-text)', marginBottom: '16px' }} />
-          <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--neutral-primary)', marginBottom: '12px' }}>
-            Manual Discrepancy Verification
+          <AlertTriangle size={36} style={{ color: 'var(--warning-600)', marginBottom: '16px' }} />
+          <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--neutral-900)', marginBottom: '8px' }}>
+            Discrepancy Manual Override
           </p>
-          <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', marginBottom: '24px', lineHeight: 1.5 }}>
-            Please confirm that you have physically inspected the uploaded delivery slip and have verified that the SAP system weight is correct despite the OCR discrepancy.
+          <p style={{ fontSize: '13px', color: 'var(--neutral-500)', marginBottom: '24px', lineHeight: 1.5 }}>
+            Please confirm that you have physically inspected the uploaded delivery slip and verified that the weighbridge Net payload is accurate despite the OCR scan variance.
           </p>
           
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
@@ -455,9 +492,9 @@ export const AdminApprovals: React.FC = () => {
               onClick={handleOverrideApprove}
               disabled={isSubmitting}
               className="btn btn-primary"
-              style={{ backgroundColor: 'var(--warning-text)', borderColor: 'var(--warning-text)' }}
+              style={{ backgroundColor: 'var(--warning-600)', borderColor: 'var(--warning-600)' }}
             >
-              {isSubmitting ? 'Processing...' : 'Confirm & Approve'}
+              {isSubmitting ? 'Processing...' : 'Confirm & Approve Override'}
             </button>
           </div>
         </div>
@@ -467,7 +504,7 @@ export const AdminApprovals: React.FC = () => {
       <Modal
         isOpen={showRejectModal}
         onClose={() => setShowRejectModal(false)}
-        title={selectedRecord ? `Reject POD — Waybill ${selectedRecord.waybillNo}` : ''}
+        title={selectedRecord ? `Reject POD — Waybill #${selectedRecord.waybillNo}` : ''}
         width="480px"
       >
         <form onSubmit={handleRejectSubmit}>
@@ -477,7 +514,6 @@ export const AdminApprovals: React.FC = () => {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               className="form-input"
-              style={{ padding: '10px' }}
               required
             >
               <option value="">Select a reason...</option>
@@ -493,9 +529,9 @@ export const AdminApprovals: React.FC = () => {
               <textarea 
                 value={rejectComment}
                 onChange={(e) => setRejectComment(e.target.value)}
-                placeholder="Enter details about why this slip was rejected..."
+                placeholder="Specify rejection details..."
                 className="form-input"
-                style={{ minHeight: '100px', resize: 'vertical' }}
+                style={{ minHeight: '90px', resize: 'vertical' }}
                 required
               />
             </div>
@@ -512,14 +548,15 @@ export const AdminApprovals: React.FC = () => {
             <button 
               type="submit"
               disabled={!rejectReason || (rejectReason === 'Other (comment)' && !rejectComment) || isSubmitting}
-              className="btn btn-primary"
-              style={{ backgroundColor: 'var(--error-text)', borderColor: 'var(--error-text)' }}
+              className="btn btn-destructive"
+              style={{ backgroundColor: 'var(--error-600)', color: '#ffffff' }}
             >
               {isSubmitting ? 'Rejecting...' : 'Confirm Rejection'}
             </button>
           </div>
         </form>
       </Modal>
+
     </div>
   );
 };
