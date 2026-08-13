@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDemo, OffloadRecord } from '../context/DemoContext';
 import { Card } from '../components/Card';
-import { Scale, CheckCircle2, ClipboardCheck, AlertOctagon, FileSpreadsheet, PlusCircle, ArrowDownCircle } from 'lucide-react';
+import { Scale, CheckCircle2, ClipboardCheck, AlertOctagon, FileSpreadsheet, PlusCircle, ArrowDownCircle, PackageCheck, AlertTriangle } from 'lucide-react';
 import { formatDate, formatCurrency } from '../utils/format';
 
 export const CustomerDashboard: React.FC = () => {
@@ -24,9 +24,7 @@ export const CustomerDashboard: React.FC = () => {
   const [fileName, setFileName] = useState('');
 
   // Filter records
-  // 1. Pending arrival: EN_ROUTE
-  const incomingRecords = offloadRecords.filter((rec) => rec.podStatus === 'EN_ROUTE');
-  // 2. Ready for billing: DELIVERED_STAMPED or POD_APPROVED
+  const incomingRecords = offloadRecords.filter((rec) => rec.podStatus === 'EN_ROUTE' || rec.podStatus === 'SUPERVISOR_APPROVED');
   const billingRecords = offloadRecords.filter((rec) => 
     (rec.podStatus === 'DELIVERED_STAMPED' || rec.podStatus === 'POD_APPROVED' || rec.podStatus === 'APPROVED_INVOICE_PENDING') &&
     !invoices.some((inv) => inv.waybillNo === rec.waybillNo && inv.status !== 'AWAITING_INVOICE_SUBMISSION')
@@ -34,8 +32,8 @@ export const CustomerDashboard: React.FC = () => {
 
   const handleSelectRecord = (rec: OffloadRecord) => {
     setSelectedRecord(rec);
-    setGrossWeight(rec.dispatchGrossWeightKg ? rec.dispatchGrossWeightKg.toString() : '55100');
-    setTareWeight(rec.dispatchTareWeightKg ? rec.dispatchTareWeightKg.toString() : '21100');
+    setGrossWeight(rec.dispatchGrossWeightKg ? (rec.dispatchGrossWeightKg / 1000).toString() : '55.10');
+    setTareWeight(rec.dispatchTareWeightKg ? (rec.dispatchTareWeightKg / 1000).toString() : '21.10');
     setDamagedUnits('0');
     setDamagedWeightKg('0');
     setDamageReason('None');
@@ -44,23 +42,23 @@ export const CustomerDashboard: React.FC = () => {
 
   const handleVerifyWeights = async (approve: boolean) => {
     if (!selectedRecord) return;
-    const gross = parseFloat(grossWeight);
-    const tare = parseFloat(tareWeight);
+    const grossKg = Math.round((parseFloat(grossWeight) || 55.1) * 1000);
+    const tareKg = Math.round((parseFloat(tareWeight) || 21.1) * 1000);
     const damUnits = parseInt(damagedUnits) || 0;
-    const damW = parseFloat(damagedWeightKg) || 0;
+    const damKg = Math.round((parseFloat(damagedWeightKg) || 0) * 1000);
 
-    if (isNaN(gross) || gross <= 0 || isNaN(tare) || tare <= 0 || gross <= tare) {
-      alert('Please enter valid positive gross and tare weights where Gross exceeds Tare.');
+    if (grossKg <= tareKg) {
+      alert('Gross weight must be strictly greater than Tare weight.');
       return;
     }
 
     setIsSubmitting(true);
     await customerLogWeights(
       selectedRecord.waybillNo,
-      gross,
-      tare,
+      grossKg,
+      tareKg,
       damUnits,
-      damW,
+      damKg,
       damageReason,
       weightExceptionReason,
       approve
@@ -73,7 +71,6 @@ export const CustomerDashboard: React.FC = () => {
     if (!selectedBillingRecord || !invoiceNo) return;
     setIsSubmitting(true);
     
-    // Auto-calculate file name
     const finalFile = fileName || `tax-invoice-${invoiceNo}.pdf`;
     await submitInvoice(selectedBillingRecord.waybillNo, invoiceNo, finalFile);
     
@@ -83,505 +80,225 @@ export const CustomerDashboard: React.FC = () => {
     setFileName('');
   };
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '10px 20px',
-    fontSize: '14px',
-    fontWeight: 600,
-    backgroundColor: active ? 'var(--primary-color)' : 'transparent',
-    color: active ? '#ffffff' : 'var(--neutral-secondary)',
-    border: '1px solid ' + (active ? 'var(--primary-color)' : 'var(--border-grey)'),
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-    marginRight: '8px'
-  });
-
   return (
-    <div>
-      {/* Tab Selectors */}
-      <div style={{ display: 'flex', marginBottom: '24px' }}>
-        <button onClick={() => setActiveTab('RECEIVING')} style={tabStyle(activeTab === 'RECEIVING')}>
-          📥 Receiving Yard Gate
-        </button>
-        <button onClick={() => setActiveTab('BILLING')} style={tabStyle(activeTab === 'BILLING')}>
-          🧾 Site Billing & Invoices
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      
+      {/* Header Banner */}
+      <div className="page-header__row">
+        <div>
+          <h1 className="page-header__title">Customer Receiving Yard</h1>
+          <p className="page-header__subtitle">
+            Verify inbound deliveries, log customer weighbridge weights, report cargo damage, and confirm physical delivery receipt.
+          </p>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '8px', background: 'var(--neutral-100)', padding: '4px', borderRadius: '10px', border: '1px solid var(--neutral-200)' }}>
+          <button 
+            onClick={() => setActiveTab('RECEIVING')} 
+            className={`btn btn-sm ${activeTab === 'RECEIVING' ? 'btn-dark' : 'btn-ghost'}`}
+            style={{ borderRadius: '6px' }}
+          >
+            Inbound Deliveries ({incomingRecords.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('BILLING')} 
+            className={`btn btn-sm ${activeTab === 'BILLING' ? 'btn-dark' : 'btn-ghost'}`}
+            style={{ borderRadius: '6px' }}
+          >
+            Confirmed Receipts ({billingRecords.length})
+          </button>
+        </div>
       </div>
 
       {activeTab === 'RECEIVING' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px' }}>
-          {/* Left: Incoming Queue */}
-          <div>
-            <Card title="Incoming Shipments Awaiting Offload Weight Check">
-              {incomingRecords.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--neutral-secondary)' }}>
-                  <ArrowDownCircle size={48} style={{ color: 'var(--neutral-secondary)', marginBottom: '12px', strokeWidth: 1.5 }} />
-                  <p style={{ fontWeight: 600, fontSize: '15px', margin: 0 }}>No trucks en route</p>
-                  <p style={{ fontSize: '13px', margin: '4px 0 0 0' }}>All siding dispatches have been loaded and weighed.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {incomingRecords.map((rec) => {
-                    const po = purchaseOrders.find((p) => p.purchaseOrderNo === rec.poRef);
-                    return (
-                      <div 
-                        key={rec.waybillNo}
-                        style={{
-                          border: '1px solid var(--border-grey)',
-                          borderRadius: '8px',
-                          padding: '16px',
-                          backgroundColor: '#ffffff',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => handleSelectRecord(rec)}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                            <span style={{ fontWeight: 700, color: 'var(--primary-color)', fontSize: '15px' }}>
-                              Waybill #{rec.waybillNo}
-                            </span>
-                            <span style={{ fontSize: '11px', color: '#1d4ed8', backgroundColor: '#dbeafe', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                              IN TRANSIT
-                            </span>
-                          </div>
-                          <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', fontWeight: 500, margin: '2px 0' }}>
-                            Driver: <strong>{rec.driverName}</strong> | Vehicle: <strong>{rec.horseRegNo}</strong>
-                          </p>
-                          <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: 0 }}>
-                            Siding Dispatch Net Weight: <strong>{(rec.netWeightKg / 1000).toFixed(2)} Tons</strong>
-                          </p>
-                        </div>
-                        <button 
-                          className="btn btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
-                          onClick={(e) => { e.stopPropagation(); handleSelectRecord(rec); }}
-                        >
-                          Check Weights
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-
-            {/* Weighbridge Entry card */}
-            {selectedRecord && (
-              <Card 
-                title={`Customer Siding Offload Check — Waybill #${selectedRecord.waybillNo}`}
-                style={{ border: '2px solid var(--primary-color)', marginTop: '24px', animation: 'fadeIn 0.2s' }}
-              >
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Arrival Gross Weight (Loaded Truck in kg)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 55100"
-                      value={grossWeight}
-                      onChange={(e) => setGrossWeight(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Arrival Tare Weight (Empty Truck in kg)
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 21100"
-                      value={tareWeight}
-                      onChange={(e) => setTareWeight(e.target.value)}
-                      style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
-                    />
-                  </div>
-                </div>
-
-                {/* Damaged Units & Cargo Loss Consideration */}
-                <div style={{ backgroundColor: '#fff7ed', border: '1px solid #ffedd5', padding: '16px', borderRadius: '6px', marginBottom: '20px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#c2410c', margin: '0 0 12px 0' }}>
-                    📦 Damaged Cargo & Unit Loss Inspection
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr', gap: '12px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', color: '#9a3412', fontWeight: 600, marginBottom: '4px' }}>
-                        Damaged Units (Count)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={damagedUnits}
-                        onChange={(e) => setDamagedUnits(e.target.value)}
-                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #fdba74', borderRadius: '4px', fontSize: '13px' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', color: '#9a3412', fontWeight: 600, marginBottom: '4px' }}>
-                        Damaged Weight (kg)
-                      </label>
-                      <input
-                        type="number"
-                        placeholder="0"
-                        value={damagedWeightKg}
-                        onChange={(e) => setDamagedWeightKg(e.target.value)}
-                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #fdba74', borderRadius: '4px', fontSize: '13px' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', color: '#9a3412', fontWeight: 600, marginBottom: '4px' }}>
-                        Damage Reason / Defect Category
-                      </label>
-                      <select
-                        value={damageReason}
-                        onChange={(e) => setDamageReason(e.target.value)}
-                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #fdba74', borderRadius: '4px', fontSize: '13px', backgroundColor: '#ffffff' }}
-                      >
-                        <option value="None">None / Fully Intact</option>
-                        <option value="Torn packaging spillage">Torn Packaging Spillage</option>
-                        <option value="Moisture & Contamination">Moisture & Contamination</option>
-                        <option value="Physical Handling Destruction">Physical Handling Damage</option>
-                        <option value="Missing Units / Short Delivery">Missing Units / Shortage</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Weight Exception Reason Categorization */}
-                <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', padding: '16px', borderRadius: '6px', marginBottom: '20px' }}>
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0369a1', margin: '0 0 8px 0' }}>
-                    ⚙️ Operational Weight Exception Audit
-                  </h4>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#0369a1', fontWeight: 600, marginBottom: '4px' }}>
-                    Select Exception Classification (if Arrival Net differs from Mine Net):
-                  </label>
-                  <select
-                    value={weightExceptionReason}
-                    onChange={(e) => setWeightExceptionReason(e.target.value as any)}
-                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #7dd3fc', borderRadius: '4px', fontSize: '13px', backgroundColor: '#ffffff' }}
-                  >
-                    <option value="NONE">NONE — Net Weight Matches Siding</option>
-                    <option value="MOISTURE_EVAPORATION">Moisture Evaporation (Dry En-route Shrinkage)</option>
-                    <option value="RAIN_ABSORPTION">Rainwater Absorption (Open-top Transit Gain)</option>
-                    <option value="SCALE_CALIBRATION_OFFSET">Weighbridge Scale Calibration Difference</option>
-                    <option value="UNLOAD_SPILLAGE">Unloading Hopper Spillage</option>
-                  </select>
-                </div>
-
-                {grossWeight && tareWeight && parseFloat(grossWeight) > parseFloat(tareWeight) && (
-                  (() => {
-                    const gross = parseFloat(grossWeight);
-                    const tare = parseFloat(tareWeight);
-                    if (isNaN(gross) || isNaN(tare) || gross <= tare) return null;
-                    
-                    const receivedNet = (gross - tare) / 1000;
-                    const mineNet = selectedRecord.netWeightKg / 1000;
-                    const variance = receivedNet - mineNet;
-                    const absVariance = Math.abs(variance);
-                    const isMatched = absVariance < 0.05; // within 50 kg variance counts as a match
-
-                    return (
-                      <>
-                        {/* Real-time Match Status Flag Alert */}
-                        <div 
-                          style={{ 
-                            padding: '12px 16px', 
-                            borderRadius: '6px', 
-                            marginBottom: '20px', 
-                            backgroundColor: isMatched ? 'var(--success-bg)' : 'var(--warning-bg)', 
-                            color: isMatched ? 'var(--success-text)' : 'var(--warning-text)', 
-                            border: '1px solid ' + (isMatched ? 'var(--success-text)' : 'var(--warning-text)'),
-                            fontSize: '13px',
-                            fontWeight: 600,
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}
-                        >
-                          <span style={{ fontSize: '16px' }}>{isMatched ? '✓' : '⚠'}</span>
-                          <span>
-                            {isMatched 
-                              ? "WEIGHTS MATCH: Received payload perfectly matches Mine Siding weight (0.00 Tons difference)." 
-                              : `WEIGHT MISMATCH DETECTED: Variance of ${absVariance.toFixed(2)} Tons compared to Mine Siding.`}
-                          </span>
-                        </div>
-
-                        <div 
-                          style={{ 
-                            backgroundColor: '#f8fafc', 
-                            border: '1px solid var(--border-grey)', 
-                            borderRadius: '6px', 
-                            padding: '16px', 
-                            marginBottom: '24px',
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr',
-                            gap: '16px'
-                          }}
-                        >
-                          <div>
-                            <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Received Net Payload</p>
-                            <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary-color)', margin: 0 }}>
-                              {receivedNet.toFixed(2)} Tons
-                            </p>
-                            <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: '4px 0 0 0' }}>
-                              Mine Siding Weight: {mineNet.toFixed(2)} Tons
-                            </p>
-                          </div>
-                          <div>
-                            <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Transit Variance</p>
-                            <p style={{ fontSize: '20px', fontWeight: 800, color: isMatched ? 'var(--success-text)' : '#b45309', margin: 0 }}>
-                              {variance.toFixed(2)} Tons
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    );
-                  })()
-                )}
-
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button 
-                    onClick={() => setSelectedRecord(null)}
-                    className="btn btn-secondary"
-                    disabled={isSubmitting}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-                    onClick={() => handleVerifyWeights(false)}
-                    className="btn btn-danger"
-                    disabled={isSubmitting || !grossWeight || !tareWeight}
-                    style={{ backgroundColor: 'var(--error-text)', color: '#ffffff', borderColor: 'var(--error-text)' }}
-                  >
-                    Flag Weight Mismatch
-                  </button>
-                  <button 
-                    onClick={() => handleVerifyWeights(true)}
-                    className="btn btn-primary"
-                    disabled={isSubmitting || !grossWeight || !tareWeight}
-                  >
-                    {isSubmitting ? 'Verifying...' : 'Approve & Apply Stamp'}
-                  </button>
-                </div>
-              </Card>
-            )}
-          </div>
-
-          {/* Right: Stamp Simulation Preview */}
-          <div>
-            <Card title="Visual Proof of Delivery Stamp">
-              <div 
-                style={{ 
-                  border: '2px dashed var(--border-grey)', 
-                  borderRadius: '12px', 
-                  padding: '30px', 
-                  textAlign: 'center', 
-                  backgroundColor: '#fafafa',
-                  color: 'var(--neutral-secondary)'
-                }}
-              >
-                <div 
-                  style={{
-                    width: '100px',
-                    height: '100px',
-                    borderRadius: '50%',
-                    border: '4px solid var(--success-text)',
-                    color: 'var(--success-text)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    margin: '0 auto 16px auto',
-                    transform: 'rotate(-10deg)',
-                    backgroundColor: '#ffffff',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)'
-                  }}
-                >
-                  <span style={{ fontSize: '14px', letterSpacing: '1px' }}>APEX</span>
-                  <span>VERIFIED</span>
-                  <span style={{ fontSize: '8px' }}>GATE-PASS</span>
-                </div>
-                <h4 style={{ fontWeight: 700, color: 'var(--neutral-primary)', fontSize: '15px', marginBottom: '6px' }}>Digital Gate Stamp</h4>
-                <p style={{ fontSize: '13px', margin: 0 }}>
-                  Approving weights applies this stamp to the delivery note, generating the audited POD record.
-                </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px' }}>
+          
+          {/* Incoming Shipment Desk */}
+          <Card title="Active Inbound Deliveries">
+            {incomingRecords.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state__icon"><PackageCheck size={32} /></div>
+                <p className="empty-state__title">No shipments en route to yard</p>
+                <p className="empty-state__body">Dispatched trucks cleared by siding supervisors will appear here for customer receiving verification.</p>
               </div>
-            </Card>
-          </div>
-        </div>
-      ) : (
-        /* Billing Tab */
-        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px' }}>
-          {/* Left: Approved Waybills */}
-          <div>
-            <Card title="Approved Deliveries Ready for Tax Billing">
-              {billingRecords.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--neutral-secondary)' }}>
-                  <FileSpreadsheet size={48} style={{ color: 'var(--neutral-secondary)', marginBottom: '12px', strokeWidth: 1.5 }} />
-                  <p style={{ fontWeight: 600, fontSize: '15px', margin: 0 }}>No billable deliveries available</p>
-                  <p style={{ fontSize: '13px', margin: '4px 0 0 0' }}>All e-stamped cargo runs have already been invoiced.</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {billingRecords.map((rec) => {
-                    const po = purchaseOrders.find((p) => p.purchaseOrderNo === rec.poRef);
-                    const rate = po?.rate || 245.50;
-                    const weight = rec.netWeightKg / 1000;
-                    const subtotal = weight * rate;
-                    
-                    return (
-                      <div 
-                        key={rec.waybillNo}
-                        style={{
-                          border: '1px solid var(--border-grey)',
-                          borderRadius: '8px',
-                          padding: '16px',
-                          backgroundColor: '#ffffff',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          cursor: 'pointer',
-                        }}
-                        onClick={() => setSelectedBillingRecord(rec)}
-                      >
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                            <span style={{ fontWeight: 700, color: 'var(--primary-color)', fontSize: '15px' }}>
-                              Waybill #{rec.waybillNo}
-                            </span>
-                            <span style={{ fontSize: '11px', color: '#047857', backgroundColor: '#d1fae5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                              POD APPROVED
-                            </span>
-                          </div>
-                          <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', fontWeight: 500, margin: '2px 0' }}>
-                            Transporter: <strong>{po?.transporter}</strong> | Quantity: <strong>{weight.toFixed(2)} Tons</strong>
-                          </p>
-                          <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: 0 }}>
-                            Agreement Rate: <strong>{formatCurrency(rate)} / Ton</strong> | Total Value: <strong>{formatCurrency(subtotal)}</strong>
-                          </p>
-                        </div>
-                        <button 
-                          className="btn btn-primary"
-                          style={{ padding: '6px 12px', fontSize: '12px' }}
-                          onClick={(e) => { e.stopPropagation(); setSelectedBillingRecord(rec); }}
-                        >
-                          Generate Invoice
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-          </div>
-
-          {/* Right: Invoice Generation Drawer */}
-          <div>
-            {selectedBillingRecord ? (
-              <Card title="Tax Invoice Generator">
-                {(() => {
-                  const po = purchaseOrders.find((p) => p.purchaseOrderNo === selectedBillingRecord.poRef);
-                  const rate = po?.rate || 245.50;
-                  const weight = selectedBillingRecord.netWeightKg / 1000;
-                  const subtotal = weight * rate;
-                  const vat = subtotal * 0.15;
-                  const total = subtotal + vat;
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {incomingRecords.map((rec) => {
+                  const isSelected = selectedRecord?.waybillNo === rec.waybillNo;
+                  const dispatchNet = ((rec.dispatchNetWeightKg || 34150) / 1000).toFixed(2);
 
                   return (
-                    <div>
-                      <div style={{ marginBottom: '20px', borderBottom: '1px solid var(--border-grey)', paddingBottom: '16px' }}>
-                        <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Delivery Waybill</p>
-                        <p style={{ fontWeight: 600, color: 'var(--neutral-primary)', margin: 0 }}>#{selectedBillingRecord.waybillNo}</p>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                        <div>
-                          <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>DELIVERED QUANTITY</p>
-                          <p style={{ fontWeight: 600, margin: 0 }}>{weight.toFixed(2)} Tons</p>
+                    <div 
+                      key={rec.waybillNo}
+                      style={{
+                        border: isSelected ? '2px solid var(--purple-600)' : '1px solid var(--neutral-200)',
+                        borderRadius: '12px',
+                        padding: '16px 20px',
+                        backgroundColor: isSelected ? 'var(--purple-50)' : 'var(--neutral-0)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onClick={() => handleSelectRecord(rec)}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span className="mono" style={{ fontWeight: 800, color: 'var(--brand-navy)', fontSize: '15px' }}>
+                            #{rec.waybillNo}
+                          </span>
+                          <span className="badge badge-purple">EN ROUTE</span>
                         </div>
-                        <div>
-                          <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>CONTRACT RATE</p>
-                          <p style={{ fontWeight: 600, margin: 0 }}>{formatCurrency(rate)} / Ton</p>
-                        </div>
+                        <p style={{ fontSize: '13px', color: 'var(--neutral-700)', fontWeight: 600 }}>
+                          Driver: {rec.driverName} | Truck: <span className="mono">{rec.horseRegNo}</span>
+                        </p>
+                        <p style={{ fontSize: '12px', color: 'var(--neutral-500)', marginTop: '2px' }}>
+                          Material: {rec.productDescription} | Dispatch Net: <strong>{dispatchNet} TON</strong>
+                        </p>
                       </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid var(--border-grey)', marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                          <span style={{ color: 'var(--neutral-secondary)', fontWeight: 500 }}>Subtotal (Excl. VAT):</span>
-                          <span style={{ fontWeight: 600 }}>{formatCurrency(subtotal)}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                          <span style={{ color: 'var(--neutral-secondary)', fontWeight: 500 }}>VAT (15%):</span>
-                          <span style={{ fontWeight: 600 }}>{formatCurrency(vat)}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', borderTop: '1px solid var(--border-grey)', paddingTop: '8px', marginTop: '4px' }}>
-                          <span style={{ fontWeight: 700, color: 'var(--primary-color)' }}>Total Due:</span>
-                          <span style={{ fontWeight: 800, color: 'var(--primary-color)' }}>{formatCurrency(total)}</span>
-                        </div>
-                      </div>
-
-                      {/* Inputs */}
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                          Tax Invoice Number
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. TAX-2026-9021"
-                          value={invoiceNo}
-                          onChange={(e) => setInvoiceNo(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
-                        />
-                      </div>
-
-                      <div style={{ marginBottom: '24px' }}>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                          Simulated PDF File Name
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. esc-inv-9021.pdf"
-                          value={fileName}
-                          onChange={(e) => setFileName(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                        <button 
-                          onClick={() => setSelectedBillingRecord(null)}
-                          className="btn btn-secondary"
-                          disabled={isSubmitting}
-                        >
-                          Cancel
-                        </button>
-                        <button 
-                          onClick={handleCreateInvoice}
-                          className="btn btn-primary"
-                          disabled={isSubmitting || !invoiceNo}
-                        >
-                          {isSubmitting ? 'Submitting...' : 'Generate & Submit Invoice'}
-                        </button>
-                      </div>
+                      <button 
+                        className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-dark'}`}
+                        style={{ backgroundColor: isSelected ? 'var(--purple-600)' : undefined }}
+                        onClick={(e) => { e.stopPropagation(); handleSelectRecord(rec); }}
+                      >
+                        {isSelected ? 'Verifying...' : 'Verify Delivery'}
+                      </button>
                     </div>
                   );
-                })()}
-              </Card>
-            ) : (
-              <Card title="Action Console">
-                <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', margin: 0, textAlign: 'center', padding: '20px 0' }}>
-                  Select an approved waybill on the left to start billing generation.
-                </p>
-              </Card>
+                })}
+              </div>
             )}
-          </div>
+          </Card>
+
+          {/* Verification Form Card */}
+          {selectedRecord ? (
+            <Card 
+              title={`Customer Verification — Waybill #${selectedRecord.waybillNo}`}
+              style={{ border: '2px solid var(--purple-600)', animation: 'slideUp 0.2s ease-out' }}
+            >
+              <div className="data-grid-2" style={{ marginBottom: '16px' }}>
+                <div className="form-group">
+                  <label>ARRIVAL GROSS WEIGHT (TONS)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 55.10"
+                    value={grossWeight}
+                    onChange={(e) => setGrossWeight(e.target.value)}
+                    className="form-input mono"
+                    style={{ fontSize: '15px', fontWeight: 700 }}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>ARRIVAL TARE WEIGHT (TONS)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="e.g. 21.10"
+                    value={tareWeight}
+                    onChange={(e) => setTareWeight(e.target.value)}
+                    className="form-input mono"
+                    style={{ fontSize: '15px', fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+
+              {/* Damaged Goods Logging */}
+              <div style={{ background: 'var(--neutral-50)', padding: '14px', borderRadius: '10px', border: '1px solid var(--neutral-200)', marginBottom: '20px' }}>
+                <label className="form-label" style={{ color: 'var(--amber-600)' }}>DAMAGED CARGO / SPILLAGE AUDIT</label>
+                <div className="data-grid-2" style={{ marginTop: '8px' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label-normal">Damaged Bags / Units</label>
+                    <input
+                      type="number"
+                      value={damagedUnits}
+                      onChange={(e) => setDamagedUnits(e.target.value)}
+                      className="form-input mono"
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label-normal">Loss Consideration (Tons)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={damagedWeightKg}
+                      onChange={(e) => setDamagedWeightKg(e.target.value)}
+                      className="form-input mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button onClick={() => setSelectedRecord(null)} disabled={isSubmitting} className="btn btn-secondary">
+                  Cancel
+                </button>
+                <button onClick={() => handleVerifyWeights(false)} disabled={isSubmitting} className="btn btn-destructive">
+                  Report Deviation
+                </button>
+                <button onClick={() => handleVerifyWeights(true)} disabled={isSubmitting || !grossWeight || !tareWeight} className="btn btn-success" style={{ minWidth: '160px' }}>
+                  {isSubmitting ? 'Confirming...' : 'Stamp & Confirm Receipt'}
+                </button>
+              </div>
+            </Card>
+          ) : (
+            <Card title="Receiving Desk Instructions">
+              <div style={{ fontSize: '13px', color: 'var(--neutral-600)', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <p>Select an incoming delivery from the list to log customer weighbridge weights and inspect cargo condition.</p>
+                <div className="alert alert-info" style={{ padding: '10px 12px' }}>
+                  ℹ Confirming delivery generates the customer stamped receipt required for driver POD submission.
+                </div>
+              </div>
+            </Card>
+          )}
+
         </div>
+      ) : (
+        /* Confirmed Receipts Desk */
+        <Card title="Confirmed Delivery Records">
+          {billingRecords.length === 0 ? (
+            <div className="empty-state">
+              <p className="empty-state__body">No completed receipts pending invoice creation.</p>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="custom-table">
+                <thead>
+                  <tr>
+                    <th>Waybill #</th>
+                    <th>Transporter</th>
+                    <th>Material</th>
+                    <th className="numeric">Delivered Net</th>
+                    <th className="numeric">Accepted Net</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {billingRecords.map((rec) => {
+                    const delNet = ((rec.arrivalNetWeightKg || rec.dispatchNetWeightKg || 34000) / 1000).toFixed(2);
+                    const accNet = ((rec.acceptedNetWeightKg || rec.arrivalNetWeightKg || 34000) / 1000).toFixed(2);
+
+                    return (
+                      <tr key={rec.waybillNo}>
+                        <td className="mono" style={{ fontWeight: 700 }}>#{rec.waybillNo}</td>
+                        <td style={{ fontWeight: 500 }}>{rec.driverName}</td>
+                        <td>{rec.productDescription}</td>
+                        <td className="numeric mono">{delNet} TON</td>
+                        <td className="numeric mono" style={{ fontWeight: 700, color: 'var(--success-600)' }}>{accNet} TON</td>
+                        <td><span className="badge badge-success">STAMPED RECEIPT</span></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
       )}
+
     </div>
   );
 };

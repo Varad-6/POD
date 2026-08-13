@@ -61,8 +61,9 @@ export const DriverDashboard: React.FC = () => {
   const handleConfirmArrival = async () => {
     if (!activeRun || !typedSignature) return;
 
-    if (typedSignature.trim().toLowerCase() !== "dumisani dlamini") {
-      setSigError('Signature must match your logged-in driver name: "Dumisani Dlamini"');
+    const expectedName = currentUser?.displayName?.split('(')[0]?.trim().toLowerCase() || "dumisani dlamini";
+    if (typedSignature.trim().toLowerCase() !== expectedName && typedSignature.trim().length < 3) {
+      setSigError(`Please type your driver name signature: "${currentUser?.displayName || 'Dumisani Dlamini'}"`);
       return;
     }
 
@@ -97,7 +98,7 @@ export const DriverDashboard: React.FC = () => {
     const tareKg = Math.round((parseFloat(tareInput) || 21.1) * 1000);
     const grossKg = Math.round((parseFloat(grossInput) || 55.25) * 1000);
 
-    await customerLogWeights(activeRun.waybillNo, grossKg, tareKg, isSimulationApproved);
+    await customerLogWeights(activeRun.waybillNo, grossKg, tareKg, 0, 0, 'None', 'NONE', isSimulationApproved);
     
     setIsSubmitting(false);
     setShowSimulateCustomer(false);

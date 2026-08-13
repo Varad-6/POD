@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDemo, OffloadRecord } from '../context/DemoContext';
 import { Card } from '../components/Card';
-import { Truck, Scale, CheckCircle2, AlertOctagon, ClipboardCheck, ArrowUpRight } from 'lucide-react';
+import { Truck, Scale, CheckCircle2, AlertOctagon, ClipboardCheck, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { formatDate } from '../utils/format';
 
 export const SupervisorDashboard: React.FC = () => {
@@ -14,96 +14,99 @@ export const SupervisorDashboard: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Filter records
-  // 1. Pending pre-dispatch checks: Status is 'DRIVER_ARRIVED'
   const pendingRecords = offloadRecords.filter((rec) => rec.podStatus === 'DRIVER_ARRIVED');
-  // 2. Completed logs: Status is 'SUPERVISOR_APPROVED' or 'SUPERVISOR_REJECTED' or 'EN_ROUTE' or later
   const completedLogs = offloadRecords.filter((rec) => 
     rec.podStatus !== 'DRIVER_ARRIVED' && rec.podStatus !== 'DRIVER_ASSIGNED' && rec.podStatus !== 'PENDING_POD'
   );
 
   const handleSelectRecord = (rec: OffloadRecord) => {
     setSelectedRecord(rec);
-    setTareWeight('');
-    setGrossWeight('');
+    setTareWeight(rec.dispatchTareWeightKg ? (rec.dispatchTareWeightKg / 1000).toString() : '21.10');
+    setGrossWeight(rec.dispatchGrossWeightKg ? (rec.dispatchGrossWeightKg / 1000).toString() : '55.25');
   };
 
   const handleLogWeights = async (approve: boolean) => {
     if (!selectedRecord) return;
-    const tare = parseFloat(tareWeight);
-    const gross = parseFloat(grossWeight);
+    const tareKg = Math.round((parseFloat(tareWeight) || 21.1) * 1000);
+    const grossKg = Math.round((parseFloat(grossWeight) || 55.25) * 1000);
 
-    if (isNaN(tare) || tare <= 0 || isNaN(gross) || gross <= 0 || gross <= tare) {
-      alert('Please enter valid positive gross and tare weights where Gross exceeds Tare.');
+    if (grossKg <= tareKg) {
+      alert('Gross weight must be strictly greater than Tare weight.');
       return;
     }
 
     setIsSubmitting(true);
-    await supervisorLogWeights(selectedRecord.waybillNo, tare, gross, approve);
+    await supervisorLogWeights(selectedRecord.waybillNo, tareKg, grossKg, approve);
     setIsSubmitting(false);
     setSelectedRecord(null);
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px' }}>
-      {/* Left Column: Log Entry Desk */}
-      <div>
-        <Card title="Awaiting Siding Pre-Dispatch Weight Entry" style={{ marginBottom: '24px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px' }}>
+      
+      {/* Left Column: Pre-Dispatch Weighbridge Gate */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        
+        <div style={{ background: 'var(--brand-navy)', borderRadius: '16px', padding: '24px 28px', color: '#ffffff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span className="badge badge-amber"><Scale size={10} /> Station Gate 01</span>
+            <span style={{ fontSize: '12px', color: 'var(--neutral-400)' }}>Emoyeni Siding Weighbridge</span>
+          </div>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>Weighbridge Pre-Dispatch Gate</h2>
+          <p style={{ fontSize: '13px', color: 'var(--neutral-300)', marginTop: '2px' }}>
+            Verify driver licenses, capture empty (tare) and loaded (gross) truck weights, and grant pre-dispatch clearances.
+          </p>
+        </div>
+
+        <Card title={`Pending Siding Arrivals (${pendingRecords.length})`}>
           {pendingRecords.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--neutral-secondary)' }}>
-              <Scale size={48} style={{ color: 'var(--neutral-secondary)', marginBottom: '12px', strokeWidth: 1.5 }} />
-              <p style={{ fontWeight: 600, fontSize: '15px', margin: 0 }}>No trucks in yard siding</p>
-              <p style={{ fontSize: '13px', margin: '4px 0 0 0' }}>Waiting for drivers to check in arrival confirm.</p>
+            <div className="empty-state">
+              <div className="empty-state__icon"><Scale size={32} /></div>
+              <p className="empty-state__title">No trucks waiting at siding gate</p>
+              <p className="empty-state__body">Drivers who confirm arrival at siding will automatically appear here for pre-dispatch weight logging.</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {pendingRecords.map((rec) => {
                 const po = purchaseOrders.find((p) => p.purchaseOrderNo === rec.poRef);
+                const isSelected = selectedRecord?.waybillNo === rec.waybillNo;
+
                 return (
                   <div 
                     key={rec.waybillNo}
                     style={{
-                      border: '1px solid var(--border-grey)',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      backgroundColor: '#ffffff',
+                      border: isSelected ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
+                      borderRadius: '12px',
+                      padding: '16px 20px',
+                      backgroundColor: isSelected ? 'var(--accent-blue-light)' : 'var(--neutral-0)',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                       cursor: 'pointer',
-                      transition: 'border-color 0.15s',
+                      transition: 'all 0.15s ease'
                     }}
                     onClick={() => handleSelectRecord(rec)}
                   >
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--primary-color)', fontSize: '15px' }}>
-                          Waybill #{rec.waybillNo}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span className="mono" style={{ fontWeight: 800, color: 'var(--brand-navy)', fontSize: '15px' }}>
+                          #{rec.waybillNo}
                         </span>
-                        <span style={{ fontSize: '11px', color: '#ea580c', backgroundColor: '#ffedd5', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                          ARRIVED AT YARD
-                        </span>
+                        <span className="badge badge-amber">DRIVER ARRIVED</span>
                       </div>
-                      <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', fontWeight: 500, margin: '2px 0' }}>
-                        Driver: <strong>{rec.driverName}</strong> | Vehicle: <strong>{rec.horseRegNo}</strong>
+                      <p style={{ fontSize: '13px', color: 'var(--neutral-700)', fontWeight: 600 }}>
+                        Driver: {rec.driverName} | Vehicle: <span className="mono">{rec.horseRegNo}</span>
                       </p>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
-                        <span style={{ fontSize: '11px', color: '#15803d', backgroundColor: '#dcfce7', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                          🪪 License: {rec.driverLicenseNo || 'DL-850912-EC'} (VERIFIED)
-                        </span>
-                        <span style={{ fontSize: '11px', color: '#1e40af', backgroundColor: '#dbeafe', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                          📋 Bilty #: {rec.biltyNo || 'BLT-770101'}
-                        </span>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '6px' }}>
+                        <span className="badge badge-success">🪪 License: {rec.driverLicenseNo || 'DL-850912-EC'} (VERIFIED)</span>
+                        <span className="badge badge-teal">📋 Bilty #: {rec.biltyNo || 'BLT-770101'}</span>
                       </div>
-                      <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: '4px 0 0 0' }}>
-                        Product: {rec.productDescription} | Expected: <strong>{po?.targetQuantity || 30.00} Tons</strong>
-                      </p>
                     </div>
                     <button 
-                      className="btn btn-primary"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                      className={`btn btn-sm ${isSelected ? 'btn-primary' : 'btn-dark'}`}
                       onClick={(e) => { e.stopPropagation(); handleSelectRecord(rec); }}
                     >
-                      Log Dispatch Weights
+                      {isSelected ? 'Logging...' : 'Capture Weights'}
                     </button>
                   </div>
                 );
@@ -115,84 +118,72 @@ export const SupervisorDashboard: React.FC = () => {
         {/* Selected Record Weights Input Form */}
         {selectedRecord && (
           <Card 
-            title={`Mine Siding Weighbridge — Waybill #${selectedRecord.waybillNo} (Bilty: ${selectedRecord.biltyNo || 'BLT-770101'})`}
-            style={{ border: '2px solid var(--primary-color)', animation: 'fadeIn 0.2s' }}
+            title={`Weighbridge Logging — Waybill #${selectedRecord.waybillNo}`}
+            style={{ border: '2px solid var(--accent-blue)', animation: 'slideUp 0.2s ease-out' }}
           >
-            {/* Driver License Verification Badge */}
-            <div style={{ padding: '10px 14px', backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Driver License Badge */}
+            <div className="alert alert-success" style={{ marginBottom: '20px', padding: '10px 14px' }}>
+              <ShieldCheck size={18} />
               <div>
-                <p style={{ fontSize: '12px', fontWeight: 700, color: '#166534', margin: 0 }}>
-                  ✓ Driver License & PrDP Verification Passed
-                </p>
-                <p style={{ fontSize: '11px', color: '#15803d', margin: '2px 0 0 0' }}>
-                  Driver: {selectedRecord.driverName} | License #: {selectedRecord.driverLicenseNo || 'DL-850912-EC'} (Expires: {selectedRecord.licenseExpiryDate || '2027-11-15'})
-                </p>
-              </div>
-              <span style={{ fontSize: '10px', backgroundColor: '#166534', color: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
-                GATE CLEARED
-              </span>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Dispatch Tare / Empty Truck (kg)
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    placeholder="e.g. 21100"
-                    value={tareWeight}
-                    onChange={(e) => setTareWeight(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
-                  />
-                  <span style={{ position: 'absolute', right: '12px', top: '10px', fontSize: '12px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>KG</span>
-                </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Dispatch Gross / Loaded Truck (kg)
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="number"
-                    placeholder="e.g. 55250"
-                    value={grossWeight}
-                    onChange={(e) => setGrossWeight(e.target.value)}
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-grey)', borderRadius: '6px', fontSize: '14px', outline: 'none' }}
-                  />
-                  <span style={{ position: 'absolute', right: '12px', top: '10px', fontSize: '12px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>KG</span>
-                </div>
+                <strong>Driver License & PrDP Verified:</strong> {selectedRecord.driverName} ({selectedRecord.driverLicenseNo || 'DL-850912-EC'}) — License Valid
               </div>
             </div>
 
-            {/* Calculations Card */}
+            <div className="data-grid-2" style={{ marginBottom: '20px' }}>
+              <div className="form-group">
+                <label>DISPATCH TARE / EMPTY TRUCK (TONS)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 21.10"
+                  value={tareWeight}
+                  onChange={(e) => setTareWeight(e.target.value)}
+                  className="form-input mono"
+                  style={{ fontSize: '15px', fontWeight: 700 }}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>DISPATCH GROSS / LOADED TRUCK (TONS)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 55.25"
+                  value={grossWeight}
+                  onChange={(e) => setGrossWeight(e.target.value)}
+                  className="form-input mono"
+                  style={{ fontSize: '15px', fontWeight: 700 }}
+                />
+              </div>
+            </div>
+
+            {/* Calculations Panel */}
             {tareWeight && grossWeight && parseFloat(grossWeight) > parseFloat(tareWeight) && (
               <div 
                 style={{ 
-                  backgroundColor: '#f8fafc', 
-                  border: '1px solid var(--border-grey)', 
-                  borderRadius: '6px', 
-                  padding: '16px', 
-                  marginBottom: '24px', 
+                  backgroundColor: 'var(--neutral-50)', 
+                  border: '1px solid var(--neutral-200)', 
+                  borderRadius: '10px', 
+                  padding: '16px 20px', 
+                  marginBottom: '20px', 
                   display: 'grid', 
                   gridTemplateColumns: '1fr 1fr',
                   gap: '16px'
                 }}
               >
                 <div>
-                  <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Calculated Net Weight</p>
-                  <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary-color)', margin: 0 }}>
-                    {((parseFloat(grossWeight) - parseFloat(tareWeight)) / 1000).toFixed(2)} Tons
+                  <p style={{ fontSize: '10px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>CALCULATED NET PAYLOAD</p>
+                  <p style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-blue)', margin: '2px 0 0 0' }}>
+                    {(parseFloat(grossWeight) - parseFloat(tareWeight)).toFixed(2)} TON
                   </p>
-                  <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: '4px 0 0 0' }}>
-                    {parseFloat(grossWeight) - parseFloat(tareWeight)} kg
+                  <p style={{ fontSize: '11px', color: 'var(--neutral-500)' }}>
+                    {Math.round((parseFloat(grossWeight) - parseFloat(tareWeight)) * 1000)} kg
                   </p>
                 </div>
                 <div>
-                  <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', margin: '0 0 4px 0' }}>Target PO Weight</p>
-                  <p style={{ fontSize: '20px', fontWeight: 800, color: 'var(--neutral-primary)', margin: 0 }}>
-                    {(purchaseOrders.find((po) => po.purchaseOrderNo === selectedRecord.poRef)?.targetQuantity || 30.0).toFixed(2)} Tons
+                  <p style={{ fontSize: '10px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>TARGET PO VOL</p>
+                  <p style={{ fontSize: '22px', fontWeight: 800, color: 'var(--neutral-800)', margin: '2px 0 0 0' }}>
+                    {(purchaseOrders.find((po) => po.purchaseOrderNo === selectedRecord.poRef)?.targetQuantity || 30.0).toFixed(2)} TON
                   </p>
                 </div>
               </div>
@@ -210,66 +201,63 @@ export const SupervisorDashboard: React.FC = () => {
               <button 
                 onClick={() => handleLogWeights(false)}
                 disabled={isSubmitting || !tareWeight || !grossWeight}
-                className="btn"
-                style={{ backgroundColor: 'var(--error-text)', borderColor: 'var(--error-text)', color: '#ffffff' }}
+                className="btn btn-destructive"
               >
                 Reject Dispatch
               </button>
               <button 
                 onClick={() => handleLogWeights(true)}
                 disabled={isSubmitting || !tareWeight || !grossWeight}
-                className="btn btn-primary"
-                style={{ minWidth: '150px' }}
+                className="btn btn-success"
+                style={{ minWidth: '160px' }}
               >
-                {isSubmitting ? 'Approving...' : 'Approve Pre-Dispatch'}
+                {isSubmitting ? 'Processing...' : 'Approve Pre-Dispatch'}
               </button>
             </div>
           </Card>
         )}
       </div>
 
-      {/* Right Column: Historical Logs */}
+      {/* Right Column: Gate Clearance Log */}
       <div>
-        <Card title="Today's Siding Dispatch Log">
+        <Card title="Today's Pre-Dispatch Clearance Log">
           {completedLogs.length === 0 ? (
-            <p style={{ textAlign: 'center', padding: '20px', color: 'var(--neutral-secondary)', fontSize: '13px' }}>
-              No gate dispatches logged yet today.
-            </p>
+            <div className="empty-state">
+              <p className="empty-state__body">No gate clearances logged today.</p>
+            </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {completedLogs.map((rec) => {
                 const isApproved = rec.podStatus !== 'SUPERVISOR_REJECTED';
+                const netTons = ((rec.dispatchNetWeightKg || rec.netWeightKg || 34150) / 1000).toFixed(2);
+
                 return (
                   <div 
                     key={rec.waybillNo}
                     style={{
-                      border: '1px solid var(--border-grey)',
-                      borderRadius: '8px',
-                      padding: '12px',
-                      backgroundColor: '#fcfcfc',
+                      border: '1px solid var(--neutral-200)',
+                      borderRadius: '10px',
+                      padding: '12px 16px',
+                      backgroundColor: 'var(--neutral-0)',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <span style={{ fontWeight: 600, fontSize: '13px' }}>Waybill #{rec.waybillNo}</span>
-                      <span 
-                        style={{ 
-                          fontSize: '10px', 
-                          fontWeight: 700, 
-                          padding: '2px 6px', 
-                          borderRadius: '4px',
-                          backgroundColor: isApproved ? 'var(--success-bg)' : 'var(--error-bg)',
-                          color: isApproved ? 'var(--success-text)' : 'var(--error-text)'
-                        }}
-                      >
-                        {isApproved ? 'DISPATCHED' : 'HELD / BLOCKED'}
-                      </span>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                        <span className="mono" style={{ fontWeight: 700, fontSize: '13px' }}>#{rec.waybillNo}</span>
+                        <span className={`badge ${isApproved ? 'badge-success' : 'badge-error'}`}>
+                          {isApproved ? 'DISPATCHED' : 'HELD'}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '12px', color: 'var(--neutral-600)' }}>
+                        Vehicle: <span className="mono">{rec.horseRegNo}</span> | Net: <strong>{netTons} TON</strong>
+                      </p>
                     </div>
-                    <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: '2px 0' }}>
-                      Vehicle: <strong>{rec.horseRegNo}</strong> | Net Payload: <strong>{(rec.netWeightKg / 1000).toFixed(2)} Tons</strong>
-                    </p>
-                    <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', margin: 0 }}>
-                      Gate Clearance: {rec.operatorName} | Date: {formatDate(rec.offloadDate)}
-                    </p>
+                    <span className="mono" style={{ fontSize: '11px', color: 'var(--neutral-400)' }}>
+                      {formatDate(rec.offloadDate)}
+                    </span>
                   </div>
                 );
               })}
@@ -277,6 +265,7 @@ export const SupervisorDashboard: React.FC = () => {
           )}
         </Card>
       </div>
+
     </div>
   );
 };
