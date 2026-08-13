@@ -1,252 +1,185 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardCheck, FileClock, Users, CheckCircle, XCircle, AlertTriangle, ArrowRight, ShieldCheck, Server, Truck, Activity } from 'lucide-react';
-import { useDemo } from '../context/DemoContext';
+import { ClipboardCheck, FileClock, CheckCircle, XCircle, ArrowRight, Server, ShieldCheck, Activity } from 'lucide-react';
+import { caApi, ContractV3, ReviewQueueItemV3, DeliveryInvoiceV3 } from '../lib/api_v3';
 import { Card } from '../components/Card';
-import { formatDate } from '../utils/format';
+import { StatusBadge } from '../components/StatusBadge';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { offloadRecords, invoices, purchaseOrders, contracts } = useDemo();
+  const [contracts, setContracts] = useState<ContractV3[]>([]);
+  const [reviews, setReviews] = useState<ReviewQueueItemV3[]>([]);
+  const [invoices, setInvoices] = useState<DeliveryInvoiceV3[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Metric calculations
-  const pendingApprovalsCount = offloadRecords.filter(
-    (rec) => rec.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || rec.podStatus === 'LOW_CONFIDENCE'
-  ).length;
-
-  const parkedInvoicesCount = invoices.filter((inv) => inv.status === 'PARKED').length;
-  const postedInvoicesCount = invoices.filter((inv) => inv.status === 'POSTED' || inv.status === 'PAID').length;
-  const totalTransportersCount = 4; // Sipho, VDM, CBS, ONYX, MPL
-
-  const totalDeliveredTons = offloadRecords
-    .filter((r) => r.podStatus === 'APPROVED' || r.podStatus === 'APPROVED_MISMATCH_OVERRIDE' || r.podStatus === 'PAID')
-    .reduce((acc, r) => acc + (r.acceptedNetWeightKg || r.arrivalNetWeightKg || r.dispatchNetWeightKg || 0) / 1000, 0);
-
-  // Generate real audit activity feed
-  const getActivities = () => {
-    const list = [
-      { id: '1', text: 'SAP S21 interface sync completed for 4 contracts', date: '2026-08-12', type: 'SYNC', icon: <Server size={14} color="var(--accent-blue)" /> },
-      { id: '2', text: 'Invoice INV-2026-0015 posted (MIRO clearing reference PMT-90024)', date: '2026-07-16', type: 'MIRO', icon: <FileClock size={14} color="var(--success-600)" /> },
-      { id: '3', text: 'Weighbridge tolerance check enabled (0.5% threshold)', date: '2026-07-14', type: 'CONFIG', icon: <ShieldCheck size={14} color="var(--warning-600)" /> },
-    ];
-
-    const approvedPODs = offloadRecords.filter(
-      (rec) => rec.podStatus === 'APPROVED' || rec.podStatus === 'APPROVED_MISMATCH_OVERRIDE' || rec.podStatus === 'APPROVED_INVOICE_PENDING'
-    );
-    
-    approvedPODs.forEach((rec, index) => {
-      const displayOverride = rec.podStatus === 'APPROVED_MISMATCH_OVERRIDE' ? ' (manual override)' : '';
-      list.unshift({
-        id: `approve-${index}`,
-        text: `POD for Waybill ${rec.waybillNo} approved ${displayOverride}`,
-        date: rec.offloadDate || '2026-07-14',
-        type: 'APPROVAL',
-        icon: <CheckCircle size={14} style={{ color: 'var(--success-600)' }} />
-      });
-    });
-
-    const rejectedPODs = offloadRecords.filter((rec) => rec.podStatus === 'REJECTED');
-    rejectedPODs.forEach((rec, index) => {
-      list.unshift({
-        id: `reject-${index}`,
-        text: `POD for Waybill ${rec.waybillNo} rejected: ${rec.rejectionReason || 'Discrepancy'}`,
-        date: rec.offloadDate || '2026-07-14',
-        type: 'REJECTION',
-        icon: <XCircle size={14} style={{ color: 'var(--error-600)' }} />
-      });
-    });
-
-    return list.slice(0, 6);
+  const loadStats = async () => {
+    setLoading(true);
+    try {
+      const c = await caApi.getContracts();
+      setContracts(c);
+      const r = await caApi.getReviewQueue('OPEN');
+      setReviews(r);
+      const i = await caApi.getDeliveryInvoices('SENT_TO_CA');
+      setInvoices(i);
+    } catch (err) {
+      console.error('Failed to load dashboard metrics:', err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Top Banner / System Status */}
-      <div style={{ background: 'var(--brand-navy)', borderRadius: '16px', padding: '24px 28px', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'var(--shadow-md)' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-            <span className="sap-mode-badge"><Server size={10} /> MOCK SAP MODE</span>
-            <span style={{ fontSize: '12px', color: 'var(--neutral-400)', fontWeight: 500 }}>Ikwezi Logistics Control Tower</span>
+      {/* Top Banner */}
+      <div 
+        style={{ 
+          background: 'linear-gradient(135deg, #0B132B 0%, #1C2541 100%)', 
+          borderRadius: '16px', 
+          padding: '28px 32px', 
+          color: '#ffffff', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          boxShadow: 'var(--shadow-card)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ zIndex: 2 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+            <span className="pulse-dot pulse-dot--active" />
+            <span style={{ fontSize: '11px', color: '#06B6D4', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Fleet Telemetry • SAP S4/HANA Live Integration
+            </span>
           </div>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px' }}>Operations Control Tower</h2>
-          <p style={{ fontSize: '13px', color: 'var(--neutral-300)', marginTop: '2px' }}>
-            Monitoring contract fulfillment, weighbridge validation queues, and SAP MIRO invoice posting.
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', margin: 0 }}>
+            Fleet Logistics Command Desk
+          </h2>
+          <p style={{ fontSize: '13px', color: '#94A3B8', marginTop: '4px', maxWidth: '640px', margin: '4px 0 0 0' }}>
+            Real-time tracking of outline agreement usage, weight logs, geofence validations, OCR checks, and SAP MIRO invoice automated parking.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button onClick={() => navigate('/admin/approvals')} className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>
-            Review POD Queue ({pendingApprovalsCount}) <ArrowRight size={14} />
+        <div style={{ display: 'flex', gap: '12px', zIndex: 2 }}>
+          <button onClick={() => navigate('/admin/approvals')} className="btn btn-primary">
+            Inspect POD Queue ({reviews.length}) <ArrowRight size={14} />
           </button>
-          <button onClick={() => navigate('/admin/invoices')} className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '13px', backgroundColor: 'rgba(255,255,255,0.1)', color: '#ffffff', borderColor: 'rgba(255,255,255,0.2)' }}>
-            MIRO Desk ({parkedInvoicesCount})
+          <button 
+            onClick={() => navigate('/admin/invoices')} 
+            className="btn btn-secondary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            MIRO Console ({invoices.length})
           </button>
         </div>
       </div>
 
-      {/* 4 Metric Cards Grid */}
-      <div className="metric-grid-4">
-        {/* Pending POD Approvals */}
-        <div 
-          className="metric-card" 
-          onClick={() => navigate('/admin/approvals')}
-          style={{ cursor: 'pointer', borderLeft: '4px solid var(--warning-500)' }}
-        >
-          <div className="metric-card__row">
-            <div>
-              <div className="metric-card__value">{pendingApprovalsCount}</div>
-              <div className="metric-card__label">Pending POD Verification</div>
-            </div>
-            <div className="metric-card__icon" style={{ background: 'var(--warning-50)', color: 'var(--warning-600)' }}>
-              <ClipboardCheck size={22} />
-            </div>
-          </div>
-          <div className="metric-card__delta warning" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px', fontSize: '11px', fontWeight: 600 }}>
-            <Activity size={12} /> Requires CA Sign-off
-          </div>
-        </div>
+      {loading ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading telemetry...</div>
+      ) : (
+        <>
+          {/* KPI Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+            <Card title="Outline Agreements" icon={<Server size={18} color="var(--accent-blue)" />}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{contracts.length}</span>
+                <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Active Contracts</span>
+              </div>
+            </Card>
 
-        {/* Parked Invoices */}
-        <div 
-          className="metric-card" 
-          onClick={() => navigate('/admin/invoices')}
-          style={{ cursor: 'pointer', borderLeft: '4px solid var(--accent-blue)' }}
-        >
-          <div className="metric-card__row">
-            <div>
-              <div className="metric-card__value">{parkedInvoicesCount}</div>
-              <div className="metric-card__label">Parked Invoices (MIRO)</div>
-            </div>
-            <div className="metric-card__icon" style={{ background: 'var(--accent-blue-light)', color: 'var(--accent-blue)' }}>
-              <FileClock size={22} />
-            </div>
-          </div>
-          <div className="metric-card__delta info" style={{ color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px', fontSize: '11px', fontWeight: 600 }}>
-            Awaiting SAP Posting
-          </div>
-        </div>
+            <Card title="Flagged Reviews" icon={<ClipboardCheck size={18} color="var(--error-600)" />}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{reviews.length}</span>
+                <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Open Audits</span>
+              </div>
+            </Card>
 
-        {/* Verified Delivered Freight Tons */}
-        <div className="metric-card" style={{ borderLeft: '4px solid var(--success-500)' }}>
-          <div className="metric-card__row">
-            <div>
-              <div className="metric-card__value">{totalDeliveredTons.toFixed(1)} <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--neutral-500)' }}>TONS</span></div>
-              <div className="metric-card__label">Verified Volume</div>
-            </div>
-            <div className="metric-card__icon" style={{ background: 'var(--success-50)', color: 'var(--success-600)' }}>
-              <Truck size={22} />
-            </div>
-          </div>
-          <div className="metric-card__delta positive" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '12px', fontSize: '11px', fontWeight: 600 }}>
-            Accepted Net Weight Total
-          </div>
-        </div>
+            <Card title="Park Pending" icon={<FileClock size={18} color="#f59e0b" />}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{invoices.length}</span>
+                <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Ready to Park</span>
+              </div>
+            </Card>
 
-        {/* Active Carriers */}
-        <div className="metric-card" style={{ borderLeft: '4px solid var(--purple-600)' }}>
-          <div className="metric-card__row">
-            <div>
-              <div className="metric-card__value">{totalTransportersCount}</div>
-              <div className="metric-card__label">Contracted Carriers</div>
-            </div>
-            <div className="metric-card__icon" style={{ background: 'var(--purple-50)', color: 'var(--purple-600)' }}>
-              <Users size={22} />
-            </div>
+            <Card title="BAPI Sync Status" icon={<ShieldCheck size={18} color="var(--success-600)" />}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <span style={{ fontSize: '22px', fontWeight: 800, color: 'var(--success-600)' }}>ONLINE</span>
+                <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>SAP S21 Interface</span>
+              </div>
+            </Card>
           </div>
-          <div className="metric-card__delta" style={{ color: 'var(--purple-600)', marginTop: '12px', fontSize: '11px', fontWeight: 600 }}>
-            {purchaseOrders.length} Active PO Runs
-          </div>
-        </div>
-      </div>
 
-      {/* Main Split: Approval Attention Queue + Audit Log */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '24px' }}>
-        
-        {/* Pending Approvals Table Card */}
-        <Card 
-          title="POD Approvals Needing Attention" 
-          subtitle="Review uploaded weighbridge slips, OCR matching status, and tolerance checks"
-        >
-          <div className="table-container">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>Waybill</th>
-                  <th>Transporter</th>
-                  <th>Product</th>
-                  <th>Weight (Net)</th>
-                  <th>OCR Status</th>
-                  <th style={{ textAlign: 'right' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {offloadRecords
-                  .filter((r) => r.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || r.podStatus === 'LOW_CONFIDENCE' || r.podStatus === 'PENDING_POD')
-                  .slice(0, 5)
-                  .map((rec) => {
-                    const weightTons = ((rec.acceptedNetWeightKg || rec.dispatchNetWeightKg || 34000) / 1000).toFixed(2);
-                    const isLowConf = rec.podStatus === 'LOW_CONFIDENCE';
-
-                    return (
-                      <tr key={rec.waybillNo}>
-                        <td className="mono" style={{ fontWeight: 700 }}>{rec.waybillNo}</td>
-                        <td style={{ fontWeight: 500 }}>{rec.driverName ? rec.driverName.split(' ')[1] || rec.driverName : 'Sipho Freight'}</td>
-                        <td style={{ fontSize: '12px', color: 'var(--neutral-600)' }}>{rec.productDescription}</td>
-                        <td className="numeric">{weightTons} T</td>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+            <Card title="Live Outline Agreements Usage Meter">
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Contract Ref</th>
+                      <th>Yard Location</th>
+                      <th>Valid From</th>
+                      <th>Valid To</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {contracts.map(c => (
+                      <tr key={c.id}>
+                        <td className="mono" style={{ fontWeight: 700 }}>{c.sap_contract_no}</td>
+                        <td style={{ fontWeight: 600 }}>{c.customer_name}</td>
+                        <td>{c.start_date}</td>
+                        <td>{c.end_date}</td>
                         <td>
-                          {isLowConf ? (
-                            <span className="badge badge-warning"><AlertTriangle size={10} /> Low Confidence</span>
-                          ) : (
-                            <span className="badge badge-blue"><Activity size={10} /> In Queue</span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'right' }}>
-                          <button 
-                            onClick={() => navigate('/admin/approvals')} 
-                            className="btn btn-sm btn-secondary"
-                            style={{ padding: '4px 8px', fontSize: '11px' }}
-                          >
-                            Review
-                          </button>
+                          <StatusBadge status={c.status} />
                         </td>
                       </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
 
-        {/* Audit Log Card */}
-        <Card title="Administrative Event Stream" subtitle="Audit trail of POD approvals, rejections, and MIRO postings">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {getActivities().map((act) => (
-              <div 
-                key={act.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '12px',
-                  padding: '10px 12px',
-                  borderRadius: '8px',
-                  background: 'var(--neutral-50)',
-                  border: '1px solid var(--neutral-200)'
-                }}
-              >
-                <div style={{ marginTop: '2px', flexShrink: 0 }}>
-                  {act.icon}
+            <Card title="System Telemetry Logs">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', padding: '6px', borderRadius: '6px', color: 'var(--accent-blue)' }}>
+                    <Activity size={14} />
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>OData Sync Sequence Active</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--neutral-500)' }}>Refreshed outline contracts from S/4HANA</p>
+                  </div>
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--neutral-800)', lineHeight: 1.3 }}>{act.text}</p>
-                  <p style={{ fontSize: '10.5px', color: 'var(--neutral-500)', marginTop: '2px' }}>{formatDate(act.date)}</p>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '6px', borderRadius: '6px', color: 'var(--error-600)' }}>
+                    <ClipboardCheck size={14} />
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>Review Queue Alert</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--neutral-500)' }}>{reviews.length} items flagged for manual override</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '6px', borderRadius: '6px', color: 'var(--success-600)' }}>
+                    <FileClock size={14} />
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>MIRO Post Sequence Connected</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--neutral-500)' }}>Live connectivity to SAP Finance module</p>
+                  </div>
                 </div>
               </div>
-            ))}
+            </Card>
           </div>
-        </Card>
-
-      </div>
+        </>
+      )}
 
     </div>
   );

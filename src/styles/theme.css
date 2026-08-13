@@ -1,23 +1,27 @@
 /* ============================================================
-   POD — Enterprise Design System
-   Transport Execution & Proof of Delivery Platform
-   Target: Ikwezi Mining Limited / SAP S/4HANA
+   POD — Fleet Control Enterprise Design System
+   Target Aesthetic: Dribbble Fleet Control & Samsara Logistics Portal
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  /* ── Brand Identity ────────────────────────────── */
-  --brand-navy:       #0A1628;   /* Primary dark — headers, sidebar */
-  --brand-navy-mid:   #0F2040;   /* Sidebar hover */
-  --brand-navy-light: #1A2E50;   /* Secondary nav */
+  /* ── Fleet Control Dark & Light Theme Tokens ───────────────── */
+  --brand-navy:       #0B132B;   /* Deep Slate Navy — Headers & Sidebar */
+  --brand-navy-mid:   #1C2541;   /* Hover & Active Nav */
+  --brand-navy-light: #2A365C;   /* Borders & Divider Lines */
 
-  --accent-blue:      #1D4ED8;   /* Primary action */
-  --accent-blue-hover:#1E40AF;   /* Action hover */
-  --accent-blue-light:#DBEAFE;   /* Light tint */
-  --accent-blue-muted:#93C5FD;   /* Muted blue */
+  --accent-blue:      #2563EB;   /* Royal Fleet Blue */
+  --accent-blue-hover:#1D4ED8;   
+  --accent-blue-light:#EFF6FF;   
+  --accent-blue-muted:#93C5FD;   
 
-  /* ── Neutrals (Slate scale) ───────────────────── */
+  --accent-cyan:      #06B6D4;   /* Telemetry Accent */
+  --accent-emerald:   #10B981;   /* Verified / On-Time Pulse */
+  --accent-emerald-light:#ECFDF5;
+
+  /* ── Neutrals (Slate Scale) ───────────────────────────────── */
+  --neutral-950: #020617;
   --neutral-900: #0F172A;
   --neutral-800: #1E293B;
   --neutral-700: #334155;
@@ -30,7 +34,7 @@
   --neutral-50:  #F8FAFC;
   --neutral-0:   #FFFFFF;
 
-  /* ── Semantic Colors ──────────────────────────── */
+  /* ── Semantic Colors ──────────────────────────────────────── */
   --success-600: #059669;
   --success-500: #10B981;
   --success-100: #D1FAE5;
@@ -51,41 +55,9 @@
   --info-100:    #E0F2FE;
   --info-50:     #F0F9FF;
 
-  --teal-600:    #0D9488;
-  --teal-100:    #CCFBF1;
-  --teal-50:     #F0FDFA;
-
-  --purple-600:  #7C3AED;
-  --purple-100:  #EDE9FE;
-  --purple-50:   #F5F3FF;
-
-  --amber-600:   #B45309;
-  --amber-100:   #FEF3C7;
-  --amber-50:    #FFFBEB;
-
-  /* ── Semantic Aliases (old names — backward compat) */
-  --primary-color:    var(--brand-navy);
-  --primary-hover:    var(--brand-navy-mid);
-  --secondary-bg:     var(--neutral-100);
-  --success-text:     var(--success-600);
-  --success-bg:       var(--success-50);
-  --error-text:       var(--error-600);
-  --error-bg:         var(--error-50);
-  --warning-text:     var(--warning-600);
-  --warning-bg:       var(--warning-50);
-  --info-text:        var(--accent-blue);
-  --info-bg:          var(--accent-blue-light);
-  --teal-text:        var(--teal-600);
-  --teal-bg:          var(--teal-50);
-  --neutral-primary:  var(--neutral-800);
-  --neutral-secondary:var(--neutral-500);
-  --border-grey:      var(--neutral-200);
-  --page-bg:          var(--neutral-50);
-  --card-bg:          var(--neutral-0);
-
-  /* ── Typography ───────────────────────────────── */
+  /* ── Typography ───────────────────────────────────────────── */
   --font-family:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono:        'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  --font-mono:        'JetBrains Mono', monospace;
 
   --text-xs:    11px;
   --text-sm:    12px;
@@ -96,7 +68,6 @@
   --text-2xl:   20px;
   --text-3xl:   24px;
   --text-4xl:   30px;
-  --text-5xl:   36px;
 
   --weight-regular: 400;
   --weight-medium:  500;
@@ -104,19 +75,11 @@
   --weight-bold:    700;
   --weight-extra:   800;
 
-  --leading-tight:  1.2;
+  --leading-tight:  1.25;
   --leading-snug:   1.35;
   --leading-normal: 1.5;
-  --leading-relaxed:1.625;
 
-  --tracking-tighter: -0.04em;
-  --tracking-tight:   -0.02em;
-  --tracking-normal:   0;
-  --tracking-wide:     0.04em;
-  --tracking-wider:    0.08em;
-  --tracking-widest:   0.12em;
-
-  /* ── Spacing Scale ────────────────────────────── */
+  /* ── Spacing ──────────────────────────────────────────────── */
   --space-1:  4px;
   --space-2:  8px;
   --space-3:  12px;
@@ -124,48 +87,26 @@
   --space-5:  20px;
   --space-6:  24px;
   --space-8:  32px;
-  --space-10: 40px;
-  --space-12: 48px;
-  --space-16: 64px;
 
-  /* ── Border Radius ────────────────────────────── */
-  --radius-sm:  4px;
-  --radius-md:  6px;
-  --radius-lg:  8px;
-  --radius-xl:  10px;
-  --radius-2xl: 12px;
+  /* ── Card & Glass Radius ──────────────────────────────────── */
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
   --radius-full:9999px;
 
-  /* ── Shadows ──────────────────────────────────── */
-  --shadow-xs:  0 1px 2px rgba(0,0,0,0.05);
-  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-md:  0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
-  --shadow-lg:  0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
-  --shadow-xl:  0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.06);
-  --shadow-modal: 0 25px 50px -12px rgba(0,0,0,0.25);
-  --shadow-card: var(--shadow-sm);
+  /* ── Premium Fleet Control Elevation & Shadows ────────────── */
+  --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
+  --shadow-card:   0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  --shadow-hover:  0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+  --shadow-modal:  0 25px 50px -12px rgba(15, 23, 42, 0.25);
 
-  /* Backward compat */
-  --card-shadow: var(--shadow-sm);
-  --modal-shadow: var(--shadow-modal);
+  /* ── Layout Dimensions ────────────────────────────────────── */
+  --sidebar-width:    270px;
+  --topbar-height:    64px;
+  --demo-bar-height:  0px;
+  --content-max-width:1440px;
 
-  /* ── Layout ───────────────────────────────────── */
-  --sidebar-width:    256px;
-  --topbar-height:    60px;
-  --demo-bar-height:  38px;
-  --content-max-width:1280px;
-
-  /* ── Transitions ──────────────────────────────── */
-  --transition-fast:   0.1s ease;
-  --transition-base:   0.15s ease;
-  --transition-medium: 0.25s ease;
-  --transition-slow:   0.35s ease;
-
-  /* ── Z-Index Scale ────────────────────────────── */
-  --z-sidebar:  100;
-  --z-topbar:   90;
-  --z-dropdown: 200;
-  --z-modal:    300;
-  --z-toast:    400;
-  --z-demo-bar: 1000;
+  --transition-fast:   0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }

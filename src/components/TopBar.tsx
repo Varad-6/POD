@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LogOut, Bell } from 'lucide-react';
-import { useDemo } from '../context/DemoContext';
+import { useAuthV3 } from '../contexts/AuthContextV3';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from './Modal';
 
@@ -9,36 +9,29 @@ interface TopBarProps {
 }
 
 export const TopBar: React.FC<TopBarProps> = ({ title }) => {
-  const { currentUser, logout, notifications, markNotificationRead } = useDemo();
+  const { user: currentUser, logout } = useAuthV3();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const notifications: { id: string; text: string; read: boolean; link: string }[] = [];
 
   if (!currentUser) return null;
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = 0;
 
-  // Get Initials for Avatar
   const getInitials = () => {
-    if (currentUser.displayName) {
-      const parts = currentUser.displayName.split(' ');
-      return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
-    }
-    if (currentUser.companyName) {
-      const parts = currentUser.companyName.split(' ');
-      return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
-    }
-    return currentUser.username.substring(0, 2).toUpperCase();
+    const name = currentUser.displayName || currentUser.username;
+    const parts = name.split(' ');
+    return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
   };
 
   const handleLogout = () => {
     setShowLogoutConfirm(false);
     logout();
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
-  const handleNotificationClick = (notifId: string, link: string) => {
-    markNotificationRead(notifId);
+  const handleNotificationClick = (_notifId: string, link: string) => {
     setShowNotifDropdown(false);
     navigate(link);
   };
@@ -47,60 +40,53 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
     <header 
       style={{
         height: 'var(--topbar-height)',
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid var(--border-grey)',
+        backgroundColor: '#FFFFFF',
+        borderBottom: '1px solid var(--neutral-200)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 32px',
         position: 'sticky',
-        top: 'var(--demo-bar-height)',
+        top: 0,
         zIndex: 90,
+        boxShadow: 'var(--shadow-subtle)',
       }}
     >
       {/* Title */}
-      <h2 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--neutral-primary)' }}>
+      <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
         {title}
       </h2>
 
-      {/* User Info & Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', position: 'relative' }}>
-        
-        {/* Notification Bell (Only for Transporter Roles) */}
+        {/* User Info & Current Role */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', position: 'relative' }}>
+
+        {/* Notifications Button */}
         {(currentUser.role === 'DRIVER' || currentUser.role === 'TRANSPORTER_ADMIN' || currentUser.role === 'TRANSPORTER') && (
           <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowNotifDropdown(!showNotifDropdown)}
               style={{
-                background: 'none',
-                border: 'none',
+                background: showNotifDropdown ? 'var(--neutral-100)' : 'transparent',
+                border: '1px solid var(--neutral-200)',
                 cursor: 'pointer',
-                color: 'var(--neutral-secondary)',
+                color: 'var(--neutral-600)',
                 display: 'flex',
                 alignItems: 'center',
-                padding: '8px',
+                padding: '7px',
                 borderRadius: '8px',
-                transition: 'background-color 0.15s',
-                backgroundColor: showNotifDropdown ? 'var(--secondary-bg)' : 'transparent'
-              }}
-              onMouseEnter={(e) => {
-                if (!showNotifDropdown) e.currentTarget.style.backgroundColor = '#f1f5f9';
-              }}
-              onMouseLeave={(e) => {
-                if (!showNotifDropdown) e.currentTarget.style.backgroundColor = 'transparent';
+                transition: 'all 0.15s ease',
               }}
               title="Notifications"
             >
-              <Bell size={20} />
+              <Bell size={17} />
               
-              {/* Unread Badge */}
               {unreadCount > 0 && (
                 <span
                   style={{
                     position: 'absolute',
                     top: '4px',
                     right: '4px',
-                    backgroundColor: 'var(--error-text)',
+                    backgroundColor: 'var(--error-600)',
                     color: '#ffffff',
                     fontSize: '10px',
                     fontWeight: 700,
@@ -121,30 +107,29 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
             {/* Notifications Dropdown Panel */}
             {showNotifDropdown && (
               <div
-                className="animate-slide-in"
                 style={{
                   position: 'absolute',
                   top: '44px',
                   right: 0,
                   width: '320px',
-                  backgroundColor: '#ffffff',
-                  borderRadius: '10px',
-                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
-                  border: '1px solid var(--border-grey)',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '12px',
+                  boxShadow: 'var(--shadow-modal)',
+                  border: '1px solid var(--neutral-200)',
                   zIndex: 200,
                   overflow: 'hidden'
                 }}
               >
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-grey)', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--primary-color)' }}>Notifications</span>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--neutral-200)', backgroundColor: 'var(--neutral-50)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--neutral-900)' }}>Notifications</span>
                   {unreadCount > 0 && (
-                    <span style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 500 }}>{unreadCount} unread</span>
+                    <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 600 }}>{unreadCount} unread</span>
                   )}
                 </div>
                 
                 <div style={{ maxHeight: '280px', overflowY: 'auto' }}>
                   {notifications.length === 0 ? (
-                    <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--neutral-secondary)' }}>
+                    <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--neutral-500)' }}>
                       <p style={{ fontSize: '13px', fontWeight: 500 }}>No notifications yet</p>
                       <p style={{ fontSize: '11px', marginTop: '2px' }}>Approved or rejected status alerts show here.</p>
                     </div>
@@ -155,22 +140,14 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
                         onClick={() => handleNotificationClick(notif.id, notif.link)}
                         style={{
                           padding: '12px 16px',
-                          borderBottom: '1px solid #f1f5f9',
+                          borderBottom: '1px solid var(--neutral-100)',
                           cursor: 'pointer',
-                          backgroundColor: notif.read ? 'transparent' : 'rgba(31, 78, 121, 0.04)',
-                          transition: 'background-color 0.1s',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '4px'
+                          backgroundColor: notif.read ? 'transparent' : 'rgba(37, 99, 235, 0.04)',
+                          transition: 'background-color 0.15s',
                         }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = notif.read ? 'transparent' : 'rgba(31, 78, 121, 0.04)'}
                       >
-                        <p style={{ fontSize: '12.5px', fontWeight: notif.read ? 500 : 700, color: 'var(--neutral-primary)', lineHeight: 1.4 }}>
+                        <p style={{ fontSize: '12.5px', fontWeight: notif.read ? 500 : 700, color: 'var(--neutral-800)', lineHeight: 1.4 }}>
                           {notif.text}
-                        </p>
-                        <p style={{ fontSize: '10px', color: 'var(--neutral-secondary)', fontWeight: 500 }}>
-                          Click to raise invoice statement
                         </p>
                       </div>
                     ))
@@ -181,96 +158,62 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
           </div>
         )}
 
+        {/* User Info & Persona Pill */}
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--neutral-primary)' }}>
-            {currentUser.displayName || currentUser.companyName}
+          <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--neutral-900)', margin: 0 }}>
+            {currentUser.displayName || currentUser.username}
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
             <span 
-              style={(() => {
-                const role = currentUser.role;
-                let bg = '#f1f5f9';
-                let color = '#475569';
-                if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN') {
-                  bg = '#EFF6FF';
-                  color = '#2563EB';
-                } else if (role === 'SUPERVISOR') {
-                  bg = '#E0F2FE';
-                  color = '#0284C7';
-                } else if (role === 'CUSTOMER') {
-                  bg = '#F5F3FF';
-                  color = '#7C3AED';
-                } else if (role === 'DRIVER') {
-                  bg = '#FEF3C7';
-                  color = '#B45309';
-                } else if (role === 'TRANSPORTER_ADMIN' || role === 'TRANSPORTER') {
-                  bg = '#F0FDFA';
-                  color = '#0D9488';
-                }
-                return {
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  backgroundColor: bg,
-                  color: color,
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  border: `1px solid ${color}33`,
-                  display: 'inline-block'
-                };
-              })()}
+              style={{
+                fontSize: '10px',
+                fontWeight: 700,
+                backgroundColor: 'var(--accent-blue-light)',
+                color: 'var(--accent-blue)',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                border: '1px solid rgba(37, 99, 235, 0.2)',
+                textTransform: 'uppercase',
+              }}
             >
-              {(() => {
-                const role = currentUser.role;
-                if (role === 'COMPANY_ADMIN' || role === 'IKWEZI_ADMIN') return 'Company Admin';
-                if (role === 'SUPERVISOR') return 'Supervisor';
-                if (role === 'CUSTOMER') return 'Customer';
-                if (role === 'DRIVER') return 'Truck Driver';
-                return 'Transporter Admin';
-              })()}
+              {currentUser.role.replace(/_/g, ' ')}
             </span>
           </div>
         </div>
 
-        {/* Avatar */}
+        {/* User Avatar */}
         <div 
           style={{
-            width: '40px',
-            height: '40px',
+            width: '38px',
+            height: '38px',
             borderRadius: '50%',
-            backgroundColor: 'var(--secondary-bg)',
-            color: 'var(--primary-color)',
+            backgroundColor: 'var(--brand-navy)',
+            color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: '14px',
-            border: '1.5px solid var(--primary-color)'
+            fontWeight: 800,
+            fontSize: '13px',
+            border: '2px solid #FFFFFF',
+            boxShadow: 'var(--shadow-subtle)',
           }}
         >
           {getInitials()}
         </div>
 
-        {/* Quick Logout Button */}
+        {/* Logout Button */}
         <button
           onClick={() => setShowLogoutConfirm(true)}
           style={{
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            color: 'var(--neutral-secondary)',
+            color: 'var(--neutral-500)',
             display: 'flex',
             alignItems: 'center',
-            padding: '8px',
+            padding: '7px',
             borderRadius: '8px',
-            transition: 'background-color 0.15s'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--error-text)';
-            e.currentTarget.style.backgroundColor = 'var(--error-bg)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--neutral-secondary)';
-            e.currentTarget.style.backgroundColor = 'transparent';
+            transition: 'all 0.15s ease'
           }}
           title="Sign Out"
         >
@@ -286,23 +229,21 @@ export const TopBar: React.FC<TopBarProps> = ({ title }) => {
         width="400px"
       >
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '15px', marginBottom: '24px', color: 'var(--neutral-primary)' }}>
-            Are you sure you want to log out of the portal?
+          <p style={{ fontSize: '14px', marginBottom: '20px', color: 'var(--neutral-800)' }}>
+            Are you sure you want to log out of the POD portal?
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button 
               onClick={() => setShowLogoutConfirm(false)} 
-              className="btn btn-secondary"
+              className="btn btn-ghost"
               style={{ padding: '8px 16px' }}
             >
               Cancel
             </button>
             <button 
               onClick={handleLogout} 
-              className="btn btn-primary"
-              style={{ padding: '8px 16px', backgroundColor: 'var(--error-text)', borderColor: 'var(--error-text)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--error-text)'}
+              className="btn btn-dark"
+              style={{ padding: '8px 16px', backgroundColor: 'var(--error-600)' }}
             >
               Log Out
             </button>

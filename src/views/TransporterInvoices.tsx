@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Receipt, FileText, Upload, Plus, DollarSign } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useDemo, Invoice } from '../context/DemoContext';
 import { Card } from '../components/Card';
+import { PageHeader } from '../components/PageHeader';
+import { Tabs } from '../components/Tabs';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { FileUploadBox } from '../components/FileUploadBox';
 import { formatCurrency, formatDate } from '../utils/format';
 
 export const TransporterInvoices: React.FC = () => {
-  const { invoices, purchaseOrders, submitInvoice } = useDemo();
+  const { invoices, submitInvoice } = useDemo();
   const [activeTab, setActiveTab] = useState<'CREATE' | 'LEDGER'>('CREATE');
 
   // Input states for invoice creation
@@ -39,16 +41,9 @@ export const TransporterInvoices: React.FC = () => {
   const createList = invoices.filter((inv) => inv.status === 'AWAITING_INVOICE_SUBMISSION');
   const ledgerList = invoices.filter((inv) => inv.status !== 'AWAITING_INVOICE_SUBMISSION');
 
-  // Calculate sum of Paid invoices
   const totalPaidSum = ledgerList
     .filter((inv) => inv.status === 'PAID')
     .reduce((sum, inv) => sum + inv.amount, 0);
-
-  const getAssociatedPORate = (waybillNo: string) => {
-    // Locate invoice, find waybill offload, find PO
-    const associatedInvoice = invoices.find((inv) => inv.waybillNo === waybillNo);
-    return associatedInvoice?.rate || 245.50;
-  };
 
   const handleInvoiceSelect = (inv: Invoice) => {
     setSelectedInvoice(inv);
@@ -64,87 +59,72 @@ export const TransporterInvoices: React.FC = () => {
     await submitInvoice(selectedInvoice.waybillNo, invoiceNumber, fileName);
     setIsSubmitting(false);
 
-    // Cleanup
     setSelectedInvoice(null);
     setInvoiceNumber('');
     setFileName(null);
-    setActiveTab('LEDGER'); // Automatically switch to ledger
+    setActiveTab('LEDGER');
   };
 
-  const tabStyle = (active: boolean): React.CSSProperties => ({
-    padding: '12px 24px',
-    fontSize: '14px',
-    fontWeight: 600,
-    backgroundColor: active ? '#ffffff' : 'transparent',
-    color: active ? 'var(--primary-color)' : 'var(--neutral-secondary)',
-    border: 'none',
-    borderBottom: active ? '2px solid var(--primary-color)' : '2px solid transparent',
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  });
-
   return (
-    <div>
-      {/* Tab Select Header */}
-      <div 
-        style={{ 
-          display: 'flex', 
-          borderBottom: '1px solid var(--border-grey)', 
-          marginBottom: '24px',
-          gap: '16px' 
-        }}
-      >
-        <button onClick={() => { setActiveTab('CREATE'); setSelectedInvoice(null); }} style={tabStyle(activeTab === 'CREATE')}>
-          Create Invoice
-        </button>
-        <button onClick={() => { setActiveTab('LEDGER'); setSelectedInvoice(null); }} style={tabStyle(activeTab === 'LEDGER')}>
-          Payment Ledger
-        </button>
-      </div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      
+      {/* Page Header */}
+      <PageHeader 
+        title="Carrier Invoicing & Payment Ledger"
+        subtitle="Raise formal tax bills against approved proof-of-delivery receipts and track SAP payment clearings"
+        actions={
+          <Tabs 
+            tabs={[
+              { id: 'CREATE', label: 'Create Invoice', count: createList.length },
+              { id: 'LEDGER', label: 'Payment Ledger', count: ledgerList.length },
+            ]}
+            activeTab={activeTab}
+            onChange={(id) => { setActiveTab(id as any); setSelectedInvoice(null); }}
+          />
+        }
+      />
 
       {activeTab === 'CREATE' && (
         <div>
           {!selectedInvoice ? (
-            /* Choose delivery to invoice */
             createList.length === 0 ? (
               <EmptyState 
                 message="No deliveries ready for invoicing" 
-                submessage="Invoicing is unlocked once the mine manager approves your uploaded PODs."
+                submessage="Invoicing unlocks automatically once mine supervisors approve your submitted PODs."
               />
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
                 {createList.map((inv) => (
                   <Card key={inv.waybillNo} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                       <div>
-                        <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--primary-color)' }}>
-                          Waybill #{inv.waybillNo}
+                        <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)' }}>
+                          #{inv.waybillNo}
                         </h3>
-                        <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)' }}>
-                          Volume Approved
+                        <p style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>
+                          Approved Net Freight Payload
                         </p>
                       </div>
                       <StatusBadge status={inv.status} />
                     </div>
 
-                    {/* Cost Box */}
                     <div 
                       style={{ 
-                        backgroundColor: 'var(--secondary-bg)', 
+                        backgroundColor: 'var(--neutral-50)', 
                         padding: '16px', 
-                        borderRadius: '8px', 
-                        border: '1px solid rgba(31, 78, 121, 0.1)',
+                        borderRadius: '10px', 
+                        border: '1px solid var(--neutral-200)',
                         marginBottom: '20px',
                         textAlign: 'center'
                       }}
                     >
-                      <p style={{ fontSize: '12px', color: 'var(--primary-color)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>
+                      <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
                         Calculated Freight Value
                       </p>
-                      <p style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary-color)' }}>
+                      <p className="mono" style={{ fontSize: '24px', fontWeight: 800, color: 'var(--neutral-900)' }}>
                         {formatCurrency(inv.amount)}
                       </p>
-                      <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', marginTop: '2px' }}>
+                      <p style={{ fontSize: '11px', color: 'var(--neutral-500)', marginTop: '2px' }}>
                         Formula: {inv.quantity.toFixed(2)} Tons × {formatCurrency(inv.rate)} / Ton
                       </p>
                     </div>
@@ -155,76 +135,61 @@ export const TransporterInvoices: React.FC = () => {
                       style={{ width: '100%', marginTop: 'auto' }}
                     >
                       <Plus size={16} />
-                      Raise Invoice Bill
+                      Raise Tax Invoice Bill
                     </button>
                   </Card>
                 ))}
               </div>
             )
           ) : (
-            /* Raising bill form screen */
             <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-              <Card title={`Raise Invoice — Waybill ${selectedInvoice.waybillNo}`}>
-                {/* Guide Banner */}
-                <div 
-                  style={{ 
-                    padding: '12px 16px', 
-                    backgroundColor: 'var(--info-bg)', 
-                    color: 'var(--info-text)', 
-                    borderRadius: '8px', 
-                    fontSize: '12.5px', 
-                    fontWeight: 500, 
-                    marginBottom: '20px',
-                    border: '1px solid rgba(21, 101, 192, 0.15)',
-                    lineHeight: 1.45
-                  }}
-                >
-                  <strong>💡 Demo Guidance:</strong> In this step, the transporter submits their formal tax bill to request payment. Enter an invoice number and upload the document <strong><code>tax-bill-sample.pdf</code></strong> from your files to simulate the SAP MIRO parked invoice process.
-                </div>
+              <Card title={`Raise Invoice — Waybill #${selectedInvoice.waybillNo}`}>
                 <form onSubmit={handleInvoiceSubmit}>
-                  {/* Freight details summary */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', backgroundColor: 'var(--page-bg)', padding: '16px', borderRadius: '8px', border: '1px solid var(--border-grey)', marginBottom: '24px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', backgroundColor: 'var(--neutral-50)', padding: '16px', borderRadius: '10px', border: '1px solid var(--neutral-200)', marginBottom: '24px' }}>
                     <div>
-                      <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)' }}>DELIVERED QUANTITY</p>
-                      <p style={{ fontWeight: 600 }}>{selectedInvoice.quantity.toFixed(2)} Tons</p>
+                      <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>DELIVERED QUANTITY</p>
+                      <p className="mono" style={{ fontWeight: 700 }}>{selectedInvoice.quantity.toFixed(2)} Tons</p>
                     </div>
                     <div>
-                      <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)' }}>AGREED RATE</p>
-                      <p style={{ fontWeight: 600 }}>{formatCurrency(selectedInvoice.rate)} / Ton</p>
+                      <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>AGREED RATE</p>
+                      <p className="mono" style={{ fontWeight: 700 }}>{formatCurrency(selectedInvoice.rate)} / Ton</p>
                     </div>
-                    <div style={{ gridColumn: 'span 2', height: '1px', backgroundColor: 'var(--border-grey)' }}></div>
+                    <div style={{ gridColumn: 'span 2', height: '1px', backgroundColor: 'var(--neutral-200)' }}></div>
                     <div style={{ gridColumn: 'span 2' }}>
-                      <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)' }}>TOTAL INVOICE AMOUNT</p>
-                      <p style={{ fontWeight: 800, fontSize: '20px', color: 'var(--primary-color)' }}>
+                      <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>TOTAL INVOICE AMOUNT</p>
+                      <p className="mono" style={{ fontWeight: 800, fontSize: '22px', color: 'var(--accent-blue)' }}>
                         {formatCurrency(selectedInvoice.amount)}
                       </p>
                     </div>
                   </div>
 
-                  {/* Inputs */}
-                  <div className="form-group">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label style={{ margin: 0 }}>TAX INVOICE NUMBER</label>
-                      {isOcrExtracting && (
-                        <span style={{ fontSize: '11px', color: 'var(--primary-color)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span className="animate-spin" style={{ display: 'inline-block', width: '10px', height: '10px', border: '1.5px solid var(--primary-color)', borderTopColor: 'transparent', borderRadius: '50%' }}></span>
-                          Extracting from document...
-                        </span>
-                      )}
-                    </div>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      TAX INVOICE NUMBER
+                    </label>
                     <input 
                       type="text" 
                       value={isOcrExtracting ? "Reading document..." : invoiceNumber}
                       onChange={(e) => setInvoiceNumber(e.target.value)}
                       placeholder="e.g. INV-2026-0092"
-                      className="form-input"
+                      className="mono"
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid var(--neutral-300)',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                      }}
                       disabled={isOcrExtracting}
                       required
                     />
                   </div>
 
-                  <div className="form-group" style={{ marginBottom: '24px' }}>
-                    <label>UPLOAD INVOICE FILE (PDF/IMAGE)</label>
+                  <div style={{ marginBottom: '24px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      UPLOAD TAX INVOICE FILE (PDF/IMAGE)
+                    </label>
                     <FileUploadBox 
                       onFileSelect={handleFileSelect}
                       selectedFileName={fileName}
@@ -232,13 +197,12 @@ export const TransporterInvoices: React.FC = () => {
                     />
                   </div>
 
-                  {/* Actions */}
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                     <button 
                       type="button" 
                       onClick={() => setSelectedInvoice(null)} 
                       disabled={isSubmitting}
-                      className="btn btn-secondary"
+                      className="btn btn-ghost"
                     >
                       Back
                     </button>
@@ -246,7 +210,6 @@ export const TransporterInvoices: React.FC = () => {
                       type="submit" 
                       disabled={!invoiceNumber || !fileName || isSubmitting}
                       className="btn btn-primary"
-                      style={{ minWidth: '150px' }}
                     >
                       {isSubmitting ? 'Submitting...' : 'Submit Invoice'}
                     </button>
@@ -267,13 +230,13 @@ export const TransporterInvoices: React.FC = () => {
             />
           ) : (
             <div className="table-container">
-              <table className="custom-table">
+              <table className="data-table">
                 <thead>
                   <tr>
                     <th>Invoice No</th>
                     <th>Waybill Ref</th>
                     <th>Billing Date</th>
-                    <th>Total Amount</th>
+                    <th style={{ textAlign: 'right' }}>Total Amount</th>
                     <th>Status</th>
                     <th>Posting Date</th>
                     <th>Payment Ref</th>
@@ -282,32 +245,34 @@ export const TransporterInvoices: React.FC = () => {
                 <tbody>
                   {ledgerList.map((inv) => (
                     <tr key={inv.invoiceNo}>
-                      <td style={{ fontWeight: 600, color: 'var(--primary-color)' }}>
+                      <td className="mono" style={{ fontWeight: 800, color: 'var(--neutral-900)' }}>
                         {inv.invoiceNo}
                       </td>
-                      <td style={{ fontWeight: 500 }}>{inv.waybillNo}</td>
+                      <td className="mono" style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>#{inv.waybillNo}</td>
                       <td>{formatDate(new Date())}</td>
-                      <td style={{ fontWeight: 700 }}>
+                      <td className="mono" style={{ textAlign: 'right', fontWeight: 800, fontSize: '14px' }}>
                         {formatCurrency(inv.amount)}
                       </td>
                       <td>
                         <StatusBadge status={inv.status} />
                       </td>
                       <td>
-                        {inv.postingDate ? formatDate(inv.postingDate) : <span style={{ color: 'var(--neutral-secondary)' }}>—</span>}
+                        {inv.postingDate ? formatDate(inv.postingDate) : <span style={{ color: 'var(--neutral-400)' }}>—</span>}
                       </td>
-                      <td style={{ fontWeight: 600, color: 'var(--success-text)' }}>
-                        {inv.paymentRef || <span style={{ color: 'var(--neutral-secondary)' }}>—</span>}
+                      <td className="mono" style={{ fontWeight: 700, color: 'var(--success-600)' }}>
+                        {inv.paymentRef || <span style={{ color: 'var(--neutral-400)' }}>—</span>}
                       </td>
                     </tr>
                   ))}
                   
-                  {/* Totals Row */}
-                  <tr className="total-row">
-                    <td colSpan={3}>Total Payments Received</td>
-                    <td colSpan={4} style={{ color: 'var(--success-text)', fontSize: '16px' }}>
+                  <tr style={{ background: 'var(--neutral-100)', fontWeight: 800 }}>
+                    <td colSpan={3} style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '11px', color: 'var(--neutral-600)' }}>
+                      Total Payments Received & Cleared
+                    </td>
+                    <td className="mono" style={{ textAlign: 'right', color: 'var(--success-600)', fontSize: '16px', fontWeight: 800 }}>
                       {formatCurrency(totalPaidSum)}
                     </td>
+                    <td colSpan={3}></td>
                   </tr>
                 </tbody>
               </table>

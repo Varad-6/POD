@@ -1,252 +1,351 @@
-import React, { useState } from 'react';
-import { useDemo, PurchaseOrder } from '../context/DemoContext';
+import React, { useState, useEffect } from 'react';
+import { caApi, ContractV3, PurchaseOrderV3, transportersApi, Transporter } from '../lib/api_v3';
 import { Card } from '../components/Card';
-import { FileText, PlusCircle, CheckCircle, Clock, Send, Users } from 'lucide-react';
+import { PageHeader } from '../components/PageHeader';
+import { StatusBadge } from '../components/StatusBadge';
+import { FileSignature, Send, Download } from 'lucide-react';
 import { formatDate, formatCurrency } from '../utils/format';
 
 export const AdminContracts: React.FC = () => {
-  const { contracts, purchaseOrders, offloadRecords, assignPOToTransporter } = useDemo();
-  const [selectedContract, setSelectedContract] = useState<any | null>(null);
-  const [selectedPOToAssign, setSelectedPOToAssign] = useState<PurchaseOrder | null>(null);
-  const [targetTransporter, setTargetTransporter] = useState('');
+  const [contracts, setContracts] = useState<ContractV3[]>([]);
+  const [selectedContract, setSelectedContract] = useState<ContractV3 | null>(null);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderV3[]>([]);
+  const [selectedPOToAssign, setSelectedPOToAssign] = useState<PurchaseOrderV3 | null>(null);
+  
+  // Job Config Form inputs
+  const [transporters, setTransporters] = useState<Transporter[]>([]);
+  const [targetTransporterId, setTargetTransporterId] = useState('');
+  const [availabilityWindow, setAvailabilityWindow] = useState('08:00-17:00');
+  const [timebound, setTimebound] = useState('2026-12-31');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Group POs by contract
-  const getContractPOs = (contractNo: string) => {
-    return purchaseOrders.filter((po) => po.contractRef === contractNo);
+  // Fetch contracts on load
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const data = await caApi.getContracts();
+      setContracts(data);
+      if (data.length > 0) {
+        // Fetch details of first contract by default
+        const detail = await caApi.getContractDetails(data[0].id);
+        setSelectedContract(detail);
+        if (detail.purchase_orders) {
+          setPurchaseOrders(detail.purchase_orders);
+        }
+      }
+      const transList = await transportersApi.list();
+      setTransporters(transList);
+      if (transList.length > 0) {
+        setTargetTransporterId(transList[0].id.toString());
+      }
+    } catch (err) {
+      console.error('Failed to load contracts data:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Get cumulative delivered tonnage for a contract
-  const getContractDeliveredVolume = (contractNo: string) => {
-    // Find all POs under contract
-    const contractPOIds = purchaseOrders
-      .filter((po) => po.contractRef === contractNo)
-      .map((po) => po.purchaseOrderNo);
+  useEffect(() => {
+    loadData();
+  }, []);
 
-    // Sum weights of completed deliveries
-    return offloadRecords
-      .filter((r) => contractPOIds.includes(r.poRef) && (r.podStatus === 'DELIVERED_STAMPED' || r.podStatus === 'POD_SUBMITTED' || r.podStatus === 'POD_APPROVED' || r.podStatus === 'APPROVED' || r.podStatus === 'APPROVED_INVOICE_PENDING'))
-      .reduce((sum, r) => sum + (r.netWeightKg / 1000), 0);
+  const handleContractSelect = async (c: ContractV3) => {
+    try {
+      const detail = await caApi.getContractDetails(c.id);
+      setSelectedContract(detail);
+      if (detail.purchase_orders) {
+        setPurchaseOrders(detail.purchase_orders);
+      }
+    } catch (err) {
+      console.error('Failed to fetch contract details:', err);
+    }
   };
 
-  const handleAssignSubmit = async () => {
-    if (!selectedPOToAssign || !targetTransporter) return;
+  const handleDistributeSubmit = async () => {
+    if (!selectedPOToAssign || !targetTransporterId) return;
     setIsSubmitting(true);
-    await assignPOToTransporter(selectedPOToAssign.purchaseOrderNo, targetTransporter);
-    setIsSubmitting(false);
-    setSelectedPOToAssign(null);
-    setTargetTransporter('');
+    try {
+      await caApi.distributePo(selectedPOToAssign.id, {
+        transporter_id: parseInt(targetTransporterId),
+        availability_window: availabilityWindow,
+        timebound
+      });
+      // reload
+      if (selectedContract) {
+        handleContractSelect(selectedContract);
+      }
+      setSelectedPOToAssign(null);
+    } catch (err) {
+      console.error('Failed to distribute PO:', err);
+      alert('Error distributing PO');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px' }}>
-      {/* Left: Contracts & PO queues */}
-      <div>
-        <Card title="Active S/4HANA Quantity Contracts" style={{ marginBottom: '24px' }}>
-          <div className="table-container">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>Contract Ref</th>
-                  <th>Transporter</th>
-                  <th>Material Type</th>
-                  <th style={{ textAlign: 'right' }}>Unit Rate</th>
-                  <th style={{ width: '180px' }}>Usage Progress</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contracts.map((c) => {
-                  const delivered = getContractDeliveredVolume(c.contractNumber);
-                  const target = c.targetQuantity;
-                  const pct = Math.min(100, Math.round((delivered / target) * 100));
-                  
-                  return (
-                    <tr 
-                      key={c.contractNumber}
-                      onClick={() => setSelectedContract(c)}
-                      style={{ cursor: 'pointer', backgroundColor: selectedContract?.contractNumber === c.contractNumber ? '#f0f7ff' : 'transparent' }}
-                    >
-                      <td style={{ fontWeight: 700 }}>#{c.contractNumber}</td>
-                      <td style={{ fontWeight: 600 }}>{c.transporter}</td>
-                      <td>{c.qualityType}</td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatCurrency(c.rate)}</td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ flex: 1, height: '6px', backgroundColor: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${pct}%`, height: '100%', backgroundColor: pct > 85 ? '#ef4444' : 'var(--primary-color)' }}></div>
-                          </div>
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--neutral-secondary)' }}>{pct}%</span>
-                        </div>
-                        <div style={{ fontSize: '10px', color: 'var(--neutral-secondary)', marginTop: '2px' }}>
-                          {delivered.toFixed(1)} / {target} Tons
-                        </div>
-                      </td>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      
+      <PageHeader 
+        title="Contracts & PO Release Console"
+        subtitle="Manage active SAP S/4HANA Outline Agreements (ME33K/ME33L) and distribute purchase orders to transporters"
+      />
+
+      {loading ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading Contracts...</div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px' }}>
+          {/* Left: Contracts & PO queues */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            
+            <Card title="Active S/4HANA Quantity Contracts">
+              <div className="table-container">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Contract Ref</th>
+                      <th>Yard/Customer</th>
+                      <th>Validity Period</th>
+                      <th>Material</th>
+                      <th>Status</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        {/* PO Distribution Desk */}
-        <Card title="Purchase Orders Siding Distribution Queue">
-          {purchaseOrders.filter(po => po.status === 'PENDING_ASSIGNMENT').length === 0 ? (
-            <p style={{ textAlign: 'center', padding: '20px', color: 'var(--neutral-secondary)', fontSize: '13px' }}>
-              All purchase orders have been dispatched and assigned.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {purchaseOrders
-                .filter(po => po.status === 'PENDING_ASSIGNMENT')
-                .map((po) => (
-                  <div 
-                    key={po.purchaseOrderNo}
-                    style={{
-                      border: '1px solid var(--border-grey)',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      backgroundColor: '#ffffff',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}
-                  >
-                    <div>
-                      <p style={{ fontWeight: 700, color: 'var(--primary-color)', margin: '0 0 4px 0', fontSize: '15px' }}>
-                        PO #{po.purchaseOrderNo}
-                      </p>
-                      <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', margin: '2px 0' }}>
-                        Product: <strong>{po.productDescription}</strong> | Target: <strong>{po.targetQuantity} {po.unit}s</strong>
-                      </p>
-                      <p style={{ fontSize: '12px', color: 'var(--neutral-secondary)', margin: 0 }}>
-                        Route: {po.fromLocation} → {po.toLocation}
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => {
-                        setSelectedPOToAssign(po);
-                        setTargetTransporter(po.transporter);
-                      }}
-                      className="btn btn-primary"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
-                    >
-                      <Send size={12} style={{ marginRight: '4px' }} />
-                      Distribute PO
-                    </button>
-                  </div>
-                ))}
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Right Column: Contract Detail Drawer or Assign Box */}
-      <div>
-        {selectedPOToAssign ? (
-          <Card title="Distribute & Assign Purchase Order" style={{ border: '2px solid var(--primary-color)' }}>
-            <div style={{ marginBottom: '20px' }}>
-              <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Release PO Target</p>
-              <p style={{ fontWeight: 700, fontSize: '16px', color: 'var(--primary-color)', margin: 0 }}>#{selectedPOToAssign.purchaseOrderNo}</p>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
-                Select Transporter Admin Company
-              </label>
-              <select
-                value={targetTransporter}
-                onChange={(e) => setTargetTransporter(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid var(--border-grey)',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  backgroundColor: '#ffffff'
-                }}
-              >
-                <option value="Sipho Transport Services">Sipho Transport Services (Primary)</option>
-                <option value="CBS Logistics">CBS Logistics (Secondary)</option>
-                <option value="MPL Transport">MPL Transport</option>
-              </select>
-            </div>
-
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button 
-                onClick={() => setSelectedPOToAssign(null)}
-                disabled={isSubmitting}
-                className="btn btn-secondary"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleAssignSubmit}
-                disabled={isSubmitting || !targetTransporter}
-                className="btn btn-primary"
-              >
-                Release PO Run
-              </button>
-            </div>
-          </Card>
-        ) : selectedContract ? (
-          <Card title={`Contract Details: #${selectedContract.contractNumber}`}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, margin: '0 0 2px 0' }}>VENDOR / TRANSPORTER</p>
-                <p style={{ fontWeight: 600, color: 'var(--neutral-primary)', margin: 0 }}>{selectedContract.transporter}</p>
+                  </thead>
+                  <tbody>
+                    {contracts.map((c) => {
+                      const isSelected = selectedContract?.id === c.id;
+                      
+                      return (
+                        <tr 
+                          key={c.id}
+                          onClick={() => handleContractSelect(c)}
+                          style={{ 
+                            cursor: 'pointer', 
+                            backgroundColor: isSelected ? 'var(--neutral-100)' : 'transparent' 
+                          }}
+                        >
+                          <td className="mono" style={{ fontWeight: 700, color: 'var(--neutral-900)' }}>
+                            {c.sap_contract_no}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{c.customer_name}</td>
+                          <td style={{ fontSize: '12px' }}>
+                            {c.start_date} to {c.end_date}
+                          </td>
+                          <td style={{ color: 'var(--neutral-600)' }}>{c.material || 'Coal SL'}</td>
+                          <td>
+                            <StatusBadge status={c.status} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
+            </Card>
 
-              <div>
-                <p style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, margin: '0 0 2px 0' }}>CONTRACT UOM & RATE</p>
-                <p style={{ fontWeight: 600, color: 'var(--neutral-primary)', margin: 0 }}>
-                  {formatCurrency(selectedContract.rate)} per {selectedContract.uom}
+            {/* PO Distribution Desk */}
+            <Card title="Purchase Orders Distribution Queue">
+              {purchaseOrders.length === 0 ? (
+                <p style={{ textAlign: 'center', padding: '24px', color: 'var(--neutral-500)', fontSize: '13px' }}>
+                  No active purchase orders found for the selected contract.
                 </p>
-              </div>
-
-              <div style={{ borderTop: '1px solid var(--border-grey)', paddingTop: '16px' }}>
-                <h4 style={{ fontSize: '13px', fontWeight: 700, marginBottom: '10px' }}>LINKED DISPATCH POS</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {getContractPOs(selectedContract.contractNumber).map((po) => (
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {purchaseOrders.map((po) => (
                     <div 
-                      key={po.purchaseOrderNo}
+                      key={po.id}
                       style={{
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid var(--border-grey)',
-                        backgroundColor: '#fafafa',
+                        border: '1px solid var(--neutral-200)',
+                        borderRadius: '10px',
+                        padding: '16px 20px',
+                        backgroundColor: '#FFFFFF',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center'
                       }}
                     >
-                      <span style={{ fontSize: '13px', fontWeight: 600 }}>PO #{po.purchaseOrderNo}</span>
-                      <span 
-                        style={{ 
-                          fontSize: '10px', 
-                          fontWeight: 700, 
-                          padding: '2px 6px', 
-                          borderRadius: '4px',
-                          backgroundColor: po.status === 'ACCEPTED_SIGNED' || po.status === 'DRIVER_ASSIGNED' || po.status === 'DRIVER_ARRIVED' || po.status === 'SUPERVISOR_APPROVED' || po.status === 'EN_ROUTE' || po.status === 'DELIVERED_STAMPED' || po.status === 'POD_SUBMITTED' || po.status === 'POD_APPROVED' || po.status === 'INVOICE_SUBMITTED' || po.status === 'PAID' ? 'var(--success-bg)' : '#fef3c7',
-                          color: po.status === 'ACCEPTED_SIGNED' || po.status === 'DRIVER_ASSIGNED' || po.status === 'DRIVER_ARRIVED' || po.status === 'SUPERVISOR_APPROVED' || po.status === 'EN_ROUTE' || po.status === 'DELIVERED_STAMPED' || po.status === 'POD_SUBMITTED' || po.status === 'POD_APPROVED' || po.status === 'INVOICE_SUBMITTED' || po.status === 'PAID' ? 'var(--success-text)' : '#d97706'
-                        }}
-                      >
-                        {po.status}
-                      </span>
+                      <div>
+                        <p className="mono" style={{ fontWeight: 800, color: 'var(--neutral-900)', margin: '0 0 4px 0', fontSize: '15px' }}>
+                          PO #{po.sap_po_no}
+                        </p>
+                        <p style={{ fontSize: '13px', color: 'var(--neutral-600)', margin: '2px 0' }}>
+                          Product: <strong>{po.material}</strong> | Target: <strong>{po.target_qty} {po.uom}s</strong>
+                        </p>
+                        <p style={{ fontSize: '12px', color: 'var(--neutral-500)', margin: 0 }}>
+                          Rate: {formatCurrency(po.rate)} | Cost Center: {po.cost_center || 'N/A'}
+                        </p>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <StatusBadge status={po.status} />
+                        {po.status === 'OPEN' && (
+                          <button 
+                            onClick={() => setSelectedPOToAssign(po)}
+                            className="btn btn-dark btn-sm"
+                          >
+                            <Send size={12} />
+                            Distribute PO
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            </div>
-          </Card>
-        ) : (
-          <Card title="Contract Inspector">
-            <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', textAlign: 'center', padding: '20px 0', margin: 0 }}>
-              Select a contract on the left to inspect linked runs and usage metrics.
-            </p>
-          </Card>
-        )}
-      </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Right Column: Contract Detail Inspector or Distribute PO Box */}
+          <div>
+            {selectedPOToAssign ? (
+              <Card title="Distribute & Configure Job Target" accentColor="var(--accent-blue)">
+                <div style={{ marginBottom: '20px' }}>
+                  <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Release PO Target</p>
+                  <p className="mono" style={{ fontWeight: 800, fontSize: '18px', color: 'var(--neutral-900)', margin: 0 }}>#{selectedPOToAssign.sap_po_no}</p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                      Transporter Admin Assignee
+                    </label>
+                    <select
+                      value={targetTransporterId}
+                      onChange={(e) => setTargetTransporterId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid var(--neutral-300)',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        backgroundColor: '#FFFFFF',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {transporters.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                      Availability Window
+                    </label>
+                    <input 
+                      type="text" 
+                      value={availabilityWindow}
+                      onChange={e => setAvailabilityWindow(e.target.value)}
+                      placeholder="e.g. 08:00-17:00"
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid var(--neutral-300)',
+                        borderRadius: '8px',
+                        fontSize: '13px'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                      Timebound Lock
+                    </label>
+                    <input 
+                      type="date" 
+                      value={timebound}
+                      onChange={e => setTimebound(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid var(--neutral-300)',
+                        borderRadius: '8px',
+                        fontSize: '13px'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button 
+                    onClick={() => setSelectedPOToAssign(null)}
+                    disabled={isSubmitting}
+                    className="btn btn-ghost"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleDistributeSubmit}
+                    disabled={isSubmitting || !targetTransporterId}
+                    className="btn btn-primary"
+                  >
+                    Release PO
+                  </button>
+                </div>
+              </Card>
+            ) : selectedContract ? (
+              <Card title={`Contract: ${selectedContract.sap_contract_no}`}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 2px 0' }}>YARD / CUSTOMER SITE</p>
+                    <p style={{ fontWeight: 700, color: 'var(--neutral-900)', margin: 0, fontSize: '14px' }}>{selectedContract.customer_name}</p>
+                  </div>
+
+                  <div>
+                    <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 2px 0' }}>VALIDITY RANGE</p>
+                    <p style={{ fontWeight: 600, color: 'var(--neutral-800)', margin: 0 }}>
+                      {selectedContract.start_date} to {selectedContract.end_date}
+                    </p>
+                  </div>
+
+                  {selectedContract.pdf_url && (
+                    <div>
+                      <a 
+                        href={`http://localhost:3001${selectedContract.pdf_url}`}
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="btn btn-ghost btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Download size={14} />
+                        View PDF Outline Agreement
+                      </a>
+                    </div>
+                  )}
+
+                  <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '16px' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>LINKED OUTLINE AGREEMENT POS</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {purchaseOrders.map((po) => (
+                        <div 
+                          key={po.id}
+                          style={{
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--neutral-200)',
+                            backgroundColor: 'var(--neutral-50)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}
+                        >
+                          <span className="mono" style={{ fontSize: '13px', fontWeight: 700 }}>PO #{po.sap_po_no}</span>
+                          <StatusBadge status={po.status} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Card title="Contract Inspector">
+                <p style={{ fontSize: '13px', color: 'var(--neutral-500)', textAlign: 'center', padding: '24px 0', margin: 0 }}>
+                  Select a contract row from the left table to inspect linked purchase orders and volume usage.
+                </p>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

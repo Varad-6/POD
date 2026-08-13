@@ -9,6 +9,7 @@ import {
   DASHBOARD_SUMMARY,
   CONTRACTS
 } from '../data/mockData';
+import { getSAPAdapter } from '../services';
 
 // Types
 export interface User {
@@ -233,6 +234,22 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('demo_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
+  // Initial Sync from SAP Adapter (Live S21 or Mock)
+  useEffect(() => {
+    const adapter = getSAPAdapter();
+    adapter.fetchContracts().then((fetchedContracts) => {
+      if (fetchedContracts && fetchedContracts.length > 0) {
+        setContracts(fetchedContracts);
+      }
+    }).catch(err => console.warn('Contracts sync warning:', err));
+
+    adapter.fetchPurchaseOrders().then((fetchedPOs) => {
+      if (fetchedPOs && fetchedPOs.length > 0) {
+        setPurchaseOrders(fetchedPOs as any);
+      }
+    }).catch(err => console.warn('POs sync warning:', err));
+  }, []);
+
   // Toast Helpers
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -269,19 +286,24 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const acceptPO = async (purchaseOrderNo: string, signatureDataUrl: string) => {
     await new Promise((resolve) => setTimeout(resolve, 800)); // Simulate processing delay
     
+    // Trigger SAP Acknowledgment via SAP Adapter
+    const adapter = getSAPAdapter();
+    const signerName = currentUser?.role === 'TRANSPORTER' ? currentUser.companyName : 'Sipho Transport Services';
+    await adapter.acknowledgePO(purchaseOrderNo, signerName || 'Transporter', 'SIG-HASH', new Date().toISOString());
+
     setPurchaseOrders((prev) =>
       prev.map((po) =>
         po.purchaseOrderNo === purchaseOrderNo
           ? {
               ...po,
               status: 'ACCEPTED_SIGNED',
-              signedBy: currentUser?.role === 'TRANSPORTER' ? currentUser.companyName : 'Sipho Transport Services',
+              signedBy: signerName,
               signedDate: new Date().toISOString()
             }
           : po
       )
     );
-    showToast(`PO #${purchaseOrderNo} signed and accepted`, 'success');
+    showToast(`PO #${purchaseOrderNo} signed and accepted (Synced to SAP)`, 'success');
   };
 
   const uploadPOD = async (waybillNo: string, fileName: string) => {

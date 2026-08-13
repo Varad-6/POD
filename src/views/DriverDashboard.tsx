@@ -1,694 +1,417 @@
-import React, { useState } from 'react';
-import { useDemo, OffloadRecord } from '../context/DemoContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuthV3 } from '../contexts/AuthContextV3';
+import { drApi, TransportAssignmentV3 } from '../lib/api_v3';
 import { Card } from '../components/Card';
-import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
-import { FileUploadBox } from '../components/FileUploadBox';
-import { LoadingSpinner } from '../components/LoadingSpinner';
-import { formatDate } from '../utils/format';
-import { Truck, MapPin, CheckCircle2, Upload, AlertTriangle } from 'lucide-react';
+import { Truck, MapPin, CheckCircle2, Upload, AlertTriangle, Key } from 'lucide-react';
 
 export const DriverDashboard: React.FC = () => {
-  const { 
-    purchaseOrders, 
-    offloadRecords, 
-    driverConfirmArrival, 
-    driverDepartSiding,
-    supervisorLogWeights,
-    customerLogWeights,
-    uploadPOD,
-    currentUser
-  } = useDemo();
-
-  // Selected records for modals
-  const [selectedPO, setSelectedPO] = useState<any>(null);
-  const [selectedOffload, setSelectedOffload] = useState<OffloadRecord | null>(null);
-  
-  // E-Sign States
-  const [typedSignature, setTypedSignature] = useState('');
+  const { user } = useAuthV3();
+  const [assignments, setAssignments] = useState<TransportAssignmentV3[]>([]);
+  const [selectedAssignment, setSelectedAssignment] = useState<TransportAssignmentV3 | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [sigError, setSigError] = useState<string | null>(null);
 
-  // Presenter Simulation States (for demo speed)
-  const [showSimulateSupervisor, setShowSimulateSupervisor] = useState(false);
-  const [showSimulateCustomer, setShowSimulateCustomer] = useState(false);
-  const [tareInput, setTareInput] = useState('21.10');
-  const [grossInput, setGrossInput] = useState('55.25');
-  const [isSimulationApproved, setIsSimulationApproved] = useState(true);
+  // OTP details
+  const [otpCode, setOtpCode] = useState('');
+  const [otpStage, setOtpStage] = useState<'PICKUP' | 'DELIVERY'>('PICKUP');
 
-  // File upload states
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
-  const [uploadStep, setUploadStep] = useState<'UPLOAD' | 'PROCESSING' | 'RESULT'>('UPLOAD');
-  const [selectedStepDetail, setSelectedStepDetail] = useState<number | null>(null);
+  // Weighbridge log input
+  const [weighStage, setWeighStage] = useState<'MINE_TARE' | 'MINE_GROSS' | 'DEST_GROSS' | 'DEST_TARE'>('MINE_TARE');
+  const [weightKg, setWeightKg] = useState('15000');
 
-  // Find active run for this driver
-  const activeRun = offloadRecords.find((rec) => 
-    rec.podStatus === 'DRIVER_ASSIGNED' ||
-    rec.podStatus === 'DRIVER_ARRIVED' ||
-    rec.podStatus === 'SUPERVISOR_APPROVED' ||
-    rec.podStatus === 'SUPERVISOR_REJECTED' ||
-    rec.podStatus === 'EN_ROUTE' ||
-    rec.podStatus === 'DELIVERED_STAMPED'
-  );
+  // GPS Tracking states
+  const [trackingActive, setTrackingActive] = useState(false);
+  const [gpsCoords, setGpsCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const watchIdRef = useRef<number | null>(null);
 
-  const getPOForActiveRun = () => {
-    if (!activeRun) return null;
-    return purchaseOrders.find(p => p.purchaseOrderNo === activeRun.poRef);
+  // POD Upload simulated file
+  const [selectedPodFile, setSelectedPodFile] = useState('/uploads/pod/pod_9.jpg');
+  const [ocrResult, setOcrResult] = useState<any>(null);
+
+  const loadAssignments = async () => {
+    setLoading(true);
+    try {
+      const data = await drApi.getMineAssignments();
+      setAssignments(data);
+      if (data.length > 0) {
+        setSelectedAssignment(data[0]);
+      }
+    } catch (err) {
+      console.error('Failed to load driver assignments:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleConfirmArrival = async () => {
-    if (!activeRun || !typedSignature) return;
+  useEffect(() => {
+    loadAssignments();
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
 
-    const expectedName = currentUser?.displayName?.split('(')[0]?.trim().toLowerCase() || "dumisani dlamini";
-    if (typedSignature.trim().toLowerCase() !== expectedName && typedSignature.trim().length < 3) {
-      setSigError(`Please type your driver name signature: "${currentUser?.displayName || 'Dumisani Dlamini'}"`);
+  // Generate OTP
+  const handleGenerateOTP = async (stage: 'PICKUP' | 'DELIVERY') => {
+    if (!selectedAssignment) return;
+    setIsSubmitting(true);
+    try {
+      const res = await drApi.otpGenerate(selectedAssignment.id, stage);
+      setOtpCode(res.otp_code);
+      setOtpStage(stage);
+      alert(`OTP code generated successfully: ${res.otp_code}. Provide this code to the supervisor/receiving yard.`);
+    } catch (err) {
+      console.error('Failed to generate OTP:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Log weight
+  const handleWeightLog = async () => {
+    if (!selectedAssignment) return;
+    setIsSubmitting(true);
+    try {
+      await drApi.logWeight(selectedAssignment.id, {
+        stage: weighStage,
+        weight_kg: parseFloat(weightKg),
+        truck_detail: 'Driver console self log'
+      });
+      loadAssignments();
+      alert('Weight log registered successfully.');
+    } catch (err) {
+      console.error('Failed to log weight:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Watch Position (Transit events)
+  const toggleTracking = () => {
+    if (trackingActive) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setTrackingActive(false);
+      setGpsCoords(null);
+    } else {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+      }
+      setTrackingActive(true);
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setGpsCoords({ lat, lng });
+          
+          // Log en route transit event
+          if (selectedAssignment) {
+            drApi.logTransitEvent(selectedAssignment.id, {
+              status: 'EN_ROUTE',
+              gps_lat: lat,
+              gps_lng: lng
+            }).catch(err => console.error('Transit event sync failed:', err));
+          }
+        },
+        (err) => {
+          console.error('GPS Watch error:', err);
+        },
+        { enableHighAccuracy: true }
+      );
+    }
+  };
+
+  // Confirm Arrival
+  const handleConfirmArrival = () => {
+    if (!selectedAssignment) return;
+    if (!navigator.geolocation) {
+      alert('Geolocation not supported.');
       return;
     }
 
     setIsSubmitting(true);
-    setSigError(null);
-
-    // E-sign arrival
-    await driverConfirmArrival(activeRun.poRef);
-    
-    setIsSubmitting(false);
-    setSelectedPO(null);
-    setTypedSignature('');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await drApi.confirmArrival(selectedAssignment.id, {
+            gps_lat: pos.coords.latitude,
+            gps_lng: pos.coords.longitude
+          });
+          alert(res.message + ` IP Captured: ${res.ip_captured}`);
+          loadAssignments();
+        } catch (err) {
+          console.error('Arrival check failed:', err);
+          alert('Could not confirm arrival check.');
+        } finally {
+          setIsSubmitting(false);
+        }
+      },
+      (err) => {
+        console.error('GPS error:', err);
+        setIsSubmitting(false);
+        alert('Please enable GPS to confirm arrival location.');
+      }
+    );
   };
 
-  const handleSimulateSupervisor = async () => {
-    if (!activeRun) return;
+  // POD upload
+  const handlePodSubmit = async () => {
+    if (!selectedAssignment) return;
     setIsSubmitting(true);
-    
-    const tareKg = Math.round((parseFloat(tareInput) || 21.1) * 1000);
-    const grossKg = Math.round((parseFloat(grossInput) || 55.25) * 1000);
-
-    await supervisorLogWeights(activeRun.waybillNo, tareKg, grossKg, isSimulationApproved);
-    
-    setIsSubmitting(false);
-    setShowSimulateSupervisor(false);
+    setOcrResult(null);
+    try {
+      const res = await drApi.uploadPod(selectedAssignment.id, {
+        pod_file_url: selectedPodFile
+      });
+      setOcrResult(res);
+      loadAssignments();
+      alert('POD document uploaded & processed by OCR parser.');
+    } catch (err) {
+      console.error('POD submission error:', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  const handleSimulateCustomer = async () => {
-    if (!activeRun) return;
-    setIsSubmitting(true);
-    
-    const tareKg = Math.round((parseFloat(tareInput) || 21.1) * 1000);
-    const grossKg = Math.round((parseFloat(grossInput) || 55.25) * 1000);
-
-    await customerLogWeights(activeRun.waybillNo, grossKg, tareKg, 0, 0, 'None', 'NONE', isSimulationApproved);
-    
-    setIsSubmitting(false);
-    setShowSimulateCustomer(false);
-  };
-
-  const handleDepartYard = async () => {
-    if (!activeRun) return;
-    setIsSubmitting(true);
-    await driverDepartSiding(activeRun.waybillNo);
-    setIsSubmitting(false);
-  };
-
-  const handlePODUploadSubmit = async () => {
-    if (!activeRun || !selectedFileName) return;
-    
-    setUploadStep('PROCESSING');
-    await new Promise((resolve) => setTimeout(resolve, 2100));
-    setUploadStep('RESULT');
-  };
-
-  const handleConfirmPODFile = async () => {
-    if (!activeRun || !selectedFileName) return;
-    
-    setIsSubmitting(true);
-    await uploadPOD(activeRun.waybillNo, selectedFileName);
-    
-    setIsSubmitting(false);
-    setShowUploadModal(false);
-    setSelectedFileName(null);
-    setUploadStep('UPLOAD');
-  };
-
-  const po = getPOForActiveRun();
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '12px 0' }}>
+    <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Banner */}
-      <div 
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '16px',
-          backgroundColor: 'var(--primary-color)',
-          color: '#ffffff',
-          borderRadius: '12px',
-          padding: '20px 24px',
-          marginBottom: '28px',
-          boxShadow: 'var(--card-shadow)'
-        }}
-      >
-        <div>
-          <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '4px', color: '#ffffff' }}>Welcome back, Dumisani!</h2>
-          <p style={{ fontSize: '14px', color: '#e2e8f0' }}>Manage your active deliveries, e-sign PO arrival, and upload verified POD slips.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <span 
-            style={{ 
-              fontSize: '12px', 
-              fontWeight: 700, 
-              backgroundColor: 'rgba(255, 255, 255, 0.15)', 
-              color: '#ffffff', 
-              padding: '6px 14px', 
-              borderRadius: '999px',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-            }}
-          >
-            Role: Truck Driver
-          </span>
-        </div>
+      <div>
+        <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--neutral-900)', margin: 0 }}>
+          Driver Haulage Control Console
+        </h1>
+        <p style={{ fontSize: '14px', color: 'var(--neutral-500)', margin: '4px 0 0 0' }}>
+          Welcome back, {user?.displayName || 'Driver'}. Manage your active assignments, verify pickup/delivery stages, and upload PODs.
+        </p>
       </div>
 
-      <h3 style={{ fontSize: '16px', fontWeight: '700', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <Truck size={18} /> Active Delivery Assignment
-      </h3>
-
-      {!activeRun ? (
+      {loading ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-505)' }}>Loading haulage tasks...</div>
+      ) : assignments.length === 0 ? (
         <EmptyState 
-          message="No active deliveries assigned"
-          submessage="Check back later or contact your Transporter Administrator to assign a new job."
+          icon={<Truck size={48} />}
+          title="No Haulage Assignments"
+          description="You do not have any transport assignments scheduled for today."
         />
       ) : (
-        <Card>
-          {/* Header */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid var(--border-grey)', paddingBottom: '16px', marginBottom: '16px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--primary-color)' }}>
-                  Waybill #{activeRun.waybillNo}
-                </span>
-                <span style={{ fontSize: '13px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>
-                  (PO: #{activeRun.poRef})
-                </span>
-              </div>
-              <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)' }}>
-                Route: {activeRun.site} → Eskom Richards Bay
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--neutral-secondary)', fontWeight: 500 }}>
-                Date: {formatDate(activeRun.offloadDate)}
-              </span>
-              <StatusBadge status={activeRun.podStatus} />
-            </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          {/* Assignments selector */}
+          <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '6px' }}>
+            {assignments.map(a => (
+              <button
+                key={a.id}
+                onClick={() => { setSelectedAssignment(a); setOcrResult(null); }}
+                style={{
+                  padding: '12px 20px',
+                  borderRadius: '10px',
+                  border: selectedAssignment?.id === a.id ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
+                  backgroundColor: selectedAssignment?.id === a.id ? 'var(--accent-blue-light)' : '#fff',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  flexShrink: 0,
+                  minWidth: '220px'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span className="mono" style={{ fontWeight: 800 }}>Assignment #{a.id}</span>
+                  <StatusBadge status={a.status} />
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--neutral-700)' }}>{a.material}</div>
+                <div style={{ fontSize: '11px', color: 'var(--neutral-500)' }}>PO #{a.sap_po_no}</div>
+              </button>
+            ))}
           </div>
 
-          {/* Logistics details */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Vehicle Horse</span>
-              <p style={{ fontWeight: 600, fontSize: '14px' }}>{activeRun.horseRegNo}</p>
-            </div>
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Trailers</span>
-              <p style={{ fontWeight: 600, fontSize: '14px', color: 'var(--neutral-secondary)' }}>
-                {activeRun.trailer1RegNo} / {activeRun.trailer2RegNo}
-              </p>
-            </div>
-            <div>
-              <span style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Net Payload</span>
-              <p style={{ fontWeight: 600, fontSize: '14px', color: activeRun.netWeightKg ? 'var(--success-text)' : 'var(--neutral-secondary)' }}>
-                {activeRun.netWeightKg ? `${(activeRun.netWeightKg / 1000).toFixed(2)} TON` : '—'}
-              </p>
-            </div>
-          </div>
-
-          {/* Journey Steps Tracking */}
-          <div style={{ backgroundColor: 'var(--page-bg)', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
-            <h4 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--neutral-secondary)', textTransform: 'uppercase', marginBottom: '12px' }}>
-              Delivery Journey Stages
-            </h4>
-            <div style={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
+          {selectedAssignment && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
               
-              <div 
-                onClick={() => setSelectedStepDetail(1)}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', zIndex: 1, cursor: 'pointer' }}
-                title="Click to view details for Stage 1"
-              >
-                <div 
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: activeRun.podStatus === 'DRIVER_ASSIGNED' ? 'var(--warning-bg)' : 'var(--success-bg)',
-                    color: activeRun.podStatus === 'DRIVER_ASSIGNED' ? 'var(--warning-text)' : 'var(--success-text)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                    border: '2px solid ' + (activeRun.podStatus === 'DRIVER_ASSIGNED' ? 'var(--warning-text)' : 'var(--success-text)')
-                  }}
-                >
-                  {activeRun.podStatus === 'DRIVER_ASSIGNED' ? '1' : '✓'}
-                </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, marginTop: '6px', textDecoration: selectedStepDetail === 1 ? 'underline' : 'none' }}>Arrival Signed</span>
+              {/* Left Column: Details & GPS Tracking */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <Card title="Assignment Execution Details">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>Consignment Route</span>
+                      <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600 }}>{selectedAssignment.from_location} → {selectedAssignment.to_location}</p>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>Material Type</span>
+                      <p style={{ margin: 0, fontSize: '13.5px', fontWeight: 600 }}>{selectedAssignment.material}</p>
+                    </div>
+
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>Vehicle Horse Trailer</span>
+                      <p className="mono" style={{ margin: 0, fontSize: '13.5px', fontWeight: 700 }}>{selectedAssignment.vehicle_reg || 'N/A'}</p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card title="Transit GPS Tracking">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <p style={{ fontSize: '12.5px', color: 'var(--neutral-500)', margin: 0 }}>
+                      En-route logistics requires continuous GPS telemetry updates. Toggling watch mode logs transit positions.
+                    </p>
+
+                    <button 
+                      onClick={toggleTracking} 
+                      className={`btn ${trackingActive ? 'btn-danger' : 'btn-dark'}`}
+                    >
+                      {trackingActive ? 'Stop Transit Ping' : 'Start Transit Tracking'}
+                    </button>
+
+                    {gpsCoords && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--neutral-100)', padding: '10px 14px', borderRadius: '8px', fontSize: '12.5px' }}>
+                        <MapPin size={14} color="var(--accent-blue)" />
+                        <span>Lat: {gpsCoords.lat.toFixed(5)}, Lng: {gpsCoords.lng.toFixed(5)}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Arrived Confirmation Check */}
+                {['DISPATCHED', 'EN_ROUTE'].includes(selectedAssignment.status) && (
+                  <Card title="Destination Arrival Confirmation">
+                    <button 
+                      onClick={handleConfirmArrival}
+                      className="btn btn-primary"
+                      style={{ width: '100%' }}
+                      disabled={isSubmitting}
+                    >
+                      Verify Arrival Location (GPS & IP check)
+                    </button>
+                  </Card>
+                )}
               </div>
 
-              <div 
-                onClick={() => setSelectedStepDetail(2)}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', zIndex: 1, cursor: 'pointer' }}
-                title="Click to view details for Stage 2"
-              >
-                <div 
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: activeRun.podStatus === 'DRIVER_ARRIVED' ? 'var(--warning-bg)' : 
-                                      (activeRun.podStatus === 'SUPERVISOR_APPROVED' || activeRun.podStatus === 'EN_ROUTE' || activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-bg)' : '#e2e8f0'),
-                    color: activeRun.podStatus === 'DRIVER_ARRIVED' ? 'var(--warning-text)' : 
-                           (activeRun.podStatus === 'SUPERVISOR_APPROVED' || activeRun.podStatus === 'EN_ROUTE' || activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-text)' : 'var(--neutral-secondary)'),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                    border: '2px solid ' + (activeRun.podStatus === 'DRIVER_ARRIVED' ? 'var(--warning-text)' : 
-                                           (activeRun.podStatus === 'SUPERVISOR_APPROVED' || activeRun.podStatus === 'EN_ROUTE' || activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-text)' : '#cbd5e1'))
-                  }}
-                >
-                  {activeRun.podStatus === 'SUPERVISOR_APPROVED' || activeRun.podStatus === 'EN_ROUTE' || activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? '✓' : '2'}
-                </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, marginTop: '6px', textDecoration: selectedStepDetail === 2 ? 'underline' : 'none' }}>Supervisor Load</span>
-              </div>
+              {/* Right Column: OTP Code generation & POD Upload */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                <Card title="OTP Code Generation (Audit Proof)">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <p style={{ fontSize: '12.5px', color: 'var(--neutral-500)', margin: 0 }}>
+                      Generate verification OTP codes to substitute manual signature validation checks.
+                    </p>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <button 
+                        onClick={() => handleGenerateOTP('PICKUP')} 
+                        className="btn btn-dark btn-sm"
+                        disabled={isSubmitting}
+                      >
+                        Generate Pickup OTP
+                      </button>
+                      <button 
+                        onClick={() => handleGenerateOTP('DELIVERY')} 
+                        className="btn btn-dark btn-sm"
+                        disabled={isSubmitting}
+                      >
+                        Generate Delivery OTP
+                      </button>
+                    </div>
 
-              <div 
-                onClick={() => setSelectedStepDetail(3)}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', zIndex: 1, cursor: 'pointer' }}
-                title="Click to view details for Stage 3"
-              >
-                <div 
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: activeRun.podStatus === 'SUPERVISOR_APPROVED' ? '#e2e8f0' :
-                                      activeRun.podStatus === 'EN_ROUTE' ? 'var(--warning-bg)' : 
-                                      (activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-bg)' : '#e2e8f0'),
-                    color: activeRun.podStatus === 'SUPERVISOR_APPROVED' ? 'var(--neutral-secondary)' :
-                           activeRun.podStatus === 'EN_ROUTE' ? 'var(--warning-text)' : 
-                           (activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-text)' : 'var(--neutral-secondary)'),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                    border: '2px solid ' + (activeRun.podStatus === 'SUPERVISOR_APPROVED' ? '#cbd5e1' :
-                                           activeRun.podStatus === 'EN_ROUTE' ? 'var(--warning-text)' : 
-                                           (activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-text)' : '#cbd5e1'))
-                  }}
-                >
-                  {activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? '✓' : '3'}
-                </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, marginTop: '6px', textDecoration: selectedStepDetail === 3 ? 'underline' : 'none' }}>Customer Stamp</span>
-              </div>
+                    {otpCode && (
+                      <div style={{ textAlign: 'center', backgroundColor: 'var(--neutral-50)', padding: '16px', borderRadius: '10px', border: '1px solid var(--neutral-200)' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>Active {otpStage} OTP</span>
+                        <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--neutral-900)', letterSpacing: '0.1em', marginTop: '4px' }}>
+                          {otpCode}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
 
-              <div 
-                onClick={() => setSelectedStepDetail(4)}
-                style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', zIndex: 1, cursor: 'pointer' }}
-                title="Click to view details for Stage 4"
-              >
-                <div 
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    backgroundColor: activeRun.podStatus === 'DELIVERED_STAMPED' ? 'var(--warning-bg)' : 
-                                      (activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-bg)' : '#e2e8f0'),
-                    color: activeRun.podStatus === 'DELIVERED_STAMPED' ? 'var(--warning-text)' : 
-                           (activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-text)' : 'var(--neutral-secondary)'),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 700,
-                    fontSize: '12px',
-                    border: '2px solid ' + (activeRun.podStatus === 'DELIVERED_STAMPED' ? 'var(--warning-text)' : 
-                                           (activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? 'var(--success-text)' : '#cbd5e1'))
-                  }}
-                >
-                  {activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' ? '✓' : '4'}
-                </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, marginTop: '6px', textDecoration: selectedStepDetail === 4 ? 'underline' : 'none' }}>POD Uploaded</span>
+                {/* Weighbridge console */}
+                <Card title="Self weighbridge log capture">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>Stage</label>
+                        <select 
+                          value={weighStage} 
+                          onChange={e => setWeighStage(e.target.value as any)}
+                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--neutral-300)', borderRadius: '8px', backgroundColor: '#fff' }}
+                        >
+                          <option value="MINE_TARE">Mine Tare</option>
+                          <option value="MINE_GROSS">Mine Gross</option>
+                          <option value="DEST_GROSS">Dest Gross</option>
+                          <option value="DEST_TARE">Dest Tare</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>Weight (kg)</label>
+                        <input 
+                          type="number" 
+                          value={weightKg} 
+                          onChange={e => setWeightKg(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--neutral-300)', borderRadius: '8px' }}
+                        />
+                      </div>
+                    </div>
+                    <button className="btn btn-dark btn-sm" onClick={handleWeightLog} disabled={isSubmitting}>Log Weight Log</button>
+                  </div>
+                </Card>
+
+                {/* POD Slip upload */}
+                {['ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW'].includes(selectedAssignment.status) && (
+                  <Card title="Submit Proof of Delivery (POD)">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>Select Waybill slip image file</label>
+                        <select 
+                          value={selectedPodFile} 
+                          onChange={e => setSelectedPodFile(e.target.value)}
+                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--neutral-300)', borderRadius: '8px', backgroundColor: '#fff' }}
+                        >
+                          <option value="/uploads/pod/pod_10.jpg">WB-4500012350 (Exact Matching Demo)</option>
+                          <option value="/uploads/pod/pod_9.jpg">WB-887711 (Discrepancy / Mismatch Demo)</option>
+                        </select>
+                      </div>
+
+                      <button 
+                        onClick={handlePodSubmit} 
+                        className="btn btn-dark" 
+                        disabled={isSubmitting}
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      >
+                        <Upload size={14} />
+                        Upload Waybill Slip
+                      </button>
+
+                      {ocrResult && (
+                        <div style={{ backgroundColor: 'var(--neutral-50)', padding: '14px', borderRadius: '8px', border: '1px solid var(--neutral-200)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700 }}>OCR PARSER TARGET RESULTS</span>
+                          <div style={{ fontSize: '13px' }}>
+                            <p style={{ margin: '2px 0' }}>Waybill Extracted: <strong>{ocrResult.ocr?.ocr_waybill_extracted}</strong></p>
+                            <p style={{ margin: '2px 0' }}>Weight Extracted: <strong>{ocrResult.ocr?.ocr_weight_extracted} Tons</strong></p>
+                            <p style={{ margin: '2px 0' }}>Confidence: <strong>{ocrResult.ocr?.ocr_confidence_pct}%</strong></p>
+                            <p style={{ margin: '2px 0' }}>Match Status: <strong style={{ color: ocrResult.ocr?.match_status === 'MATCH' ? 'var(--success-600)' : 'var(--error-600)' }}>{ocrResult.ocr?.match_status}</strong></p>
+                          </div>
+                          {ocrResult.under_review && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--error-600)', fontSize: '12px', fontWeight: 600 }}>
+                              <AlertTriangle size={14} />
+                              <span>Discrepancy detected. Flagged in review queue.</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                )}
+
               </div>
 
             </div>
+          )}
 
-            {/* Selected Step Explanation Detail Card */}
-            {selectedStepDetail !== null && (
-              <div style={{
-                marginTop: '16px',
-                padding: '14px 16px',
-                backgroundColor: '#ffffff',
-                border: '1px solid var(--border-grey)',
-                borderRadius: '8px',
-                animation: 'fadeIn 0.2s',
-                position: 'relative'
-              }}>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setSelectedStepDetail(null); }}
-                  style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '12px',
-                    border: 'none',
-                    background: 'none',
-                    fontSize: '18px',
-                    cursor: 'pointer',
-                    color: 'var(--neutral-secondary)',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  ×
-                </button>
-                <h5 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: 700, color: 'var(--primary-color)' }}>
-                  {selectedStepDetail === 1 && "Stage 1: Arrival Signed Check-in"}
-                  {selectedStepDetail === 2 && "Stage 2: Supervisor Weighbridge Loading"}
-                  {selectedStepDetail === 3 && "Stage 3: Customer Siding Stamp Verification"}
-                  {selectedStepDetail === 4 && "Stage 4: Proof of Delivery (POD) Document OCR"}
-                </h5>
-                <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: 'var(--neutral-secondary)', lineHeight: '1.4' }}>
-                  {selectedStepDetail === 1 && "Driver check-in gate confirmation. The driver e-signs the PO to certify their physical arrival at the mine loading sidings. This triggers S/4HANA weighbridge ticket generation."}
-                  {selectedStepDetail === 2 && "Pre-dispatch weighbridge measurement. Empty (Tare) and Loaded (Gross) truck weights are checked. If net weight falls within safe cargo limits (e.g. 30 Tons), supervisor approves dispatch."}
-                  {selectedStepDetail === 3 && "Receiving yard offload check. Eskom customer verifies cargo on arrival by re-weighing loaded and unloaded tare weights. Verification applies the official e-gate receipt stamp."}
-                  {selectedStepDetail === 4 && "Final digital proof of delivery. Driver uploads the physically stamped gate waybill slip. Automated OCR extracts information and cross-references S/4HANA records to clear the AP invoice run."}
-                </p>
-                <div style={{ display: 'flex', gap: '16px', fontSize: '11px', color: 'var(--neutral-secondary)', borderTop: '1px solid var(--border-grey)', paddingTop: '10px' }}>
-                  <div>
-                    <strong>Actor:</strong>{" "}
-                    {selectedStepDetail === 1 && "Truck Driver"}
-                    {selectedStepDetail === 2 && "Weighbridge Supervisor (Pieter Botha)"}
-                    {selectedStepDetail === 3 && "Customer (John Ndlovu)"}
-                    {selectedStepDetail === 4 && "Truck Driver / System OCR"}
-                  </div>
-                  <div>
-                    <strong>Status:</strong>{" "}
-                    {selectedStepDetail === 1 && (activeRun.podStatus !== 'DRIVER_ASSIGNED' ? "✓ Complete (Signed)" : "Awaiting signature")}
-                    {selectedStepDetail === 2 && ((activeRun.podStatus === 'SUPERVISOR_APPROVED' || activeRun.podStatus === 'EN_ROUTE' || activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED') ? `✓ Complete (Net: ${(activeRun.netWeightKg / 1000).toFixed(2)} Tons)` : "Awaiting weighbridge entry")}
-                    {selectedStepDetail === 3 && ((activeRun.podStatus === 'DELIVERED_STAMPED' || activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED') ? "✓ Complete (Stamped)" : "Awaiting offload check")}
-                    {selectedStepDetail === 4 && ((activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED') ? `✓ Complete (${activeRun.uploadedFileName || 'Waybill.jpg'})` : "Awaiting upload")}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Contextual Action Button based on Current Status */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {activeRun.podStatus === 'DRIVER_ASSIGNED' && (
-              <button 
-                onClick={() => setSelectedPO(activeRun)}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-              >
-                <MapPin size={16} /> Confirm Siding Arrival (E-Sign)
-              </button>
-            )}
-
-            {activeRun.podStatus === 'DRIVER_ARRIVED' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', backgroundColor: 'var(--warning-bg)', borderRadius: '8px', color: 'var(--warning-text)', fontSize: '13px', fontWeight: 600 }}>
-                  <MapPin size={16} /> Awaiting Pre-Dispatch Weighing by Siding Supervisor (Pieter Botha)
-                </div>
-                {/* Presenter shortcut */}
-                <button 
-                  onClick={() => { setSelectedOffload(activeRun); setIsSimulationApproved(true); setShowSimulateSupervisor(true); }}
-                  className="btn"
-                  style={{ border: '1px dashed var(--primary-color)', color: 'var(--primary-color)', width: 'fit-content' }}
-                >
-                  ⚙️ presenter shortcut: simulate supervisor weighing
-                </button>
-              </div>
-            )}
-
-            {activeRun.podStatus === 'SUPERVISOR_APPROVED' && (
-              <button 
-                onClick={handleDepartYard}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-                disabled={isSubmitting}
-              >
-                <Truck size={16} /> Start Journey (Depart Siding)
-              </button>
-            )}
-
-            {activeRun.podStatus === 'EN_ROUTE' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', backgroundColor: 'var(--info-bg)', borderRadius: '8px', color: 'var(--info-text)', fontSize: '13px', fontWeight: 600 }}>
-                  <Truck size={16} /> Truck is currently en route. Awaiting Eskom Customer delivery verification.
-                </div>
-                {/* Presenter shortcut */}
-                <button 
-                  onClick={() => { setSelectedOffload(activeRun); setIsSimulationApproved(true); setShowSimulateCustomer(true); }}
-                  className="btn"
-                  style={{ border: '1px dashed var(--primary-color)', color: 'var(--primary-color)', width: 'fit-content' }}
-                >
-                  ⚙️ presenter shortcut: simulate customer delivery stamp
-                </button>
-              </div>
-            )}
-
-            {activeRun.podStatus === 'DELIVERED_STAMPED' && (
-              <button 
-                onClick={() => { setSelectedOffload(activeRun); setShowUploadModal(true); }}
-                className="btn btn-primary"
-                style={{ width: '100%' }}
-              >
-                <Upload size={16} /> Upload Customer Stamped POD Note
-              </button>
-            )}
-
-            {(activeRun.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || activeRun.podStatus === 'APPROVED' || activeRun.podStatus === 'APPROVED_INVOICE_PENDING') && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px', backgroundColor: 'var(--success-bg)', borderRadius: '8px', color: 'var(--success-text)', fontSize: '13px', fontWeight: 600 }}>
-                <CheckCircle2 size={16} /> Proof of Delivery (POD) has been submitted successfully to S/4HANA.
-              </div>
-            )}
-          </div>
-        </Card>
+        </div>
       )}
 
-      {/* MODAL 1: Confirm Arrival (Driver E-Sign) */}
-      <Modal
-        isOpen={!!selectedPO}
-        onClose={() => { if (!isSubmitting) setSelectedPO(null); }}
-        title={selectedPO ? `E-Sign Arrival Confirmation — Waybill #${selectedPO.waybillNo}` : ''}
-        width="500px"
-      >
-        {selectedPO && (
-          <div>
-            <p style={{ fontSize: '14px', marginBottom: '20px', color: 'var(--neutral-secondary)' }}>
-              Confirm your arrival at the mine loading yard. This activates the Supervisor Tare weighing gate.
-            </p>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: 'var(--neutral-secondary)' }}>
-                TYPE DRIVER FULL NAME TO SIGN
-              </label>
-              <input 
-                type="text" 
-                placeholder="Dumisani Dlamini"
-                value={typedSignature}
-                onChange={(e) => { setTypedSignature(e.target.value); setSigError(null); }}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-grey)',
-                  fontSize: '14px',
-                  boxSizing: 'border-box'
-                }}
-              />
-              {sigError && <p style={{ color: 'var(--error-text)', fontSize: '12px', marginTop: '6px', fontWeight: 600 }}>{sigError}</p>}
-            </div>
-
-            {typedSignature && (
-              <div style={{ marginBottom: '20px' }}>
-                <span style={{ fontSize: '11px', color: 'var(--neutral-secondary)', fontWeight: 600 }}>SIGNATURE PREVIEW</span>
-                <div style={{ border: '1px solid var(--border-grey)', padding: '16px', borderRadius: '6px', backgroundColor: '#fcfcfc', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontSize: '26px', color: 'var(--primary-color)', textAlign: 'center' }}>
-                  {typedSignature}
-                </div>
-              </div>
-            )}
-
-            <button 
-              onClick={handleConfirmArrival}
-              className="btn btn-primary"
-              style={{ width: '100%' }}
-              disabled={!typedSignature || isSubmitting}
-            >
-              {isSubmitting ? 'Submitting...' : 'Sign Arrival & Confirm'}
-            </button>
-          </div>
-        )}
-      </Modal>
-
-      {/* MODAL 2: Presenter Supervisor Weight simulation */}
-      <Modal
-        isOpen={showSimulateSupervisor}
-        onClose={() => setShowSimulateSupervisor(false)}
-        title="Presenter Shortcut: Supervisor Siding Weighbridge"
-        width="480px"
-      >
-        <div>
-          <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', marginBottom: '16px' }}>
-            Simulates the Weighbridge Supervisor clearing truck weights on dispatch. (Saves role switching steps).
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Tare Weight (Tons)</label>
-              <input type="text" value={tareInput} onChange={(e) => setTareInput(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-grey)' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Gross Weight (Tons)</label>
-              <input type="text" value={grossInput} onChange={(e) => setGrossInput(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-grey)' }} />
-            </div>
-          </div>
-          <button onClick={handleSimulateSupervisor} className="btn btn-primary" style={{ width: '100%' }}>
-            Confirm weighbridge pre-dispatch approval
-          </button>
-        </div>
-      </Modal>
-
-      {/* MODAL 3: Presenter Customer Stamp simulation */}
-      <Modal
-        isOpen={showSimulateCustomer}
-        onClose={() => setShowSimulateCustomer(false)}
-        title="Presenter Shortcut: Customer Offloading Stamp"
-        width="480px"
-      >
-        <div>
-          <p style={{ fontSize: '13px', color: 'var(--neutral-secondary)', marginBottom: '16px' }}>
-            Simulates the Eskom Siding Customer checking delivery cargo weight and applying the e-gate pass stamp.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Customer Gross (Tons)</label>
-              <input type="text" value={grossInput} onChange={(e) => setGrossInput(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-grey)' }} />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>Customer Tare (Tons)</label>
-              <input type="text" value={tareInput} onChange={(e) => setTareInput(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid var(--border-grey)' }} />
-            </div>
-          </div>
-          <button onClick={handleSimulateCustomer} className="btn btn-primary" style={{ width: '100%' }}>
-            Verify & Apply Receipt Stamp
-          </button>
-        </div>
-      </Modal>
-
-      {/* MODAL 4: Driver POD File Upload */}
-      <Modal
-        isOpen={showUploadModal}
-        onClose={() => { if (!isSubmitting) setShowUploadModal(false); }}
-        title="Upload Stamped Proof of Delivery (POD)"
-        width="600px"
-      >
-        {activeRun && (
-          <div>
-            {uploadStep === 'UPLOAD' && (
-              <div>
-                <p style={{ fontSize: '14px', color: 'var(--neutral-secondary)', marginBottom: '16px' }}>
-                  Please upload a clear scan/photo of the physically stamped weighbridge waybill note (e.g. <code>WB-998807.jpg</code>).
-                </p>
-                <FileUploadBox 
-                  selectedFileName={selectedFileName}
-                  onFileSelect={(name: string) => { setSelectedFileName(name); }}
-                  onClear={() => { setSelectedFileName(null); }}
-                />
-                
-                <div style={{ marginTop: '20px', display: 'flex', gap: '8px', padding: '10px 14px', backgroundColor: 'var(--secondary-bg)', color: 'var(--primary-color)', borderRadius: '8px', fontSize: '12px', fontWeight: 600 }}>
-                  💡 Demo Tip: Upload "WB-998807.jpg" for a perfect match, "WB-998808_mismatch.jpg" for weight discrepancy warning, or "WB-998809_blurry.jpg" for manual review.
-                </div>
-                <button 
-                  onClick={handlePODUploadSubmit}
-                  className="btn btn-primary"
-                  style={{ width: '100%', marginTop: '20px' }}
-                  disabled={!selectedFileName}
-                >
-                  Submit for Verification
-                </button>
-              </div>
-            )}
-            {uploadStep === 'PROCESSING' && (
-              <LoadingSpinner 
-                statusTexts={["Uploading scanned POD document...", "Running OCR text extraction...", "Cross-referencing with weighbridge S/4HANA records..."]}
-                intervalMs={700}
-              />
-            )}
-            {uploadStep === 'RESULT' && (
-              <div>
-                <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--primary-color)', marginBottom: '16px' }}>
-                  OCR Extraction Report
-                </h4>
-                
-                <div style={{ border: '1px solid var(--border-grey)', borderRadius: '12px', padding: '16px', backgroundColor: '#f8fafc', marginBottom: '20px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid var(--border-grey)' }}>
-                        <th style={{ textAlign: 'left', padding: '8px 4px', color: 'var(--neutral-secondary)' }}>Field</th>
-                        <th style={{ textAlign: 'left', padding: '8px 4px', color: 'var(--neutral-secondary)' }}>Extracted (POD)</th>
-                        <th style={{ textAlign: 'left', padding: '8px 4px', color: 'var(--neutral-secondary)' }}>SAP Records</th>
-                        <th style={{ textAlign: 'center', padding: '8px 4px', color: 'var(--neutral-secondary)' }}>Result</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr style={{ borderBottom: '1px solid var(--border-grey)' }}>
-                        <td style={{ padding: '10px 4px', fontWeight: 600 }}>Waybill Number</td>
-                        <td style={{ padding: '10px 4px' }}>{activeRun.waybillNo}</td>
-                        <td style={{ padding: '10px 4px' }}>{activeRun.waybillNo}</td>
-                        <td style={{ padding: '10px 4px', textAlign: 'center', color: 'var(--success-text)', fontWeight: 'bold' }}>✓ Match</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid var(--border-grey)' }}>
-                        <td style={{ padding: '10px 4px', fontWeight: 600 }}>Truck Number</td>
-                        <td style={{ padding: '10px 4px' }}>{activeRun.horseRegNo}</td>
-                        <td style={{ padding: '10px 4px' }}>{activeRun.horseRegNo}</td>
-                        <td style={{ padding: '10px 4px', textAlign: 'center', color: 'var(--success-text)', fontWeight: 'bold' }}>✓ Match</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid var(--border-grey)' }}>
-                        <td style={{ padding: '10px 4px', fontWeight: 600 }}>Net Cargo Weight</td>
-                        <td style={{ padding: '10px 4px' }}>{(activeRun.netWeightKg / 1000).toFixed(2)} TON</td>
-                        <td style={{ padding: '10px 4px' }}>{(activeRun.netWeightKg / 1000).toFixed(2)} TON</td>
-                        <td style={{ padding: '10px 4px', textAlign: 'center', color: 'var(--success-text)', fontWeight: 'bold' }}>✓ Match</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button 
-                    onClick={() => setUploadStep('UPLOAD')}
-                    className="btn btn-secondary"
-                    style={{ flex: 1 }}
-                  >
-                    Re-upload
-                  </button>
-                  <button 
-                    onClick={handleConfirmPODFile}
-                    className="btn btn-primary"
-                    style={{ flex: 2 }}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? 'Submitting...' : 'Confirm & Submit to Admin'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };
