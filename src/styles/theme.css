@@ -1,36 +1,171 @@
+/* ============================================================
+   POD — Enterprise Design System
+   Transport Execution & Proof of Delivery Platform
+   Target: Ikwezi Mining Limited / SAP S/4HANA
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&display=swap');
+
 :root {
-  /* Color Palette */
-  --primary-color: #0F172A; /* Slate 900 - Dark Premium */
-  --primary-hover: #1E293B; /* Slate 800 */
-  --secondary-bg: #F1F5F9; /* Slate 100 */
-  
-  --success-text: #059669; /* Emerald 600 */
-  --success-bg: #ECFDF5; /* Emerald 50 */
-  
-  --error-text: #DC2626; /* Red 600 */
-  --error-bg: #FEF2F2; /* Red 50 */
-  
-  --warning-text: #D97706; /* Amber 600 */
-  --warning-bg: #FFFBEB; /* Amber 50 */
-  
-  --info-text: #2563EB; /* Blue 600 */
-  --info-bg: #EFF6FF; /* Blue 50 */
-  
-  --teal-text: #0D9488; /* Teal 600 */
-  --teal-bg: #F0FDFA; /* Teal 50 */
-  
-  --neutral-primary: #1E293B; /* Slate 800 */
-  --neutral-secondary: #64748B; /* Slate 500 */
-  --border-grey: #E2E8F0; /* Slate 200 */
-  --page-bg: #F8FAFC; /* Slate 50 */
-  --card-bg: #FFFFFF;
-  
-  /* Shadows */
-  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.03);
-  --modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  
-  /* Layout sizes */
-  --sidebar-width: 260px; /* Expanded slightly for better breathing room */
-  --topbar-height: 64px;
-  --demo-bar-height: 42px;
+  /* ── Brand Identity ────────────────────────────── */
+  --brand-navy:       #0A1628;   /* Primary dark — headers, sidebar */
+  --brand-navy-mid:   #0F2040;   /* Sidebar hover */
+  --brand-navy-light: #1A2E50;   /* Secondary nav */
+
+  --accent-blue:      #1D4ED8;   /* Primary action */
+  --accent-blue-hover:#1E40AF;   /* Action hover */
+  --accent-blue-light:#DBEAFE;   /* Light tint */
+  --accent-blue-muted:#93C5FD;   /* Muted blue */
+
+  /* ── Neutrals (Slate scale) ───────────────────── */
+  --neutral-900: #0F172A;
+  --neutral-800: #1E293B;
+  --neutral-700: #334155;
+  --neutral-600: #475569;
+  --neutral-500: #64748B;
+  --neutral-400: #94A3B8;
+  --neutral-300: #CBD5E1;
+  --neutral-200: #E2E8F0;
+  --neutral-100: #F1F5F9;
+  --neutral-50:  #F8FAFC;
+  --neutral-0:   #FFFFFF;
+
+  /* ── Semantic Colors ──────────────────────────── */
+  --success-600: #059669;
+  --success-500: #10B981;
+  --success-100: #D1FAE5;
+  --success-50:  #ECFDF5;
+
+  --warning-600: #D97706;
+  --warning-500: #F59E0B;
+  --warning-100: #FEF3C7;
+  --warning-50:  #FFFBEB;
+
+  --error-700:   #B91C1C;
+  --error-600:   #DC2626;
+  --error-100:   #FEE2E2;
+  --error-50:    #FEF2F2;
+
+  --info-600:    #0284C7;
+  --info-500:    #0EA5E9;
+  --info-100:    #E0F2FE;
+  --info-50:     #F0F9FF;
+
+  --teal-600:    #0D9488;
+  --teal-100:    #CCFBF1;
+  --teal-50:     #F0FDFA;
+
+  --purple-600:  #7C3AED;
+  --purple-100:  #EDE9FE;
+  --purple-50:   #F5F3FF;
+
+  --amber-600:   #B45309;
+  --amber-100:   #FEF3C7;
+  --amber-50:    #FFFBEB;
+
+  /* ── Semantic Aliases (old names — backward compat) */
+  --primary-color:    var(--brand-navy);
+  --primary-hover:    var(--brand-navy-mid);
+  --secondary-bg:     var(--neutral-100);
+  --success-text:     var(--success-600);
+  --success-bg:       var(--success-50);
+  --error-text:       var(--error-600);
+  --error-bg:         var(--error-50);
+  --warning-text:     var(--warning-600);
+  --warning-bg:       var(--warning-50);
+  --info-text:        var(--accent-blue);
+  --info-bg:          var(--accent-blue-light);
+  --teal-text:        var(--teal-600);
+  --teal-bg:          var(--teal-50);
+  --neutral-primary:  var(--neutral-800);
+  --neutral-secondary:var(--neutral-500);
+  --border-grey:      var(--neutral-200);
+  --page-bg:          var(--neutral-50);
+  --card-bg:          var(--neutral-0);
+
+  /* ── Typography ───────────────────────────────── */
+  --font-family:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:        'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  --text-xs:    11px;
+  --text-sm:    12px;
+  --text-base:  14px;
+  --text-md:    15px;
+  --text-lg:    16px;
+  --text-xl:    18px;
+  --text-2xl:   20px;
+  --text-3xl:   24px;
+  --text-4xl:   30px;
+  --text-5xl:   36px;
+
+  --weight-regular: 400;
+  --weight-medium:  500;
+  --weight-semi:    600;
+  --weight-bold:    700;
+  --weight-extra:   800;
+
+  --leading-tight:  1.2;
+  --leading-snug:   1.35;
+  --leading-normal: 1.5;
+  --leading-relaxed:1.625;
+
+  --tracking-tighter: -0.04em;
+  --tracking-tight:   -0.02em;
+  --tracking-normal:   0;
+  --tracking-wide:     0.04em;
+  --tracking-wider:    0.08em;
+  --tracking-widest:   0.12em;
+
+  /* ── Spacing Scale ────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── Border Radius ────────────────────────────── */
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  8px;
+  --radius-xl:  10px;
+  --radius-2xl: 12px;
+  --radius-full:9999px;
+
+  /* ── Shadows ──────────────────────────────────── */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.05);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+  --shadow-lg:  0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --shadow-xl:  0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.06);
+  --shadow-modal: 0 25px 50px -12px rgba(0,0,0,0.25);
+  --shadow-card: var(--shadow-sm);
+
+  /* Backward compat */
+  --card-shadow: var(--shadow-sm);
+  --modal-shadow: var(--shadow-modal);
+
+  /* ── Layout ───────────────────────────────────── */
+  --sidebar-width:    256px;
+  --topbar-height:    60px;
+  --demo-bar-height:  38px;
+  --content-max-width:1280px;
+
+  /* ── Transitions ──────────────────────────────── */
+  --transition-fast:   0.1s ease;
+  --transition-base:   0.15s ease;
+  --transition-medium: 0.25s ease;
+  --transition-slow:   0.35s ease;
+
+  /* ── Z-Index Scale ────────────────────────────── */
+  --z-sidebar:  100;
+  --z-topbar:   90;
+  --z-dropdown: 200;
+  --z-modal:    300;
+  --z-toast:    400;
+  --z-demo-bar: 1000;
 }

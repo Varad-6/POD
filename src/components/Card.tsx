@@ -3,12 +3,13 @@ import React from 'react';
 interface CardProps {
   children: React.ReactNode;
   title?: string;
+  subtitle?: string;
   onClick?: () => void;
   hoverEffect?: boolean;
   style?: React.CSSProperties;
 }
 
-export const Card: React.FC<CardProps> = ({ children, title, onClick, hoverEffect = false, style }) => {
+export const Card: React.FC<CardProps> = ({ children, title, subtitle, onClick, hoverEffect = false, style }) => {
   const cardStyle: React.CSSProperties = {
     backgroundColor: 'var(--card-bg)',
     borderRadius: '12px',
@@ -40,7 +41,12 @@ export const Card: React.FC<CardProps> = ({ children, title, onClick, hoverEffec
         }
       }}
     >
-      {title && <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '600' }}>{title}</h3>}
+      {title && (
+        <div style={{ marginBottom: '16px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--neutral-900)' }}>{title}</h3>
+          {subtitle && <p style={{ fontSize: '12px', color: 'var(--neutral-500)', marginTop: '2px' }}>{subtitle}</p>}
+        </div>
+      )}
       {children}
     </div>
   );
