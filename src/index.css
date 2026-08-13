@@ -74,17 +74,17 @@ body {
 }
 
 .sidebar-nav-item:hover {
-  color: #F8FAFC;
-  background-color: rgba(255, 255, 255, 0.06);
+  color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.12);
   transform: translateX(2px);
 }
 
 .sidebar-nav-item.active {
   color: #FFFFFF;
   font-weight: 700;
-  background: linear-gradient(90deg, rgba(37, 99, 235, 0.25) 0%, rgba(37, 99, 235, 0.06) 100%);
-  border-left-color: #3B82F6;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  background: linear-gradient(90deg, rgba(255, 98, 0, 0.35) 0%, rgba(255, 98, 0, 0.08) 100%);
+  border-left-color: #FF6200;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* ── Typography & Headers ─────────────────────────────────── */
@@ -302,16 +302,18 @@ h4 { font-size: var(--text-lg); }
   margin-top: 2px;
 }
 
-/* ── Fleet Control Buttons ────────────────────────────────── */
+/* ── FedEx Enterprise Buttons ────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 10px 22px;
   font-size: 13px;
-  font-weight: 600;
-  border-radius: var(--radius-md);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: var(--radius-full);
   border: 1px solid transparent;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -319,36 +321,46 @@ h4 { font-size: var(--text-lg); }
 }
 
 .btn-primary {
-  background-color: var(--accent-blue);
+  background-color: var(--brand-purple);
   color: #FFFFFF;
 }
 .btn-primary:hover {
-  background-color: var(--accent-blue-hover);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  background-color: var(--brand-purple-dark);
+  box-shadow: 0 4px 14px rgba(77, 20, 140, 0.3);
+}
+
+.btn-accent, .btn-orange {
+  background-color: var(--brand-orange);
+  color: #FFFFFF;
+}
+.btn-accent:hover, .btn-orange:hover {
+  background-color: var(--brand-orange-hover);
+  box-shadow: 0 4px 14px rgba(255, 98, 0, 0.35);
 }
 
 .btn-dark {
-  background-color: var(--brand-navy);
+  background-color: var(--brand-purple-dark);
   color: #FFFFFF;
 }
 .btn-dark:hover {
-  background-color: var(--brand-navy-mid);
-  box-shadow: 0 4px 12px rgba(11, 19, 43, 0.25);
+  background-color: var(--brand-purple);
+  box-shadow: 0 4px 14px rgba(56, 12, 104, 0.3);
 }
 
 .btn-ghost {
   background-color: transparent;
-  color: var(--neutral-700);
-  border-color: var(--neutral-200);
+  color: var(--neutral-800);
+  border-color: var(--neutral-300);
 }
 .btn-ghost:hover {
   background-color: var(--neutral-100);
-  color: var(--neutral-900);
+  border-color: var(--neutral-400);
+  color: var(--brand-purple);
 }
 
 .btn-sm {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 6px 14px;
+  font-size: 11px;
 }
 
 /* ── Modern Table Styling ─────────────────────────────────── */

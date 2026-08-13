@@ -24,12 +24,10 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
     <div
       className={`tabs-nav ${className}`}
       style={{
-        display: 'inline-flex',
-        gap: '4px',
-        background: 'var(--neutral-100)',
-        padding: '4px',
-        borderRadius: '10px',
-        border: '1px solid var(--neutral-200)',
+        display: 'flex',
+        gap: '24px',
+        borderBottom: '2px solid var(--neutral-200)',
+        paddingBottom: '0px',
       }}
     >
       {tabs.map((tab) => {
@@ -42,28 +40,28 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '7px 14px',
-              fontSize: '12px',
-              fontWeight: isActive ? 700 : 500,
-              color: isActive ? '#FFFFFF' : 'var(--neutral-600)',
-              background: isActive ? 'var(--brand-navy)' : 'transparent',
+              padding: '10px 4px 12px 4px',
+              fontSize: '13px',
+              fontWeight: isActive ? 800 : 600,
+              color: isActive ? 'var(--brand-purple)' : 'var(--neutral-600)',
+              background: 'transparent',
               border: 'none',
-              borderRadius: '7px',
+              borderBottom: isActive ? '3px solid var(--brand-purple)' : '3px solid transparent',
+              marginBottom: '-2px',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-              boxShadow: isActive ? '0 2px 6px rgba(11, 19, 43, 0.15)' : 'none',
             }}
           >
             {tab.icon}
-            <span>{tab.label}</span>
+            <span style={{ textTransform: 'uppercase', letterSpacing: '0.03em' }}>{tab.label}</span>
             {tab.count !== undefined && (
               <span
                 style={{
                   fontSize: '11px',
                   fontWeight: 700,
-                  padding: '2px 6px',
-                  borderRadius: '10px',
-                  background: isActive ? 'rgba(255, 255, 255, 0.2)' : 'var(--neutral-200)',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  background: isActive ? 'var(--brand-purple)' : 'var(--neutral-200)',
                   color: isActive ? '#FFFFFF' : 'var(--neutral-700)',
                 }}
               >

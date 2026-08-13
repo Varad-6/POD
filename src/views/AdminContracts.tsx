@@ -131,7 +131,7 @@ export const AdminContracts: React.FC = () => {
                           <td style={{ fontSize: '12px' }}>
                             {c.start_date} to {c.end_date}
                           </td>
-                          <td style={{ color: 'var(--neutral-600)' }}>{c.material || 'Coal SL'}</td>
+                          <td style={{ color: 'var(--neutral-600)' }}>{(c as any).material || 'Washed Coal Grade A'}</td>
                           <td>
                             <StatusBadge status={c.status} />
                           </td>

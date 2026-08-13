@@ -7,6 +7,8 @@ import LoginPage from './pages/LoginPage';
 import { AuthProviderV3, useAuthV3 } from './contexts/AuthContextV3';
 import { DemoProvider } from './context/DemoContext';
 
+import { Footer } from './components/Footer';
+
 // Existing views
 import { TransporterDashboard } from './views/TransporterDashboard';
 import { TransporterPOs } from './views/TransporterPOs';
@@ -105,6 +107,7 @@ const MainApp: React.FC = () => {
               <Route path="*" element={<Navigate to={getDefaultRoute(user.role)} replace />} />
             </Routes>
           </main>
+          <Footer />
         </div>
       </div>
     </div>

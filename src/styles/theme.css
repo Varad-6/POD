@@ -1,62 +1,73 @@
 /* ============================================================
-   POD — Fleet Control Enterprise Design System
-   Target Aesthetic: Dribbble Fleet Control & Samsara Logistics Portal
+   POD — FedEx-Inspired Enterprise Logistics Design System
+   Color Palette:
+   - Primary: FedEx Purple (#4D148C)
+   - Accent: FedEx Orange (#FF6200)
+   - Neutrals: White background, Dark text (#333/#111), Light gray dividers (#F5F5F5)
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  /* ── Fleet Control Dark & Light Theme Tokens ───────────────── */
-  --brand-navy:       #0B132B;   /* Deep Slate Navy — Headers & Sidebar */
-  --brand-navy-mid:   #1C2541;   /* Hover & Active Nav */
-  --brand-navy-light: #2A365C;   /* Borders & Divider Lines */
+  /* ── Brand Palette (FedEx-Inspired) ────────────────────────── */
+  --brand-purple:       #4D148C;   /* FedEx Purple — Primary Header & Nav */
+  --brand-purple-dark:  #380C68;   /* Hover / Dark Active States */
+  --brand-purple-light: #F2ECFB;   /* Subtly tinted background fills */
 
-  --accent-blue:      #2563EB;   /* Royal Fleet Blue */
-  --accent-blue-hover:#1D4ED8;   
-  --accent-blue-light:#EFF6FF;   
-  --accent-blue-muted:#93C5FD;   
+  --brand-orange:       #FF6200;   /* FedEx Orange — Primary Actions & Badges */
+  --brand-orange-hover: #E05600;   /* Button Hover Darken */
+  --brand-orange-light: #FFF2EB;   /* Accent Highlights */
 
-  --accent-cyan:      #06B6D4;   /* Telemetry Accent */
-  --accent-emerald:   #10B981;   /* Verified / On-Time Pulse */
-  --accent-emerald-light:#ECFDF5;
+  --brand-navy:         #4D148C;   /* Replaced navy references with Primary Purple */
+  --brand-navy-mid:     #380C68;
+  --brand-navy-light:   #2B0852;
 
-  /* ── Neutrals (Slate Scale) ───────────────────────────────── */
-  --neutral-950: #020617;
-  --neutral-900: #0F172A;
-  --neutral-800: #1E293B;
-  --neutral-700: #334155;
-  --neutral-600: #475569;
-  --neutral-500: #64748B;
-  --neutral-400: #94A3B8;
-  --neutral-300: #CBD5E1;
-  --neutral-200: #E2E8F0;
-  --neutral-100: #F1F5F9;
-  --neutral-50:  #F8FAFC;
+  --accent-blue:        #4D148C;   /* Primary accent mapped to Purple */
+  --accent-blue-hover:  #380C68;
+  --accent-blue-light:  #F2ECFB;
+  --accent-blue-muted:  #9D72DA;
+
+  --accent-cyan:        #0080A3;   
+  --accent-emerald:     #008A00;   /* Verified Status */
+  --accent-emerald-light:#E6F4E6;
+
+  /* ── Neutrals (Clean Crisp Scale) ─────────────────────────── */
+  --neutral-950: #111111;
+  --neutral-900: #222222;
+  --neutral-800: #333333;
+  --neutral-700: #444444;
+  --neutral-600: #666666;
+  --neutral-500: #767676;
+  --neutral-400: #999999;
+  --neutral-300: #CCCCCC;
+  --neutral-200: #E3E3E3;
+  --neutral-100: #F5F5F5;   /* FedEx Light Gray Dividers */
+  --neutral-50:  #FAFAFA;
   --neutral-0:   #FFFFFF;
 
   /* ── Semantic Colors ──────────────────────────────────────── */
-  --success-600: #059669;
-  --success-500: #10B981;
-  --success-100: #D1FAE5;
-  --success-50:  #ECFDF5;
+  --success-600: #008A00;
+  --success-500: #00A800;
+  --success-100: #E6F4E6;
+  --success-50:  #F2F9F2;
 
-  --warning-600: #D97706;
-  --warning-500: #F59E0B;
-  --warning-100: #FEF3C7;
-  --warning-50:  #FFFBEB;
+  --warning-600: #D96B00;
+  --warning-500: #FF6200;
+  --warning-100: #FFF2EB;
+  --warning-50:  #FFF9F5;
 
   --error-700:   #B91C1C;
-  --error-600:   #DC2626;
-  --error-100:   #FEE2E2;
-  --error-50:    #FEF2F2;
+  --error-600:   #D32F2F;
+  --error-100:   #FFEBEE;
+  --error-50:    #FFFAFA;
 
-  --info-600:    #0284C7;
-  --info-500:    #0EA5E9;
-  --info-100:    #E0F2FE;
-  --info-50:     #F0F9FF;
+  --info-600:    #4D148C;
+  --info-500:    #6722BD;
+  --info-100:    #F2ECFB;
+  --info-50:     #FAF7FE;
 
-  /* ── Typography ───────────────────────────────────────────── */
-  --font-family:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* ── Typography (FedEx Clean Sans-Serif) ──────────────────── */
+  --font-family:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   --font-mono:        'JetBrains Mono', monospace;
 
   --text-xs:    11px;
@@ -75,8 +86,8 @@
   --weight-bold:    700;
   --weight-extra:   800;
 
-  --leading-tight:  1.25;
-  --leading-snug:   1.35;
+  --leading-tight:  1.2;
+  --leading-snug:   1.3;
   --leading-normal: 1.5;
 
   /* ── Spacing ──────────────────────────────────────────────── */
@@ -88,21 +99,21 @@
   --space-6:  24px;
   --space-8:  32px;
 
-  /* ── Card & Glass Radius ──────────────────────────────────── */
-  --radius-sm:  6px;
-  --radius-md:  8px;
-  --radius-lg:  12px;
-  --radius-xl:  16px;
-  --radius-full:9999px;
+  /* ── Card & Pill Radii ────────────────────────────────────── */
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  8px;
+  --radius-xl:  12px;
+  --radius-full:9999px; /* Pill Shape buttons & tracking bars */
 
-  /* ── Premium Fleet Control Elevation & Shadows ────────────── */
-  --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
-  --shadow-card:   0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
-  --shadow-hover:  0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
-  --shadow-modal:  0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  /* ── FedEx Clean Elevation & Shadows ──────────────────────── */
+  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-card:   0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-hover:  0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-modal:  0 20px 40px rgba(0, 0, 0, 0.2);
 
   /* ── Layout Dimensions ────────────────────────────────────── */
-  --sidebar-width:    270px;
+  --sidebar-width:    260px;
   --topbar-height:    64px;
   --demo-bar-height:  0px;
   --content-max-width:1440px;
@@ -110,3 +121,4 @@
   --transition-fast:   0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+

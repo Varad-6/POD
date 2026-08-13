@@ -45,7 +45,7 @@ export const Sidebar: React.FC = () => {
       <aside 
         style={{
           width: 'var(--sidebar-width)',
-          backgroundColor: '#0B132B',
+          backgroundColor: 'var(--brand-purple)',
           color: '#FFFFFF',
           display: 'flex',
           flexDirection: 'column',
@@ -56,7 +56,7 @@ export const Sidebar: React.FC = () => {
           left: 0,
           padding: '24px 16px 20px 16px',
           zIndex: 1000,
-          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
           boxSizing: 'border-box',
           overflowY: 'auto'
         }}
@@ -70,11 +70,11 @@ export const Sidebar: React.FC = () => {
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #2563EB 0%, #0284C7 100%)',
+                  background: 'linear-gradient(135deg, #FF6200 0%, #E05600 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(37, 99, 235, 0.4)',
+                  boxShadow: '0 4px 14px rgba(255, 98, 0, 0.4)',
                   flexShrink: 0
                 }}
               >
@@ -102,16 +102,16 @@ export const Sidebar: React.FC = () => {
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      backgroundColor: '#10B981',
-                      boxShadow: '0 0 8px #10B981'
+                      backgroundColor: '#FF6200',
+                      boxShadow: '0 0 8px #FF6200'
                     }} 
                   />
                   <span 
                     style={{ 
                       fontSize: '11px', 
-                      color: '#60A5FA', 
-                      backgroundColor: 'rgba(37, 99, 235, 0.18)',
-                      border: '1px solid rgba(59, 130, 246, 0.3)',
+                      color: '#FFFFFF', 
+                      backgroundColor: 'rgba(255, 98, 0, 0.3)',
+                      border: '1px solid rgba(255, 98, 0, 0.5)',
                       padding: '2px 8px',
                       borderRadius: '6px',
                       fontWeight: 700, 

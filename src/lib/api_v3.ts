@@ -38,6 +38,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+// ─── SEARCH ──────────────────────────────────────────────────
+export const searchApi = {
+  globalSearch: (q: string) =>
+    request<{
+      query: string;
+      contracts: any[];
+      purchaseOrders: any[];
+      assignments: any[];
+      drivers: any[];
+      vehicles: any[];
+    }>(`/search?q=${encodeURIComponent(q)}`),
+};
+
 // ─── AUTH ────────────────────────────────────────────────────
 export const authApi = {
   login: (username: string, password: string) =>

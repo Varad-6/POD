@@ -5,6 +5,7 @@ interface CardProps {
   title?: string;
   subtitle?: string;
   action?: React.ReactNode;
+  icon?: React.ReactNode;
   accentColor?: string;
   onClick?: () => void;
   hoverEffect?: boolean;
@@ -17,6 +18,7 @@ export const Card: React.FC<CardProps> = ({
   title,
   subtitle,
   action,
+  icon,
   accentColor,
   onClick,
   hoverEffect = false,
@@ -45,11 +47,14 @@ export const Card: React.FC<CardProps> = ({
         />
       )}
 
-      {(title || subtitle || action) && (
+      {(title || subtitle || action || icon) && (
         <div className="card-header">
-          <div>
-            {title && <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--neutral-900)' }}>{title}</h3>}
-            {subtitle && <p style={{ fontSize: '12px', color: 'var(--neutral-500)', marginTop: '2px' }}>{subtitle}</p>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {icon && <div>{icon}</div>}
+            <div>
+              {title && <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--neutral-900)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{title}</h3>}
+              {subtitle && <p style={{ fontSize: '12px', color: 'var(--neutral-500)', marginTop: '2px' }}>{subtitle}</p>}
+            </div>
           </div>
           {action && <div>{action}</div>}
         </div>

@@ -2,14 +2,23 @@ import React from 'react';
 import { Inbox } from 'lucide-react';
 
 interface EmptyStateProps {
+  icon?: React.ReactNode;
+  title?: string;
+  description?: string;
   message?: string;
   submessage?: string;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ 
-  message = "No pending items right now", 
-  submessage = "Check back later or change your filters."
+  icon,
+  title,
+  description,
+  message, 
+  submessage
 }) => {
+  const displayTitle = title || message || "No pending items right now";
+  const displaySubmessage = description || submessage || "Check back later or change your filters.";
+
   return (
     <div 
       style={{

@@ -83,23 +83,38 @@ export const AdminDashboard: React.FC = () => {
         <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading telemetry...</div>
       ) : (
         <>
-          {/* KPI Cards Grid */}
+          {/* KPI Cards Grid — Card Encapsulated & Interactive Redirection */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-            <Card title="Outline Agreements" icon={<Server size={18} color="var(--accent-blue)" />}>
+            <Card 
+              title="Outline Agreements" 
+              icon={<Server size={18} color="var(--brand-purple)" />}
+              onClick={() => navigate('/admin/contracts')}
+              style={{ cursor: 'pointer' }}
+            >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{contracts.length}</span>
                 <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Active Contracts</span>
               </div>
             </Card>
 
-            <Card title="Flagged Reviews" icon={<ClipboardCheck size={18} color="var(--error-600)" />}>
+            <Card 
+              title="Flagged Reviews" 
+              icon={<ClipboardCheck size={18} color="var(--error-600)" />}
+              onClick={() => navigate('/admin/approvals')}
+              style={{ cursor: 'pointer' }}
+            >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{reviews.length}</span>
                 <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Open Audits</span>
               </div>
             </Card>
 
-            <Card title="Park Pending" icon={<FileClock size={18} color="#f59e0b" />}>
+            <Card 
+              title="Park Pending" 
+              icon={<FileClock size={18} color="var(--brand-orange)" />}
+              onClick={() => navigate('/admin/invoices')}
+              style={{ cursor: 'pointer' }}
+            >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{invoices.length}</span>
                 <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Ready to Park</span>

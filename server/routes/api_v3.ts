@@ -23,6 +23,60 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
   return R * c;
 }
 
+// GET /api/v3/search?q=
+router.get('/search', requireAuth, (req: Request, res: Response) => {
+  const db = getDb();
+  const q = (req.query.q as string || '').trim();
+  if (!q) {
+    return res.json({ contracts: [], purchaseOrders: [], assignments: [], drivers: [], vehicles: [] });
+  }
+
+  const searchTerm = `%${q}%`;
+
+  const contracts = db.prepare(`
+    SELECT c.*, cu.name as customer_name
+    FROM contracts c JOIN customers cu ON cu.id = c.customer_id
+    WHERE c.sap_contract_no LIKE ? OR cu.name LIKE ?
+  `).all(searchTerm, searchTerm);
+
+  const purchaseOrders = db.prepare(`
+    SELECT po.*, c.sap_contract_no
+    FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id
+    WHERE po.sap_po_no LIKE ? OR po.material LIKE ? OR po.cost_center LIKE ?
+  `).all(searchTerm, searchTerm, searchTerm);
+
+  const assignments = db.prepare(`
+    SELECT ta.*, d.name as driver_name, v.reg_no as vehicle_reg, po.sap_po_no
+    FROM transport_assignments ta
+    JOIN drivers d ON d.id = ta.driver_id
+    JOIN vehicles v ON v.id = ta.vehicle_id
+    JOIN job_configs jc ON jc.id = ta.job_config_id
+    JOIN purchase_orders po ON po.id = jc.po_id
+    WHERE ta.id LIKE ? OR d.name LIKE ? OR v.reg_no LIKE ? OR ta.status LIKE ?
+  `).all(searchTerm, searchTerm, searchTerm, searchTerm);
+
+  const drivers = db.prepare(`
+    SELECT d.*, t.name as transporter_name
+    FROM drivers d JOIN transporters t ON t.id = d.transporter_id
+    WHERE d.name LIKE ? OR d.license_no LIKE ?
+  `).all(searchTerm, searchTerm);
+
+  const vehicles = db.prepare(`
+    SELECT v.*, t.name as transporter_name
+    FROM vehicles v JOIN transporters t ON t.id = v.transporter_id
+    WHERE v.reg_no LIKE ?
+  `).all(searchTerm);
+
+  return res.json({
+    query: q,
+    contracts,
+    purchaseOrders,
+    assignments,
+    drivers,
+    vehicles,
+  });
+});
+
 // GET /api/v3/assignments
 router.get('/assignments', requireAuth, requireRole('CA', 'TA', 'SR'), (req: Request, res: Response) => {
   const db = getDb();
