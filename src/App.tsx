@@ -76,9 +76,8 @@ const MainApp: React.FC = () => {
           boxSizing: 'border-box'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8' }}>
-          <Settings size={14} className="animate-spin" />
-          <span>LOGISTICS DEMO CONTROLLER</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Empty left title spot */}
         </div>
 
         <div style={{ display: 'flex', gap: '16px' }}>
