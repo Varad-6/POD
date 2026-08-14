@@ -300,7 +300,7 @@ export const AdminContracts: React.FC = () => {
                   {selectedContract.pdf_url && (
                     <div>
                       <a 
-                        href={`http://localhost:3001${selectedContract.pdf_url}`}
+                        href={selectedContract.pdf_url.startsWith('http') ? selectedContract.pdf_url : `http://localhost:3001${selectedContract.pdf_url}`}
                         target="_blank" 
                         rel="noreferrer"
                         className="btn btn-ghost btn-sm"

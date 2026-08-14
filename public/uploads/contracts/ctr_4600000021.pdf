@@ -1,0 +1,71 @@
+%PDF-1.4
+1 0 obj
+<<
+  /Type /Catalog
+  /Pages 2 0 R
+>>
+endobj
+2 0 obj
+<<
+  /Type /Pages
+  /Kids [3 0 R]
+  /Count 1
+>>
+endobj
+3 0 obj
+<<
+  /Type /Page
+  /Parent 2 0 R
+  /Resources <<
+    /Font <<
+      /F1 4 0 R
+    >>
+  >>
+  /MediaBox [0 0 612 792]
+  /Contents 5 0 R
+>>
+endobj
+4 0 obj
+<<
+  /Type /Font
+  /Subtype /Type1
+  /BaseFont /Helvetica
+>>
+endobj
+5 0 obj
+<< /Length 210 >>
+stream
+BT
+/F1 18 Tf
+50 720 Td
+(SAP S/4HANA OUTLINE AGREEMENT) Tj
+0 -30 Td
+/F1 12 Tf
+(Contract Number: 4600000017) Tj
+0 -20 Td
+(Vendor: 1402 - ABC Enterprises) Tj
+0 -20 Td
+(Material: 40006653 - SL BIT 20%ASH) Tj
+0 -20 Td
+(Valid: 12.08.2026 to 12.08.2027) Tj
+0 -30 Td
+(Status: ACTIVE / SIGNED) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000244 00000 n 
+0000000313 00000 n 
+trailer
+<<
+  /Size 6
+  /Root 1 0 R
+>>
+startxref
+574
+%%EOF
