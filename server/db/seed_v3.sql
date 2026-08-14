@@ -36,50 +36,50 @@ INSERT OR IGNORE INTO vehicles (id, transporter_id, reg_no, capacity) VALUES
   (3, 2, 'MP55ABCMP', 32.0),
   (4, 1, 'LP33DEFGP', 28.0);
 
--- CONTRACTS (5 Contracts)
+-- CONTRACTS (5 Actual SAP S21 Contracts from Screenshots)
 INSERT OR IGNORE INTO contracts (id, sap_contract_no, customer_id, start_date, end_date, pdf_url, status) VALUES
-  (1, 'SAP-CTR-41000001', 1, '2026-01-01', '2026-12-31', '/uploads/contracts/ctr_41000001.pdf', 'ACTIVE'),
-  (2, 'SAP-CTR-41000002', 1, '2026-02-01', '2026-11-30', '/uploads/contracts/ctr_41000002.pdf', 'ACTIVE'),
-  (3, 'SAP-CTR-41000003', 2, '2026-03-01', '2027-02-28', '/uploads/contracts/ctr_41000003.pdf', 'ACTIVE'),
-  (4, 'SAP-CTR-41000004', 2, '2026-01-15', '2026-12-15', '/uploads/contracts/ctr_41000004.pdf', 'ACTIVE'),
-  (5, 'SAP-CTR-41000005', 1, '2026-04-01', '2027-03-31', '/uploads/contracts/ctr_41000005.pdf', 'ACTIVE');
+  (1, '4600000017', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000017.pdf', 'ACTIVE'),
+  (2, '4600000018', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000018.pdf', 'ACTIVE'),
+  (3, '4600000019', 2, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000019.pdf', 'ACTIVE'),
+  (4, '4600000020', 2, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000020.pdf', 'ACTIVE'),
+  (5, '4600000021', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000021.pdf', 'ACTIVE');
 
--- PURCHASE ORDERS (5 POs per contract = 25 POs)
+-- PURCHASE ORDERS (Actual SAP Material Items linked to Contracts)
 INSERT OR IGNORE INTO purchase_orders (id, contract_id, sap_po_no, material, uom, target_qty, rate, tolerance_pct, cost_center, status) VALUES
-  -- Contract 1 POs
-  (1,  1, 'PO-4500012350', 'RB Coal Grade A - Bituminous', 'TON', 34.0, 245.50, 0.5, 'CC-MINING-01', 'OPEN'),
-  (2,  1, 'PO-4500012351', 'RB Coal Grade A - Bituminous', 'TON', 34.0, 245.50, 0.5, 'CC-MINING-01', 'OPEN'),
-  (3,  1, 'PO-4500012352', 'SL BIT 20%ASH',               'TON', 30.0, 240.00, 0.5, 'CC-MINING-01', 'OPEN'),
-  (4,  1, 'PO-4500012353', 'SL BIT 20%ASH',               'TON', 32.0, 242.00, 0.5, 'CC-MINING-01', 'ASSIGNED'),
-  (5,  1, 'PO-4500012354', 'Thermal Coal High Grade',     'TON', 34.0, 250.00, 0.5, 'CC-MINING-01', 'IN_PROGRESS'),
+  -- Contract 4600000017 (Supplier: ABC Enterprises | Material: 40006653 SL BIT 20ASH)
+  (1,  1, 'PO-4500012350', 'SL BIT 20ASH (40006653)', 'TO', 34.0, 151.50, 0.5, 'CC-MINING-01', 'OPEN'),
+  (2,  1, 'PO-4500012351', 'SL BIT 20ASH (40006653)', 'TO', 34.0, 151.50, 0.5, 'CC-MINING-01', 'OPEN'),
+  (3,  1, 'PO-4500012352', 'SL BIT 20ASH (40006653)', 'TO', 30.0, 151.50, 0.5, 'CC-MINING-01', 'OPEN'),
+  (4,  1, 'PO-4500012353', 'SL BIT 20ASH (40006653)', 'TO', 32.0, 151.50, 0.5, 'CC-MINING-01', 'ASSIGNED'),
+  (5,  1, 'PO-4500012354', 'SL BIT 20ASH (40006653)', 'TO', 34.0, 151.50, 0.5, 'CC-MINING-01', 'IN_PROGRESS'),
 
-  -- Contract 2 POs
-  (6,  2, 'PO-4500012355', 'Export Thermal Coal Grade B', 'TON', 32.0, 235.00, 0.5, 'CC-MINING-02', 'OPEN'),
-  (7,  2, 'PO-4500012356', 'Export Thermal Coal Grade B', 'TON', 34.0, 235.00, 0.5, 'CC-MINING-02', 'OPEN'),
-  (8,  2, 'PO-4500012357', 'SL BIT 18%ASH',               'TON', 30.0, 248.00, 0.5, 'CC-MINING-02', 'OPEN'),
-  (9,  2, 'PO-4500012358', 'SL BIT 18%ASH',               'TON', 34.0, 248.00, 0.5, 'CC-MINING-02', 'ASSIGNED'),
-  (10, 2, 'PO-4500012359', 'Metallurgical Coal Sample',   'TON', 28.0, 280.00, 0.5, 'CC-MINING-02', 'COMPLETED'),
+  -- Contract 4600000018 (Supplier: ABC Enterprises | Material: 40006654 FERT_50KG_BAG)
+  (6,  2, 'PO-4500012355', 'FERT_50KG_BAG (40006654)', 'BAG', 15.0, 45.00, 0.5, 'CC-MINING-02', 'OPEN'),
+  (7,  2, 'PO-4500012356', 'FERT_50KG_BAG (40006654)', 'BAG', 15.0, 45.00, 0.5, 'CC-MINING-02', 'OPEN'),
+  (8,  2, 'PO-4500012357', 'FERT_50KG_BAG (40006654)', 'BAG', 15.0, 45.00, 0.5, 'CC-MINING-02', 'OPEN'),
+  (9,  2, 'PO-4500012358', 'FERT_50KG_BAG (40006654)', 'BAG', 15.0, 45.00, 0.5, 'CC-MINING-02', 'ASSIGNED'),
+  (10, 2, 'PO-4500012359', 'FERT_50KG_BAG (40006654)', 'BAG', 15.0, 45.00, 0.5, 'CC-MINING-02', 'IN_PROGRESS'),
 
-  -- Contract 3 POs
-  (11, 3, 'PO-4500012360', 'Leeuwpan Washed Coal',        'TON', 34.0, 260.00, 0.5, 'CC-YARD-01',   'OPEN'),
-  (12, 3, 'PO-4500012361', 'Leeuwpan Washed Coal',        'TON', 34.0, 260.00, 0.5, 'CC-YARD-01',   'OPEN'),
-  (13, 3, 'PO-4500012362', 'Run of Mine (ROM) Coal',      'TON', 32.0, 210.00, 0.5, 'CC-YARD-01',   'OPEN'),
-  (14, 3, 'PO-4500012363', 'Run of Mine (ROM) Coal',      'TON', 30.0, 210.00, 0.5, 'CC-YARD-01',   'ASSIGNED'),
-  (15, 3, 'PO-4500012364', 'Sub-Bituminous Coal Crushed', 'TON', 34.0, 225.00, 0.5, 'CC-YARD-01',   'COMPLETED'),
+  -- Contract 4600000019 (Supplier: ABC Enterprises | Material: 40006660 DEF_ADBLUE_20L)
+  (11, 3, 'PO-4500012360', 'DEF_ADBLUE_20L (40006660)', 'BT', 25.0, 28.00, 0.5, 'CC-LOGISTICS-01', 'OPEN'),
+  (12, 3, 'PO-4500012361', 'DEF_ADBLUE_20L (40006660)', 'BT', 25.0, 28.00, 0.5, 'CC-LOGISTICS-01', 'OPEN'),
+  (13, 3, 'PO-4500012362', 'DEF_ADBLUE_20L (40006660)', 'BT', 25.0, 28.00, 0.5, 'CC-LOGISTICS-01', 'OPEN'),
+  (14, 3, 'PO-4500012363', 'DEF_ADBLUE_20L (40006660)', 'BT', 25.0, 28.00, 0.5, 'CC-LOGISTICS-01', 'ASSIGNED'),
+  (15, 3, 'PO-4500012364', 'DEF_ADBLUE_20L (40006660)', 'BT', 25.0, 28.00, 0.5, 'CC-LOGISTICS-01', 'IN_PROGRESS'),
 
-  -- Contract 4 POs
-  (16, 4, 'PO-4500012365', 'Leeuwpan Duoff Coal 0-12mm',  'TON', 34.0, 230.00, 0.5, 'CC-YARD-02',   'OPEN'),
-  (17, 4, 'PO-4500012366', 'Leeuwpan Duoff Coal 0-12mm',  'TON', 32.0, 230.00, 0.5, 'CC-YARD-02',   'OPEN'),
-  (18, 4, 'PO-4500012367', 'Nuts Coal 12-25mm',           'TON', 30.0, 275.00, 0.5, 'CC-YARD-02',   'OPEN'),
-  (19, 4, 'PO-4500012368', 'Nuts Coal 12-25mm',           'TON', 34.0, 275.00, 0.5, 'CC-YARD-02',   'ASSIGNED'),
-  (20, 4, 'PO-4500012369', 'Peas Coal 6-12mm',            'TON', 34.0, 265.00, 0.5, 'CC-YARD-02',   'IN_PROGRESS'),
+  -- Contract 4600000020 (Supplier: ABC Enterprises | Material: 40006657 SPARE_PARTS_BOX)
+  (16, 4, 'PO-4500012365', 'SPARE_PARTS_BOX (40006657)', 'EA', 20.0, 125.00, 0.5, 'CC-MAINT-01', 'OPEN'),
+  (17, 4, 'PO-4500012366', 'SPARE_PARTS_BOX (40006657)', 'EA', 20.0, 125.00, 0.5, 'CC-MAINT-01', 'OPEN'),
+  (18, 4, 'PO-4500012367', 'SPARE_PARTS_BOX (40006657)', 'EA', 20.0, 125.00, 0.5, 'CC-MAINT-01', 'OPEN'),
+  (19, 4, 'PO-4500012368', 'SPARE_PARTS_BOX (40006657)', 'EA', 20.0, 125.00, 0.5, 'CC-MAINT-01', 'ASSIGNED'),
+  (20, 4, 'PO-4500012369', 'SPARE_PARTS_BOX (40006657)', 'EA', 20.0, 125.00, 0.5, 'CC-MAINT-01', 'IN_PROGRESS'),
 
-  -- Contract 5 POs
-  (21, 5, 'PO-4500012370', 'Emoyeni Select Coal Grade A', 'TON', 34.0, 255.00, 0.5, 'CC-MINING-03', 'OPEN'),
-  (22, 5, 'PO-4500012371', 'Emoyeni Select Coal Grade A', 'TON', 34.0, 255.00, 0.5, 'CC-MINING-03', 'OPEN'),
-  (23, 5, 'PO-4500012372', 'Emoyeni Fine Coal 0-6mm',     'TON', 30.0, 195.00, 0.5, 'CC-MINING-03', 'OPEN'),
-  (24, 5, 'PO-4500012373', 'Emoyeni Fine Coal 0-6mm',     'TON', 32.0, 195.00, 0.5, 'CC-MINING-03', 'ASSIGNED'),
-  (25, 5, 'PO-4500012374', 'Special Blend Mining Coal',   'TON', 34.0, 270.00, 0.5, 'CC-MINING-03', 'COMPLETED');
+  -- Contract 4600000021 (Supplier: Gajanan Enterprises | Material: 40006658 CRUSHER_JAW_PLATE)
+  (21, 5, 'PO-4500012370', 'CRUSHER_JAW_PLATE (40006658)', 'PC', 12.0, 3400.00, 0.5, 'CC-HEAVY-01', 'OPEN'),
+  (22, 5, 'PO-4500012371', 'CRUSHER_JAW_PLATE (40006658)', 'PC', 12.0, 3400.00, 0.5, 'CC-HEAVY-01', 'OPEN'),
+  (23, 5, 'PO-4500012372', 'CRUSHER_JAW_PLATE (40006658)', 'PC', 12.0, 3400.00, 0.5, 'CC-HEAVY-01', 'OPEN'),
+  (24, 5, 'PO-4500012373', 'CRUSHER_JAW_PLATE (40006658)', 'PC', 12.0, 3400.00, 0.5, 'CC-HEAVY-01', 'ASSIGNED'),
+  (25, 5, 'PO-4500012374', 'CRUSHER_JAW_PLATE (40006658)', 'PC', 12.0, 3400.00, 0.5, 'CC-HEAVY-01', 'IN_PROGRESS');
 
 -- JOB CONFIGS (TA assigned or pending)
 INSERT OR IGNORE INTO job_configs (id, po_id, transporter_id, availability_window, timebound, status) VALUES
