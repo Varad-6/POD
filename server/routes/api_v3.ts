@@ -137,25 +137,53 @@ router.get('/contracts/:id/pdf', requireAuth, requireRole('CA', 'TA'), (req: Req
 router.post('/po/:id/distribute', requireAuth, requireRole('CA'), (req: Request, res: Response) => {
   const db = getDb();
   const poId = req.params.id;
-  const { transporter_id, availability_window, timebound } = req.body;
+  const { 
+    transporter_id, 
+    availability_window, 
+    timebound,
+    availability_window_start = '06:00',
+    availability_window_end = '18:00',
+    requested_pickup_datetime,
+    expected_delivery_datetime,
+    final_due_datetime,
+    acceptance_window_hours = 4
+  } = req.body;
 
-  if (!transporter_id || !availability_window || !timebound) {
-    return res.status(400).json({ error: 'transporter_id, availability_window, and timebound required' });
+  if (!transporter_id) {
+    return res.status(400).json({ error: 'transporter_id is required' });
   }
 
-  // Create job configuration
+  // Calculate tender_response_deadline ISO string based on acceptance_window_hours
+  const hoursNum = Number(acceptance_window_hours) || 4;
+  const deadlineDate = new Date(Date.now() + hoursNum * 3600 * 1000);
+  const tender_response_deadline = deadlineDate.toISOString();
+
+  // Create job configuration with SLA schedule parameters
   const result = db.prepare(`
-    INSERT INTO job_configs (po_id, transporter_id, availability_window, timebound, status)
-    VALUES (?, ?, ?, ?, 'PENDING')
-  `).run(poId, transporter_id, availability_window, timebound);
+    INSERT INTO job_configs (
+      po_id, transporter_id, availability_window, availability_window_start, availability_window_end,
+      requested_pickup_datetime, expected_delivery_datetime, final_due_datetime,
+      acceptance_window_hours, tender_response_deadline, timebound, status
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
+  `).run(
+    poId, 
+    transporter_id, 
+    availability_window || `${availability_window_start}-${availability_window_end}`,
+    availability_window_start,
+    availability_window_end,
+    requested_pickup_datetime || new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 16),
+    expected_delivery_datetime || new Date(Date.now() + 48 * 3600 * 1000).toISOString().slice(0, 16),
+    final_due_datetime || new Date(Date.now() + 72 * 3600 * 1000).toISOString().slice(0, 16),
+    hoursNum,
+    tender_response_deadline,
+    timebound || new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+  );
 
-  // Sync log
-  db.prepare(`
-    INSERT INTO sap_sync_log (entity_type, sap_ref, direction, payload_json)
-    VALUES ('JOB_CONFIG', ?, 'OUT', ?)
-  `).run(result.lastInsertRowid.toString(), JSON.stringify({ po_id: poId, transporter_id, availability_window, timebound }));
+  // Update PO status to ASSIGNED
+  db.prepare("UPDATE purchase_orders SET status = 'ASSIGNED' WHERE id = ?").run(poId);
 
-  return res.status(201).json({ id: result.lastInsertRowid, message: 'Job configuration created' });
+  return res.status(201).json({ id: result.lastInsertRowid, message: 'PO distributed to transporter with SLA schedule parameters' });
 });
 
 // GET /api/v3/review-queue

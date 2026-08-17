@@ -62,12 +62,19 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
 
 -- ── 2. JOB CONFIGS & TRANSPORT ASSIGNMENTS ───────────────────
 CREATE TABLE IF NOT EXISTS job_configs (
-  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-  po_id               INTEGER NOT NULL REFERENCES purchase_orders(id),
-  transporter_id      INTEGER NOT NULL REFERENCES transporters(id),
-  availability_window TEXT NOT NULL, -- e.g., JSON or string range
-  timebound           TEXT NOT NULL, -- e.g., expiry date/time
-  status              TEXT NOT NULL CHECK(status IN ('PENDING', 'ASSIGNED', 'EXPIRED')) DEFAULT 'PENDING'
+  id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+  po_id                       INTEGER NOT NULL REFERENCES purchase_orders(id),
+  transporter_id              INTEGER NOT NULL REFERENCES transporters(id),
+  availability_window         TEXT NOT NULL, -- legacy string representation
+  availability_window_start   TEXT DEFAULT '06:00',
+  availability_window_end     TEXT DEFAULT '18:00',
+  requested_pickup_datetime  TEXT DEFAULT (datetime('now', '+1 day')),
+  expected_delivery_datetime TEXT DEFAULT (datetime('now', '+2 days')),
+  final_due_datetime         TEXT DEFAULT (datetime('now', '+3 days')),
+  acceptance_window_hours     INTEGER DEFAULT 4,
+  tender_response_deadline   TEXT DEFAULT (datetime('now', '+4 hours')),
+  timebound                   TEXT NOT NULL, -- expiry date/time
+  status                      TEXT NOT NULL CHECK(status IN ('PENDING', 'ASSIGNED', 'EXPIRED')) DEFAULT 'PENDING'
 );
 
 CREATE TABLE IF NOT EXISTS drivers (
