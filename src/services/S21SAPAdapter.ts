@@ -102,7 +102,7 @@ export const S21SAPAdapter: ISAPAdapter = {
         sapSyncStatus: 'SYNCED',
       }));
     } catch (err: any) {
-      console.warn('[S21SAPAdapter] fetchContracts live failed, falling back to mock:', err);
+      console.warn('[S21SAPAdapter] fetchContracts live failed:', err);
       liveSyncLogs.push({
         id: `log-cntr-err-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -110,28 +110,33 @@ export const S21SAPAdapter: ISAPAdapter = {
         entity: 'Contract',
         entityId: 'ALL',
         status: 'FAILED',
-        message: `S21 Fetch Failed: ${err.message}. Falling back to mock data.`,
+        message: `S21 Fetch Failed: ${err.message}.`,
       });
-      // Fallback: Fetch directly from S21 Express Server database endpoints (/api/v3/contracts)
-      const caContracts = await fetch('http://localhost:3001/api/v3/contracts', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('ikwezi_token_v3') || ''}` }
-      }).then(r => r.json());
-      
-      return (caContracts || []).map((c: any): Contract => ({
-        contractNumber: c.sap_contract_no,
-        qualityType: c.material || 'SL BIT 20%ASH',
-        targetQuantity: c.target_qty || 151500,
-        uom: c.uom || 'TO',
-        netValue: c.net_value || 151501,
-        rate: c.rate || 151.5,
-        validFrom: c.start_date,
-        validTo: c.end_date,
-        soldToParty: c.customer_name || '1402 - ABC Enterprises',
-        currency: 'INR',
-        fromLocation: 'MON1 Plant',
-        toLocation: 'Siding Yard 1001',
-        sapSyncStatus: 'SYNCED'
-      }));
+      // Fallback to S21 server DB
+      try {
+        const caContracts = await fetch('http://localhost:3001/api/v3/contracts', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('ikwezi_token_v3') || ''}` }
+        }).then(r => r.json());
+        
+        if (Array.isArray(caContracts) && caContracts.length > 0) {
+          return caContracts.map((c: any): Contract => ({
+            contractNumber: c.sap_contract_no,
+            qualityType: c.material || 'SL BIT 20%ASH',
+            targetQuantity: c.target_qty || 0,
+            uom: c.uom || 'TO',
+            netValue: c.net_value || 0,
+            rate: c.rate || 0,
+            validFrom: c.start_date,
+            validTo: c.end_date,
+            soldToParty: c.customer_name || 'SAP Customer',
+            currency: 'ZAR',
+            fromLocation: 'Mining Siding',
+            toLocation: 'Power Yard',
+            sapSyncStatus: 'SYNCED'
+          }));
+        }
+      } catch (_e) {}
+      return [];
     }
   },
 
@@ -172,7 +177,7 @@ export const S21SAPAdapter: ISAPAdapter = {
         sapSyncStatus: 'SYNCED',
       }));
     } catch (err: any) {
-      console.warn('[S21SAPAdapter] fetchPurchaseOrders live failed, falling back to mock:', err);
+      console.warn('[S21SAPAdapter] fetchPurchaseOrders live failed:', err);
       liveSyncLogs.push({
         id: `log-po-err-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -180,30 +185,34 @@ export const S21SAPAdapter: ISAPAdapter = {
         entity: 'PurchaseOrder',
         entityId: 'ALL',
         status: 'FAILED',
-        message: `S21 Fetch PO Failed: ${err.message}. Falling back to mock data.`,
+        message: `S21 Fetch PO Failed: ${err.message}.`,
       });
-      // Fallback: Fetch directly from S21 Express Server database endpoints
-      const searchRes = await fetch('http://localhost:3001/api/v3/search?q=45', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('ikwezi_token_v3') || ''}` }
-      }).then(r => r.json());
+      try {
+        const searchRes = await fetch('http://localhost:3001/api/v3/search?q=45', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('ikwezi_token_v3') || ''}` }
+        }).then(r => r.json());
 
-      const dbPOs = searchRes.purchaseOrders || [];
-      return dbPOs.map((po: any): PurchaseOrder => ({
-        purchaseOrderNo: po.sap_po_no,
-        contractRef: po.contract_id ? `46000000${16 + po.contract_id}` : '4600000017',
-        transporter: 'Sipho Transport Services',
-        productDescription: po.material,
-        rate: po.rate,
-        unit: po.uom,
-        targetQuantity: po.target_qty,
-        costCenter: po.cost_center || 'CC-MINING-01',
-        fromLocation: 'MON1 Plant',
-        toLocation: 'Siding Yard 1001',
-        paymentTerms: '30 days from invoice posting',
-        poDate: '2026-08-12',
-        status: po.status === 'ASSIGNED' ? 'ACCEPTED_SIGNED' : 'PENDING_ASSIGNMENT',
-        sapSyncStatus: 'SYNCED'
-      }));
+        const dbPOs = searchRes.purchaseOrders || [];
+        if (Array.isArray(dbPOs) && dbPOs.length > 0) {
+          return dbPOs.map((po: any): PurchaseOrder => ({
+            purchaseOrderNo: po.sap_po_no,
+            contractRef: po.sap_contract_no || '4600000017',
+            transporter: po.transporter_name || 'Carrier Partner',
+            productDescription: po.material,
+            rate: po.rate || 0,
+            unit: po.uom || 'TO',
+            targetQuantity: po.target_qty || 0,
+            costCenter: po.cost_center || 'CC-MINING-01',
+            fromLocation: 'Mining Siding',
+            toLocation: 'Power Station',
+            paymentTerms: '30 days from invoice posting',
+            poDate: po.created_at || new Date().toISOString().split('T')[0],
+            status: po.status === 'ASSIGNED' ? 'ACCEPTED_SIGNED' : 'PENDING_ASSIGNMENT',
+            sapSyncStatus: 'SYNCED'
+          }));
+        }
+      } catch (_e) {}
+      return [];
     }
   },
 

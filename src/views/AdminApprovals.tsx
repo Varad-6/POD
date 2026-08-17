@@ -12,6 +12,8 @@ export const AdminApprovals: React.FC = () => {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [overrideReason, setOverrideReason] = useState('MOISTURE_EVAPORATION');
   const [activeTab, setActiveTab] = useState<'OPEN' | 'RESOLVED'>('OPEN');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [flagFilter, setFlagFilter] = useState('ALL');
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -93,6 +95,39 @@ export const AdminApprovals: React.FC = () => {
           }}
         >
           Resolved Archive
+        </button>
+      </div>
+
+      {/* Filter Bar */}
+      <div style={{ display: 'flex', gap: '16px', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', backgroundColor: '#FFFFFF', padding: '16px 20px', borderRadius: '10px', border: '1px solid var(--neutral-200)' }}>
+        <div style={{ display: 'flex', gap: '12px', flex: 1, minWidth: '280px' }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <input 
+              type="text" 
+              placeholder="Search PO, Driver, Vehicle Reg..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{ width: '100%', padding: '10px 14px 10px 36px', border: '1px solid var(--neutral-300)', borderRadius: '8px', fontSize: '13px' }}
+            />
+            <RefreshCw size={14} style={{ position: 'absolute', left: '12px', top: '12px', color: 'var(--neutral-400)' }} />
+          </div>
+          <select 
+            value={flagFilter} 
+            onChange={e => setFlagFilter(e.target.value)}
+            style={{ padding: '10px 14px', border: '1px solid var(--neutral-300)', borderRadius: '8px', fontSize: '13px', backgroundColor: '#FFFFFF' }}
+          >
+            <option value="ALL">All Flag Types</option>
+            <option value="TOLERANCE_EXCEEDED">Tolerance Exceeded</option>
+            <option value="OCR_MISMATCH">OCR Mismatch</option>
+            <option value="MANUAL_FLAG">Manual Flag</option>
+          </select>
+        </div>
+
+        <button 
+          className="btn btn-ghost btn-sm"
+          onClick={() => { setSearchQuery(''); setFlagFilter('ALL'); }}
+        >
+          Reset Filters
         </button>
       </div>
 

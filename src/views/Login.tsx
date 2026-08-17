@@ -65,13 +65,13 @@ export const Login: React.FC = () => {
       
       {/* Top Enterprise Banner */}
       <header style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', padding: '16px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Truck size={20} color="#ffffff" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ height: '40px', backgroundColor: '#FFFFFF', padding: '4px 8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
+            <img src="/podzo-logo.png" alt="PODZO Logo" style={{ height: '32px', objectFit: 'contain' }} />
           </div>
           <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px', lineHeight: 1.1 }}>POD</h2>
-            <p style={{ fontSize: '11px', color: 'var(--neutral-400)', fontWeight: 500, letterSpacing: '0.04em' }}>SAP Transport Execution Platform</p>
+            <h2 style={{ fontSize: '20px', fontWeight: 900, color: '#ffffff', letterSpacing: '0.04em', lineHeight: 1.1, margin: 0 }}>PODZO</h2>
+            <p style={{ fontSize: '12px', color: '#FF9E66', fontWeight: 600, fontStyle: 'italic', margin: 0 }}>Let’s make delivery simple.</p>
           </div>
         </div>
       </header>
@@ -81,8 +81,8 @@ export const Login: React.FC = () => {
         
         {/* Left Hand Column: Value Proposition & Diagram */}
         <div className="animate-fade-in">
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '16px', backgroundColor: 'rgba(29, 78, 216, 0.2)', border: '1px solid rgba(29, 78, 216, 0.4)', color: 'var(--accent-blue-muted)', fontSize: '12px', fontWeight: 600, marginBottom: '20px' }}>
-            <ShieldCheck size={14} /> Enterprise Transport Execution & Proof-of-Delivery
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '16px', backgroundColor: 'rgba(255, 98, 0, 0.2)', border: '1px solid rgba(255, 98, 0, 0.4)', color: '#FF9E66', fontSize: '12px', fontWeight: 600, marginBottom: '20px' }}>
+            <ShieldCheck size={14} /> PODZO — Let’s make delivery simple.
           </div>
 
           <h1 style={{ fontSize: '38px', fontWeight: 800, color: '#ffffff', lineHeight: 1.15, letterSpacing: '-0.03em', marginBottom: '16px' }}>
@@ -90,7 +90,7 @@ export const Login: React.FC = () => {
           </h1>
 
           <p style={{ fontSize: '15px', color: 'var(--neutral-300)', lineHeight: 1.6, maxWidth: '540px', marginBottom: '32px' }}>
-            Integrated operational layer bridging physical weighbridge execution, 5-persona verification workflows, AI document validation, and automated SAP MIRO parked invoicing.
+            PODZO is the integrated operational layer bridging physical weighbridge execution, 5-persona verification workflows, AI document validation, and automated SAP MIRO parked invoicing.
           </p>
 
           {/* Visual Architecture Chain */}

@@ -248,17 +248,24 @@ router.post('/ca-verification/:assignmentId', requireAuth, requireRole('CA'), (r
   if (verified_bool) {
     // Fetch weights & PO target info
     const assignment = db.prepare(`
-      SELECT ta.*, po.rate, po.id as po_id
+      SELECT ta.*, po.rate, po.id as po_id, po.sap_po_no, pd.ocr_waybill_extracted, pd.ocr_weight_extracted
       FROM transport_assignments ta
       JOIN job_configs jc ON jc.id = ta.job_config_id
       JOIN purchase_orders po ON po.id = jc.po_id
+      LEFT JOIN pod_documents pd ON pd.assignment_id = ta.id
       WHERE ta.id = ?
     `).get(assignmentId) as any;
 
     if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
 
+    // Store verified POD data in dedicated S/4 mirror table (sap_s4_store)
+    db.prepare(`
+      INSERT OR REPLACE INTO sap_s4_store (assignment_id, sap_po_no, ocr_waybill_no, ocr_weight_tons, verified_by, synced_to_s4_bool)
+      VALUES (?, ?, ?, ?, ?, 1)
+    `).run(assignmentId, assignment.sap_po_no, assignment.ocr_waybill_extracted || 'WB-VERIFIED', assignment.ocr_weight_extracted || 34.0, req.user!.userId);
+
     // Compute accepted payload from destination weighbridge logs (DEST_GROSS - DEST_TARE)
-    const weights = db.prepare('SELECT checkpoint, weight_kg FROM weight_logs WHERE assignment_id = ?').all(assignmentId) as any[];
+    const weights = db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(assignmentId) as any[];
     const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg || 0;
     const destTare = weights.find(w => w.stage === 'DEST_TARE')?.weight_kg || 0;
     const acceptedPayload = (destGross - destTare) || 34000.0; // fallback if weigh logs empty in demo
@@ -608,6 +615,20 @@ router.post('/assignments/:id/weight-log', requireAuth, (req: Request, res: Resp
 
   if (!stage || !weight_kg) {
     return res.status(400).json({ error: 'stage and weight_kg required' });
+  }
+
+  // HARD GATE ENFORCEMENT: Weighing actions require PICKUP OTP to be VERIFIED
+  if (['MINE_TARE', 'MINE_GROSS'].includes(stage)) {
+    const pickupOtp = db.prepare(`
+      SELECT status FROM otp_verifications
+      WHERE assignment_id = ? AND stage = 'PICKUP' AND status = 'VERIFIED'
+    `).get(assignmentId);
+
+    if (!pickupOtp) {
+      return res.status(403).json({ 
+        error: 'HARD GATE BLOCK: Weighbridge scale operation disabled until Pickup OTP is verified by Gate Supervisor.' 
+      });
+    }
   }
 
   db.prepare(`

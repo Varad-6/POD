@@ -238,8 +238,7 @@ export const SupervisorDashboard: React.FC = () => {
                   {selectedAssignment.status === 'MINE_TARE_LOGGED' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                       <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>Weighbridge log values</h4>
-                      
-                      <div>
+                                            <div>
                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>Weighbridge Stage</label>
                         <select 
                           value={weighStage} 
@@ -252,7 +251,7 @@ export const SupervisorDashboard: React.FC = () => {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>Registered Weight (kg)</label>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>Weight (kg)</label>
                         <input 
                           type="number" 
                           value={weightKg} 
@@ -261,17 +260,6 @@ export const SupervisorDashboard: React.FC = () => {
                         />
                       </div>
 
-                      <button className="btn btn-primary" onClick={handleLogWeight} disabled={isSubmitting}>
-                        Log Weight Log
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Step 3: Verify OTP + Supervisor Stamp (MINE_GROSS_LOGGED or similar) */}
-                  {selectedAssignment.status === 'MINE_GROSS_LOGGED' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                      <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>Siding Dispatch Outward Stamp</h4>
-                      
                       <div style={{ backgroundColor: 'var(--neutral-50)', padding: '10px 14px', borderRadius: '8px', fontSize: '12px' }}>
                         <p style={{ margin: 0, fontWeight: 700 }}>IP Address Captured Server-side: <span className="mono">Captured on POST</span></p>
                       </div>

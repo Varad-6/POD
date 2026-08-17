@@ -3,8 +3,9 @@ import { Card } from '../components/Card';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
+import { SignaturePad } from '../components/SignaturePad';
 import { crApi, drApi, TransportAssignmentV3 } from '../lib/api_v3';
-import { PackageCheck, ShieldCheck } from 'lucide-react';
+import { PackageCheck, ShieldCheck, PenTool } from 'lucide-react';
 
 export const CustomerDashboard: React.FC = () => {
   const [incoming, setIncoming] = useState<TransportAssignmentV3[]>([]);
@@ -18,6 +19,7 @@ export const CustomerDashboard: React.FC = () => {
   const [unitCalc, setUnitCalc] = useState('Convert 34730 kg to 34.73 TON');
   const [otpCode, setOtpCode] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
+  const [signatureData, setSignatureData] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadIncoming = async () => {
@@ -221,11 +223,11 @@ export const CustomerDashboard: React.FC = () => {
                     </button>
                   </form>
 
-                  {/* Step 2: OTP Verification replaces Signature */}
+                  {/* Step 2: Delivery OTP Verification & Digital Signature */}
                   <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>Step 2: Delivery OTP Verification</h4>
+                    <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>Step 2: Delivery OTP & Receiver Signature</h4>
                     <p style={{ fontSize: '12px', color: 'var(--neutral-500)', margin: 0 }}>
-                      Verify the OTP code sent to the driver console. Replacing manual signatures for audit integrity.
+                      Verify the OTP code sent to the driver console and sign off on cargo acceptance.
                     </p>
 
                     <div style={{ display: 'flex', gap: '12px' }}>
@@ -244,6 +246,13 @@ export const CustomerDashboard: React.FC = () => {
                       >
                         Verify OTP
                       </button>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>
+                        Receiver Interactive Signature
+                      </label>
+                      <SignaturePad onSave={(data) => setSignatureData(data)} height={120} />
                     </div>
                   </div>
 
