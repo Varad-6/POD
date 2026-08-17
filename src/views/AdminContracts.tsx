@@ -12,10 +12,16 @@ export const AdminContracts: React.FC = () => {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderV3[]>([]);
   const [selectedPOToAssign, setSelectedPOToAssign] = useState<PurchaseOrderV3 | null>(null);
   
-  // Job Config Form inputs
+  // Job Config Form inputs with SAP SLA Schedule parameters
   const [transporters, setTransporters] = useState<Transporter[]>([]);
   const [targetTransporterId, setTargetTransporterId] = useState('');
-  const [availabilityWindow, setAvailabilityWindow] = useState('08:00-17:00');
+  const [availStart, setAvailStart] = useState('06:00');
+  const [availEnd, setAvailEnd] = useState('18:00');
+  const [requestedPickup, setRequestedPickup] = useState('2026-08-15T08:00');
+  const [expectedDelivery, setExpectedDelivery] = useState('2026-08-15T16:00');
+  const [finalDue, setFinalDue] = useState('2026-08-16T12:00');
+  const [acceptanceHours, setAcceptanceHours] = useState('4');
+  const [availabilityWindow, setAvailabilityWindow] = useState('06:00-18:00');
   const [timebound, setTimebound] = useState('2026-12-31');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -26,14 +32,10 @@ export const AdminContracts: React.FC = () => {
     try {
       const data = await caApi.getContracts();
       setContracts(data);
-      if (data.length > 0) {
-        // Fetch details of first contract by default
-        const detail = await caApi.getContractDetails(data[0].id);
-        setSelectedContract(detail);
-        if (detail.purchase_orders) {
-          setPurchaseOrders(detail.purchase_orders);
-        }
-      }
+      // Explicitly keep selectedContract and purchaseOrders empty until user clicks a contract
+      setSelectedContract(null);
+      setPurchaseOrders([]);
+      setSelectedPOToAssign(null);
       const transList = await transportersApi.list();
       setTransporters(transList);
       if (transList.length > 0) {
@@ -51,6 +53,7 @@ export const AdminContracts: React.FC = () => {
   }, []);
 
   const handleContractSelect = async (c: ContractV3) => {
+    setSelectedPOToAssign(null);
     try {
       const detail = await caApi.getContractDetails(c.id);
       setSelectedContract(detail);
@@ -68,9 +71,15 @@ export const AdminContracts: React.FC = () => {
     try {
       await caApi.distributePo(selectedPOToAssign.id, {
         transporter_id: parseInt(targetTransporterId),
-        availability_window: availabilityWindow,
+        availability_window: `${availStart}-${availEnd}`,
+        availability_window_start: availStart,
+        availability_window_end: availEnd,
+        requested_pickup_datetime: requestedPickup,
+        expected_delivery_datetime: expectedDelivery,
+        final_due_datetime: finalDue,
+        acceptance_window_hours: parseInt(acceptanceHours) || 4,
         timebound
-      });
+      } as any);
       // reload
       if (selectedContract) {
         handleContractSelect(selectedContract);
@@ -145,9 +154,14 @@ export const AdminContracts: React.FC = () => {
 
             {/* PO Distribution Desk */}
             <Card title="Purchase Orders Distribution Queue">
-              {purchaseOrders.length === 0 ? (
+              {!selectedContract ? (
+                <div style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--neutral-500)' }}>
+                  <p style={{ fontWeight: 700, fontSize: '14px', margin: '0 0 6px 0', color: 'var(--neutral-800)' }}>No Contract Selected</p>
+                  <p style={{ fontSize: '13px', margin: 0 }}>Click on any Active S/4HANA Contract row above to inspect its linked Purchase Orders.</p>
+                </div>
+              ) : purchaseOrders.length === 0 ? (
                 <p style={{ textAlign: 'center', padding: '24px', color: 'var(--neutral-500)', fontSize: '13px' }}>
-                  No active purchase orders found for the selected contract.
+                  No active purchase orders found for Contract #{selectedContract.sap_contract_no}.
                 </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -197,20 +211,167 @@ export const AdminContracts: React.FC = () => {
           {/* Right Column: Contract Detail Inspector or Distribute PO Box */}
           <div>
             {selectedPOToAssign ? (
-              <Card title="Distribute & Configure Job Target" accentColor="var(--accent-blue)">
-                <div style={{ marginBottom: '20px' }}>
-                  <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Release PO Target</p>
-                  <p className="mono" style={{ fontWeight: 800, fontSize: '18px', color: 'var(--neutral-900)', margin: 0 }}>#{selectedPOToAssign.sap_po_no}</p>
+              <Card title="Distribute & Tender Freight Target" accentColor="var(--brand-purple)">
+                
+                {/* 1. Header Summary Badge: Material, Rate & Available Tonnage */}
+                <div style={{ backgroundColor: 'var(--brand-purple-light)', border: '1px solid rgba(114, 9, 183, 0.2)', borderRadius: '10px', padding: '14px 16px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>SAP RELEASE PO TARGET</span>
+                      <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)', margin: '2px 0 0 0' }}>#{selectedPOToAssign.sap_po_no}</h3>
+                    </div>
+                    <span style={{ backgroundColor: '#FFFFFF', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--brand-purple)', border: '1px solid rgba(114, 9, 183, 0.3)' }}>
+                      RATE: {formatCurrency(selectedPOToAssign.rate)} / {selectedPOToAssign.uom}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--neutral-800)', margin: '0 0 4px 0' }}>
+                    {selectedPOToAssign.material}
+                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--neutral-600)' }}>
+                    <span>Target Volume: <strong>{selectedPOToAssign.target_qty} {selectedPOToAssign.uom}s</strong></span>
+                    <span>Cost Center: <strong>{selectedPOToAssign.cost_center || 'CC-MINING-01'}</strong></span>
+                  </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Transporter Admin Assignee
-                    </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '20px' }}>
+                  
+                  {/* 2. Section: Route Telemetry */}
+                  <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '14px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-700)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
+                      Route Telemetry & Site Geofences
+                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--neutral-200)' }}>
+                      <div>
+                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>LOADING PLANT (ORIGIN)</span>
+                        <strong style={{ color: 'var(--neutral-900)' }}>MON1 Plant / Siding</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>UNLOADING YARD (DESTINATION)</span>
+                        <strong style={{ color: 'var(--neutral-900)' }}>{selectedContract?.customer_name || 'Siding Yard 1001'}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Section: Carrier & Quantity Allocation */}
+                  <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '14px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-700)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
+                      Carrier Allocation & Tonnage Target
+                    </span>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Transporter Admin Assignee
+                        </label>
+                        <select
+                          value={targetTransporterId}
+                          onChange={(e) => setTargetTransporterId(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 12px',
+                            border: '1px solid var(--neutral-300)',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            backgroundColor: '#FFFFFF',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {transporters.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Allocated Release Volume ({selectedPOToAssign.uom})
+                        </label>
+                        <input 
+                          type="number"
+                          defaultValue={selectedPOToAssign.target_qty}
+                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--neutral-300)', borderRadius: '8px', fontSize: '13px', fontWeight: 700 }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Section: SAP SLA Schedule & Timestamps */}
+                  <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '14px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-700)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
+                      SAP SLA Schedule & Gate Operating Windows
+                    </span>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {/* Plant Operating Window */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Plant Weighbridge Gate Operating Hours
+                        </label>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <input 
+                            type="time" 
+                            value={availStart}
+                            onChange={e => setAvailStart(e.target.value)}
+                            style={{ padding: '8px 10px', border: '1px solid var(--neutral-300)', borderRadius: '6px', fontSize: '12px' }}
+                          />
+                          <input 
+                            type="time" 
+                            value={availEnd}
+                            onChange={e => setAvailEnd(e.target.value)}
+                            style={{ padding: '8px 10px', border: '1px solid var(--neutral-300)', borderRadius: '6px', fontSize: '12px' }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Requested Pickup Date & Time */}
+                      <div>
+                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
+                          Exact Requested Loading Pickup Date & Time
+                        </label>
+                        <input 
+                          type="datetime-local" 
+                          value={requestedPickup}
+                          onChange={e => setRequestedPickup(e.target.value)}
+                          style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--neutral-300)', borderRadius: '6px', fontSize: '12px' }}
+                        />
+                      </div>
+
+                      {/* Expected Delivery & Final Due SLA Cutoff */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
+                            Expected Delivery
+                          </label>
+                          <input 
+                            type="datetime-local" 
+                            value={expectedDelivery}
+                            onChange={e => setExpectedDelivery(e.target.value)}
+                            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--neutral-300)', borderRadius: '6px', fontSize: '11px' }}
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
+                            Final Due Cutoff (SLA)
+                          </label>
+                          <input 
+                            type="datetime-local" 
+                            value={finalDue}
+                            onChange={e => setFinalDue(e.target.value)}
+                            style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--neutral-300)', borderRadius: '6px', fontSize: '11px' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. Section: Acceptance Countdown Tender Limit */}
+                  <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '14px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-700)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '6px' }}>
+                      Carrier Acceptance Tender Limit
+                    </span>
                     <select
-                      value={targetTransporterId}
-                      onChange={(e) => setTargetTransporterId(e.target.value)}
+                      value={acceptanceHours}
+                      onChange={(e) => setAcceptanceHours(e.target.value)}
                       style={{
                         width: '100%',
                         padding: '10px 12px',
@@ -221,47 +382,14 @@ export const AdminContracts: React.FC = () => {
                         fontWeight: 600,
                       }}
                     >
-                      {transporters.map(t => (
-                        <option key={t.id} value={t.id}>{t.name}</option>
-                      ))}
+                      <option value="2">2 Hours (Urgent Priority Tender)</option>
+                      <option value="4">4 Hours (Standard Shift Window)</option>
+                      <option value="12">12 Hours (Half-Day Buffer)</option>
+                      <option value="24">24 Hours (Day Ahead Booking)</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Availability Window
-                    </label>
-                    <input 
-                      type="text" 
-                      value={availabilityWindow}
-                      onChange={e => setAvailabilityWindow(e.target.value)}
-                      placeholder="e.g. 08:00-17:00"
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: '1px solid var(--neutral-300)',
-                        borderRadius: '8px',
-                        fontSize: '13px'
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Timebound Lock
-                    </label>
-                    <input 
-                      type="date" 
-                      value={timebound}
-                      onChange={e => setTimebound(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 12px',
-                        border: '1px solid var(--neutral-300)',
-                        borderRadius: '8px',
-                        fontSize: '13px'
-                      }}
-                    />
+                    <p style={{ fontSize: '11px', color: 'var(--neutral-500)', margin: '6px 0 0 0' }}>
+                      Target Expiry Notice: Carrier response required by {new Date(Date.now() + Number(acceptanceHours) * 3600 * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} today.
+                    </p>
                   </div>
                 </div>
 
@@ -313,25 +441,50 @@ export const AdminContracts: React.FC = () => {
                   )}
 
                   <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '16px' }}>
-                    <h4 style={{ fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>LINKED OUTLINE AGREEMENT POS</h4>
+                    <h4 style={{ fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.02em', marginBottom: '12px', color: 'var(--neutral-900)' }}>
+                      LINKED OUTLINE AGREEMENT POS ({purchaseOrders.length})
+                    </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {purchaseOrders.map((po) => (
-                        <div 
-                          key={po.id}
-                          style={{
-                            padding: '10px 14px',
-                            borderRadius: '8px',
-                            border: '1px solid var(--neutral-200)',
-                            backgroundColor: 'var(--neutral-50)',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <span className="mono" style={{ fontSize: '13px', fontWeight: 700 }}>PO #{po.sap_po_no}</span>
-                          <StatusBadge status={po.status} />
-                        </div>
-                      ))}
+                      {purchaseOrders.map((po: any) => {
+                        const isSelectedPO = selectedPOToAssign && (selectedPOToAssign as any).id === po.id;
+                        return (
+                          <div 
+                            key={po.id}
+                            onClick={() => {
+                              if (po.status === 'OPEN') {
+                                setSelectedPOToAssign(po);
+                              }
+                            }}
+                            style={{
+                              padding: '12px 16px',
+                              borderRadius: '8px',
+                              border: isSelectedPO ? '2px solid var(--brand-purple)' : '1px solid var(--neutral-200)',
+                              backgroundColor: isSelectedPO ? 'var(--brand-purple-light)' : 'var(--neutral-50)',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              cursor: po.status === 'OPEN' ? 'pointer' : 'default',
+                              opacity: po.status === 'OPEN' ? 1 : 0.85,
+                              transition: 'all 0.15s ease',
+                              boxShadow: isSelectedPO ? 'var(--shadow-subtle)' : 'none',
+                            }}
+                            className={po.status === 'OPEN' ? "card-hover-item" : ""}
+                            title={po.status === 'OPEN' ? `Click to distribute PO #${po.sap_po_no}` : `PO #${po.sap_po_no} is already ${po.status} and cannot be redistributed`}
+                          >
+                            <div>
+                              <span className="mono" style={{ fontSize: '13px', fontWeight: 800, color: 'var(--neutral-900)' }}>
+                                PO #{po.sap_po_no}
+                              </span>
+                              <p style={{ fontSize: '11px', color: 'var(--neutral-500)', margin: '2px 0 0 0' }}>
+                                {po.material} • {po.target_qty} {po.uom}
+                              </p>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <StatusBadge status={po.status} />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

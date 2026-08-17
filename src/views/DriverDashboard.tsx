@@ -182,17 +182,47 @@ export const DriverDashboard: React.FC = () => {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--neutral-900)', margin: 0 }}>
-          Driver Haulage Control Console
-        </h1>
-        <p style={{ fontSize: '14px', color: 'var(--neutral-500)', margin: '4px 0 0 0' }}>
-          Welcome back, {user?.displayName || 'Driver'}. Manage your active assignments, verify pickup/delivery stages, and upload PODs.
-        </p>
+      {/* Mobile Task-First Header */}
+      <div style={{ backgroundColor: 'var(--brand-purple)', borderRadius: '16px', padding: '20px 24px', color: '#FFFFFF', boxShadow: 'var(--shadow-card)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div>
+            <span style={{ fontSize: '10px', fontWeight: 800, color: 'rgba(255, 255, 255, 0.7)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              MOBILE DRIVER HAULAGE CONSOLE
+            </span>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#FFFFFF', margin: '2px 0 0 0' }}>
+              Today's Assigned Route
+            </h1>
+          </div>
+          <span style={{ backgroundColor: 'rgba(255, 255, 255, 0.15)', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700 }}>
+            Truck #{user?.entityId || 'KV44RCGP'}
+          </span>
+        </div>
+
+        {/* Task Execution Stepper */}
+        {selectedAssignment && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: '10px 12px', borderRadius: '10px', fontSize: '11px', textAlign: 'center' }}>
+            <div style={{ color: '#FFFFFF', fontWeight: 700 }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>STAGE 1</div>
+              <span>Assigned</span>
+            </div>
+            <div style={{ color: ['DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED'].includes(selectedAssignment.status) ? '#10B981' : 'rgba(255, 255, 255, 0.4)', fontWeight: 700 }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>STAGE 2</div>
+              <span>In Transit</span>
+            </div>
+            <div style={{ color: ['ARRIVED', 'DELIVERED'].includes(selectedAssignment.status) ? '#10B981' : 'rgba(255, 255, 255, 0.4)', fontWeight: 700 }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>STAGE 3</div>
+              <span>At Yard</span>
+            </div>
+            <div style={{ color: selectedAssignment.status === 'DELIVERED' ? '#10B981' : 'rgba(255, 255, 255, 0.4)', fontWeight: 700 }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', marginBottom: '2px' }}>STAGE 4</div>
+              <span>Offloaded</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-505)' }}>Loading haulage tasks...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading haulage tasks...</div>
       ) : assignments.length === 0 ? (
         <EmptyState 
           icon={<Truck size={48} />}
@@ -209,21 +239,22 @@ export const DriverDashboard: React.FC = () => {
                 key={a.id}
                 onClick={() => { setSelectedAssignment(a); setOcrResult(null); }}
                 style={{
-                  padding: '12px 20px',
-                  borderRadius: '10px',
-                  border: selectedAssignment?.id === a.id ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
-                  backgroundColor: selectedAssignment?.id === a.id ? 'var(--accent-blue-light)' : '#fff',
+                  padding: '14px 20px',
+                  borderRadius: '12px',
+                  border: selectedAssignment?.id === a.id ? '2px solid var(--brand-purple)' : '1px solid var(--neutral-200)',
+                  backgroundColor: selectedAssignment?.id === a.id ? 'var(--brand-purple-light)' : '#fff',
                   cursor: 'pointer',
                   textAlign: 'left',
                   flexShrink: 0,
-                  minWidth: '220px'
+                  minWidth: '240px',
+                  minHeight: '64px'
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <span className="mono" style={{ fontWeight: 800 }}>Assignment #{a.id}</span>
                   <StatusBadge status={a.status} />
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--neutral-700)' }}>{a.material}</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--neutral-900)' }}>{a.material}</div>
                 <div style={{ fontSize: '11px', color: 'var(--neutral-500)' }}>PO #{a.sap_po_no}</div>
               </button>
             ))}
@@ -253,23 +284,29 @@ export const DriverDashboard: React.FC = () => {
                   </div>
                 </Card>
 
-                <Card title="Transit GPS Tracking">
+                <Card title="Live Journey Telemetry & GPS Tracking">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <p style={{ fontSize: '12.5px', color: 'var(--neutral-500)', margin: 0 }}>
-                      En-route logistics requires continuous GPS telemetry updates. Toggling watch mode logs transit positions.
+                    <p style={{ fontSize: '12.5px', color: 'var(--neutral-600)', margin: 0 }}>
+                      Initiating journey automatically turns ON live GPS telemetry pings to SAP S/4HANA Control Tower.
                     </p>
 
                     <button 
                       onClick={toggleTracking} 
-                      className={`btn ${trackingActive ? 'btn-danger' : 'btn-dark'}`}
+                      className={`btn ${trackingActive ? 'btn-danger' : 'btn-primary'}`}
+                      style={{ padding: '14px 18px', fontSize: '14px', fontWeight: 800, width: '100%', minHeight: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                     >
-                      {trackingActive ? 'Stop Transit Ping' : 'Start Transit Tracking'}
+                      {trackingActive ? 'STOP JOURNEY TELEMETRY' : 'START JOURNEY & LIVE GPS'}
                     </button>
 
-                    {gpsCoords && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--neutral-100)', padding: '10px 14px', borderRadius: '8px', fontSize: '12.5px' }}>
-                        <MapPin size={14} color="var(--accent-blue)" />
-                        <span>Lat: {gpsCoords.lat.toFixed(5)}, Lng: {gpsCoords.lng.toFixed(5)}</span>
+                    {trackingActive && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F0FDF4', border: '1px solid #10B981', padding: '12px 14px', borderRadius: '8px', fontSize: '12.5px', color: '#065F46' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700 }}>
+                          <span className="pulse-dot pulse-dot--active" />
+                          <span>LIVE GPS TELEMETRY ACTIVE</span>
+                        </div>
+                        <span className="mono" style={{ fontSize: '11px', fontWeight: 700 }}>
+                          {gpsCoords ? `${gpsCoords.lat.toFixed(4)}, ${gpsCoords.lng.toFixed(4)}` : 'Acquiring Fix...'}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -323,37 +360,6 @@ export const DriverDashboard: React.FC = () => {
                         </div>
                       </div>
                     )}
-                  </div>
-                </Card>
-
-                {/* Weighbridge console */}
-                <Card title="Self weighbridge log capture">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>Stage</label>
-                        <select 
-                          value={weighStage} 
-                          onChange={e => setWeighStage(e.target.value as any)}
-                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--neutral-300)', borderRadius: '8px', backgroundColor: '#fff' }}
-                        >
-                          <option value="MINE_TARE">Mine Tare</option>
-                          <option value="MINE_GROSS">Mine Gross</option>
-                          <option value="DEST_GROSS">Dest Gross</option>
-                          <option value="DEST_TARE">Dest Tare</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, marginBottom: '6px' }}>Weight (kg)</label>
-                        <input 
-                          type="number" 
-                          value={weightKg} 
-                          onChange={e => setWeightKg(e.target.value)}
-                          style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--neutral-300)', borderRadius: '8px' }}
-                        />
-                      </div>
-                    </div>
-                    <button className="btn btn-dark btn-sm" onClick={handleWeightLog} disabled={isSubmitting}>Log Weight Log</button>
                   </div>
                 </Card>
 

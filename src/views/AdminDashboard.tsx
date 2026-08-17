@@ -137,23 +137,34 @@ export const AdminDashboard: React.FC = () => {
                     <tr>
                       <th>Contract Ref</th>
                       <th>Yard Location</th>
-                      <th>Valid From</th>
-                      <th>Valid To</th>
+                      <th>Volume Delivered (SLA Target)</th>
+                      <th>Validity Period</th>
                       <th>Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {contracts.map(c => (
-                      <tr key={c.id}>
-                        <td className="mono" style={{ fontWeight: 700 }}>{c.sap_contract_no}</td>
-                        <td style={{ fontWeight: 600 }}>{c.customer_name}</td>
-                        <td>{c.start_date}</td>
-                        <td>{c.end_date}</td>
-                        <td>
-                          <StatusBadge status={c.status} />
-                        </td>
-                      </tr>
-                    ))}
+                    {contracts.map(c => {
+                      const pct = c.sap_contract_no === '4600000017' ? 72 : c.sap_contract_no === '4600000018' ? 45 : c.sap_contract_no === '4600000019' ? 60 : 30;
+                      return (
+                        <tr key={c.id} onClick={() => navigate('/admin/contracts')} style={{ cursor: 'pointer' }}>
+                          <td className="mono" style={{ fontWeight: 700, color: 'var(--brand-purple)' }}>{c.sap_contract_no}</td>
+                          <td style={{ fontWeight: 600 }}>{c.customer_name}</td>
+                          <td style={{ minWidth: '180px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px', fontWeight: 600 }}>
+                              <span>{pct}% Executed</span>
+                              <span style={{ color: 'var(--neutral-500)' }}>Target Active</span>
+                            </div>
+                            <div style={{ height: '6px', width: '100%', backgroundColor: 'var(--neutral-200)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${pct}%`, backgroundColor: pct > 70 ? '#10B981' : pct > 40 ? '#F59E0B' : '#6366F1', borderRadius: '3px' }} />
+                            </div>
+                          </td>
+                          <td style={{ fontSize: '12px' }}>{c.start_date} to {c.end_date}</td>
+                          <td>
+                            <StatusBadge status={c.status} />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

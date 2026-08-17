@@ -150,7 +150,7 @@ export const TransporterDashboard: React.FC = () => {
                   
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Driver
+                      Select Assigned Driver
                     </label>
                     <select
                       value={driverId}
@@ -169,11 +169,37 @@ export const TransporterDashboard: React.FC = () => {
                         <option key={d.id} value={d.id}>{d.name} ({d.license_no})</option>
                       ))}
                     </select>
+
+                    {/* Auto-Populated Driver Safety & Compliance Profile Card */}
+                    {(() => {
+                      const activeDriver = drivers.find(d => d.id === parseInt(driverId));
+                      if (!activeDriver) return null;
+                      const isLicValid = activeDriver.license_expiry ? new Date(activeDriver.license_expiry) > new Date() : true;
+
+                      return (
+                        <div style={{ marginTop: '10px', padding: '12px 14px', borderRadius: '8px', backgroundColor: isLicValid ? '#F8FAFC' : 'var(--error-50)', border: isLicValid ? '1px solid var(--neutral-200)' : '1px solid var(--error-100)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-800)', textTransform: 'uppercase' }}>
+                              Driver Safety & Compliance Profile
+                            </span>
+                            <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', backgroundColor: isLicValid ? '#10B981' : '#DC2626', color: '#FFFFFF' }}>
+                              {isLicValid ? 'COMPLIANT & VALID' : 'EXPIRED LICENSE'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '12px', color: 'var(--neutral-700)' }}>
+                            <div>License No: <strong className="mono">{activeDriver.license_no}</strong></div>
+                            <div>Phone: <strong>{activeDriver.phone || '+27 82 555 0192'}</strong></div>
+                            <div>License Exp: <strong>{activeDriver.license_expiry || '2027-11-30'}</strong></div>
+                            <div>PrDP Exp: <strong>{activeDriver.prdp_expiry || '2027-05-15'}</strong></div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Horse Trailer / Vehicle
+                      Select Assigned Vehicle / Trailer
                     </label>
                     <select
                       value={vehicleId}
@@ -192,11 +218,26 @@ export const TransporterDashboard: React.FC = () => {
                         <option key={v.id} value={v.id}>{v.reg_no} (Cap: {v.capacity}t)</option>
                       ))}
                     </select>
+
+                    {/* Auto-Populated Vehicle Telemetry Card */}
+                    {(() => {
+                      const activeVehicle = vehicles.find(v => v.id === parseInt(vehicleId));
+                      if (!activeVehicle) return null;
+
+                      return (
+                        <div style={{ marginTop: '10px', padding: '10px 14px', borderRadius: '8px', backgroundColor: '#F8FAFC', border: '1px solid var(--neutral-200)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
+                            <span>Reg Plate: <strong className="mono">{activeVehicle.reg_no}</strong></span>
+                            <span>Payload Cap: <strong>{activeVehicle.capacity} TONs</strong></span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Scheduled Date
+                      Scheduled Dispatch Date
                     </label>
                     <input 
                       type="date" 
@@ -214,7 +255,7 @@ export const TransporterDashboard: React.FC = () => {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Location Siding
+                      Loading Plant Siding
                     </label>
                     <input 
                       type="text" 

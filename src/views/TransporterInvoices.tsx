@@ -129,14 +129,32 @@ export const TransporterInvoices: React.FC = () => {
                       </p>
                     </div>
 
-                    <button 
-                      onClick={() => handleInvoiceSelect(inv)}
-                      className="btn btn-primary"
-                      style={{ width: '100%', marginTop: 'auto' }}
-                    >
-                      <Plus size={16} />
-                      Raise Tax Invoice Bill
-                    </button>
+                    {/* Mandatory CA Verification Rule Check */}
+                    {(() => {
+                      // Waybill WB-998801 and WB-998802 are demo verified by CA; unverified PODs require CA approval first
+                      const isCaVerified = inv.waybillNo === 'WB-998801' || inv.waybillNo === 'WB-998802';
+
+                      return (
+                        <>
+                          {!isCaVerified && (
+                            <div style={{ marginBottom: '14px', padding: '8px 12px', borderRadius: '6px', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', color: '#92400E', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
+                              🔒 AWAITING COMPANY ADMIN VERIFICATION
+                            </div>
+                          )}
+
+                          <button 
+                            onClick={() => handleInvoiceSelect(inv)}
+                            className="btn btn-primary"
+                            disabled={!isCaVerified}
+                            style={{ width: '100%', marginTop: 'auto', opacity: isCaVerified ? 1 : 0.6 }}
+                            title={isCaVerified ? "Click to raise formal SAP tax invoice bill" : "Invoice generation locked until Company Admin verifies the POD slip"}
+                          >
+                            <Plus size={16} />
+                            {isCaVerified ? 'Raise Tax Invoice Bill' : 'Locked (Pending CA Verification)'}
+                          </button>
+                        </>
+                      );
+                    })()}
                   </Card>
                 ))}
               </div>

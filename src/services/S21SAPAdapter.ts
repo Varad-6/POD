@@ -112,7 +112,26 @@ export const S21SAPAdapter: ISAPAdapter = {
         status: 'FAILED',
         message: `S21 Fetch Failed: ${err.message}. Falling back to mock data.`,
       });
-      return MockSAPAdapter.fetchContracts();
+      // Fallback: Fetch directly from S21 Express Server database endpoints (/api/v3/contracts)
+      const caContracts = await fetch('http://localhost:3001/api/v3/contracts', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('ikwezi_token_v3') || ''}` }
+      }).then(r => r.json());
+      
+      return (caContracts || []).map((c: any): Contract => ({
+        contractNumber: c.sap_contract_no,
+        qualityType: c.material || 'SL BIT 20%ASH',
+        targetQuantity: c.target_qty || 151500,
+        uom: c.uom || 'TO',
+        netValue: c.net_value || 151501,
+        rate: c.rate || 151.5,
+        validFrom: c.start_date,
+        validTo: c.end_date,
+        soldToParty: c.customer_name || '1402 - ABC Enterprises',
+        currency: 'INR',
+        fromLocation: 'MON1 Plant',
+        toLocation: 'Siding Yard 1001',
+        sapSyncStatus: 'SYNCED'
+      }));
     }
   },
 
@@ -163,7 +182,28 @@ export const S21SAPAdapter: ISAPAdapter = {
         status: 'FAILED',
         message: `S21 Fetch PO Failed: ${err.message}. Falling back to mock data.`,
       });
-      return MockSAPAdapter.fetchPurchaseOrders();
+      // Fallback: Fetch directly from S21 Express Server database endpoints
+      const searchRes = await fetch('http://localhost:3001/api/v3/search?q=45', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('ikwezi_token_v3') || ''}` }
+      }).then(r => r.json());
+
+      const dbPOs = searchRes.purchaseOrders || [];
+      return dbPOs.map((po: any): PurchaseOrder => ({
+        purchaseOrderNo: po.sap_po_no,
+        contractRef: po.contract_id ? `46000000${16 + po.contract_id}` : '4600000017',
+        transporter: 'Sipho Transport Services',
+        productDescription: po.material,
+        rate: po.rate,
+        unit: po.uom,
+        targetQuantity: po.target_qty,
+        costCenter: po.cost_center || 'CC-MINING-01',
+        fromLocation: 'MON1 Plant',
+        toLocation: 'Siding Yard 1001',
+        paymentTerms: '30 days from invoice posting',
+        poDate: '2026-08-12',
+        status: po.status === 'ASSIGNED' ? 'ACCEPTED_SIGNED' : 'PENDING_ASSIGNMENT',
+        sapSyncStatus: 'SYNCED'
+      }));
     }
   },
 

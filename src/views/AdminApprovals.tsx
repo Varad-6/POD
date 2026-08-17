@@ -186,6 +186,29 @@ export const AdminApprovals: React.FC = () => {
                     </p>
                   </div>
 
+                  {/* 4-Point Weighbridge Variance Visualizer */}
+                  <div style={{ border: '1px solid var(--neutral-200)', borderRadius: '8px', padding: '14px', backgroundColor: '#F8FAFC' }}>
+                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em' }}>
+                      4-Point Weighbridge Variance Analysis
+                    </h5>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--neutral-200)' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>MINE TARE / GROSS</span>
+                        <strong style={{ color: 'var(--neutral-900)' }}>14.20 T / 48.20 T</strong>
+                        <span style={{ fontSize: '11px', color: 'var(--neutral-600)', display: 'block' }}>Net: 34.00 Tons</span>
+                      </div>
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--neutral-200)' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>YARD TARE / GROSS</span>
+                        <strong style={{ color: 'var(--neutral-900)' }}>14.80 T / 48.20 T</strong>
+                        <span style={{ fontSize: '11px', color: 'var(--error-600)', fontWeight: 700, display: 'block' }}>Net: 33.40 Tons</span>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '10px', padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderRadius: '6px', color: 'var(--error-600)', fontSize: '11px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+                      <span>VARIANCE EXCEEDED: -600 KG (-1.76%)</span>
+                      <span>MAX TOLERANCE: ±0.5%</span>
+                    </div>
+                  </div>
+
                   {activeTab === 'OPEN' ? (
                     <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                       <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>Manual Resolution Form</h4>

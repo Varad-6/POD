@@ -130,15 +130,15 @@ export const AdminInvoices: React.FC = () => {
         </div>
       )}
 
-      {/* Tabs Menu */}
+      {/* Tabs Menu with Distinct Status Badges */}
       <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid var(--neutral-200)', paddingBottom: '12px' }}>
         <button 
           onClick={() => setActiveTab('UNPARKED')}
           style={{
             padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-            backgroundColor: activeTab === 'UNPARKED' ? 'var(--neutral-900)' : 'transparent',
+            backgroundColor: activeTab === 'UNPARKED' ? '#D97706' : 'transparent',
             color: activeTab === 'UNPARKED' ? '#FFFFFF' : 'var(--neutral-600)',
-            fontWeight: 700
+            fontWeight: 700, fontSize: '13px'
           }}
         >
           Unparked Invoices ({unparkedInvoices.length})
@@ -147,9 +147,9 @@ export const AdminInvoices: React.FC = () => {
           onClick={() => setActiveTab('PARKED')}
           style={{
             padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-            backgroundColor: activeTab === 'PARKED' ? 'var(--neutral-900)' : 'transparent',
+            backgroundColor: activeTab === 'PARKED' ? '#2563EB' : 'transparent',
             color: activeTab === 'PARKED' ? '#FFFFFF' : 'var(--neutral-600)',
-            fontWeight: 700
+            fontWeight: 700, fontSize: '13px'
           }}
         >
           Parked MIRO ({parked.length})
@@ -158,9 +158,9 @@ export const AdminInvoices: React.FC = () => {
           onClick={() => setActiveTab('POSTED')}
           style={{
             padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-            backgroundColor: activeTab === 'POSTED' ? 'var(--neutral-900)' : 'transparent',
+            backgroundColor: activeTab === 'POSTED' ? '#059669' : 'transparent',
             color: activeTab === 'POSTED' ? '#FFFFFF' : 'var(--neutral-600)',
-            fontWeight: 700
+            fontWeight: 700, fontSize: '13px'
           }}
         >
           Posted ({posted.length})
@@ -171,7 +171,7 @@ export const AdminInvoices: React.FC = () => {
             padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer',
             backgroundColor: activeTab === 'CLEARED' ? 'var(--neutral-900)' : 'transparent',
             color: activeTab === 'CLEARED' ? '#FFFFFF' : 'var(--neutral-600)',
-            fontWeight: 700
+            fontWeight: 700, fontSize: '13px'
           }}
         >
           Cleared ({cleared.length})
