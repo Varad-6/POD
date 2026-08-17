@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Bell, Search, RefreshCw, Server, CheckCircle2 } from 'lucide-react';
+import { LogOut, Bell, Search, RefreshCw, Server, CheckCircle2, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
 import { useNavigate } from 'react-router-dom';
 import { searchApi } from '../lib/api_v3';
@@ -7,9 +7,11 @@ import { Modal } from './Modal';
 
 interface TopBarProps {
   title: string;
+  onToggleSidebar?: () => void;
+  isSidebarCollapsed?: boolean;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({ title }) => {
+export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSidebarCollapsed }) => {
   const { user: currentUser, logout } = useAuthV3();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);

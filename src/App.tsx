@@ -47,6 +47,17 @@ const MainApp: React.FC = () => {
   const { user, loading } = useAuthV3();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState<boolean>(() => {
+    return localStorage.getItem('ikwezi_sidebar_collapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('ikwezi_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (loading) return;
@@ -74,12 +85,21 @@ const MainApp: React.FC = () => {
     );
   }
 
+  const sidebarWidth = isSidebarCollapsed ? '72px' : '260px';
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <div 
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        minHeight: '100vh',
+        ['--sidebar-width' as any]: sidebarWidth
+      }}
+    >
       <div className="app-container">
-        <Sidebar />
-        <div className="main-wrapper">
-          <TopBar title={getPageTitle(location.pathname, user.role)} />
+        <Sidebar collapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+        <div className="main-wrapper" style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+          <TopBar title={getPageTitle(location.pathname, user.role)} onToggleSidebar={toggleSidebar} isSidebarCollapsed={isSidebarCollapsed} />
           <main className="content-container">
             <Routes>
               {/* Transporter Routes */}

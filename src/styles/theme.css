@@ -106,7 +106,7 @@
   --radius-xl:  12px;
   --radius-full:9999px; /* Pill Shape buttons & tracking bars */
 
-  /* ── FedEx Clean Elevation & Shadows ──────────────────────── */
+  /* ── Enterprise Elevation & Shadows ──────────────────────── */
   --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-card:   0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-hover:  0 8px 24px rgba(0, 0, 0, 0.12);
@@ -121,4 +121,5 @@
   --transition-fast:   0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 
