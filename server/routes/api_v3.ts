@@ -27,16 +27,24 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
 router.post('/demo/reset', requireAuth, (_req: Request, res: Response) => {
   const db = getDb();
   try {
-    // 1. Wipe execution tables
+    // 1. Wipe execution tables in reverse dependency order
     db.prepare('DELETE FROM miro_invoices').run();
+    db.prepare('DELETE FROM main_invoices').run();
     db.prepare('DELETE FROM delivery_invoices').run();
+    db.prepare('DELETE FROM sap_s4_mirror').run();
+    db.prepare('DELETE FROM ca_verification').run();
     db.prepare('DELETE FROM review_queue').run();
     db.prepare('DELETE FROM variance_checks').run();
     db.prepare('DELETE FROM pod_documents').run();
+    db.prepare('DELETE FROM transit_events').run();
+    db.prepare('DELETE FROM arrival_confirmations').run();
+    db.prepare('DELETE FROM otp_verifications').run();
+    db.prepare('DELETE FROM delivery_capture').run();
     db.prepare('DELETE FROM bilty_uploads').run();
     db.prepare('DELETE FROM supervisor_stamp').run();
-    db.prepare('DELETE FROM otp_tokens').run();
+    db.prepare('DELETE FROM supervisor_checks').run();
     db.prepare('DELETE FROM weight_logs').run();
+    db.prepare('DELETE FROM driver_assignment_data').run();
 
     // 2. Reset transport assignments status back to ASSIGNED
     db.prepare("UPDATE transport_assignments SET status = 'ASSIGNED', location = 'Emoyeni Mine Siding'").run();
