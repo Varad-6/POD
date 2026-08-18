@@ -38,6 +38,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
+// ─── DEMO RESET ──────────────────────────────────────────────
+export const demoApi = {
+  resetData: () => request<{ status: string; message: string }>('/demo/reset', { method: 'POST' }),
+};
+
 // ─── SEARCH ──────────────────────────────────────────────────
 export const searchApi = {
   globalSearch: (q: string) =>

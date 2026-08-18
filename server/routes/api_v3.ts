@@ -23,6 +23,35 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
   return R * c;
 }
 
+// POST /api/v3/demo/reset
+router.post('/demo/reset', requireAuth, (_req: Request, res: Response) => {
+  const db = getDb();
+  try {
+    // 1. Wipe execution tables
+    db.prepare('DELETE FROM miro_invoices').run();
+    db.prepare('DELETE FROM delivery_invoices').run();
+    db.prepare('DELETE FROM review_queue').run();
+    db.prepare('DELETE FROM variance_checks').run();
+    db.prepare('DELETE FROM pod_documents').run();
+    db.prepare('DELETE FROM bilty_uploads').run();
+    db.prepare('DELETE FROM supervisor_stamp').run();
+    db.prepare('DELETE FROM otp_tokens').run();
+    db.prepare('DELETE FROM weight_logs').run();
+
+    // 2. Reset transport assignments status back to ASSIGNED
+    db.prepare("UPDATE transport_assignments SET status = 'ASSIGNED', location = 'Emoyeni Mine Siding'").run();
+
+    // 3. Reset job configs status
+    db.prepare("UPDATE job_configs SET status = 'ASSIGNED' WHERE id IN (SELECT job_config_id FROM transport_assignments)").run();
+
+    console.log('[DB V3] Demo execution data reset successfully to clean initial state.');
+    return res.json({ status: 'OK', message: 'Demo execution data reset successfully to clean initial state.' });
+  } catch (err: any) {
+    console.error('[DB V3 Reset Error]', err);
+    return res.status(500).json({ error: 'Failed to reset demo data', message: err.message });
+  }
+});
+
 // GET /api/v3/search?q=
 router.get('/search', requireAuth, (req: Request, res: Response) => {
   const db = getDb();

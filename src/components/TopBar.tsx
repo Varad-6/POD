@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { LogOut, Bell, Search, RefreshCw, Server, CheckCircle2, Menu, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LogOut, Bell, Search, RefreshCw, Server, CheckCircle2, Menu, PanelLeftClose, PanelLeftOpen, RotateCcw, AlertTriangle } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
 import { useNavigate } from 'react-router-dom';
-import { searchApi } from '../lib/api_v3';
+import { searchApi, demoApi } from '../lib/api_v3';
 import { Modal } from './Modal';
 import { PodzoLogo } from './branding/PodzoLogo';
 import { ContractPoSelector } from './branding/ContractPoSelector';
@@ -17,6 +17,8 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
   const { user: currentUser, logout } = useAuthV3();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any | null>(null);
@@ -41,6 +43,21 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
     setShowLogoutConfirm(false);
     logout();
     navigate('/login', { replace: true });
+  };
+
+  const handleResetDemoData = async () => {
+    setShowResetConfirm(false);
+    setIsResetting(true);
+    try {
+      await demoApi.resetData();
+      window.dispatchEvent(new Event('pod_data_refreshed'));
+      alert('✓ Demo data reset successfully! You can now repeat the end-to-end demo workflow.');
+      window.location.reload();
+    } catch (err: any) {
+      alert('Failed to reset demo data: ' + (err.message || 'Error occurred'));
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   const handleNotificationClick = (_notifId: string, link: string) => {
@@ -212,7 +229,31 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
       </form>
 
       {/* Right User Controls & Refresh Button */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {/* Reset Demo Data Button */}
+        <button
+          onClick={() => setShowResetConfirm(true)}
+          disabled={isResetting}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 12px',
+            borderRadius: '9999px',
+            backgroundColor: '#FFF7ED',
+            color: '#C2410C',
+            border: '1px solid #FFEDD5',
+            fontSize: '11px',
+            fontWeight: 700,
+            cursor: isResetting ? 'wait' : 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+          title="Erases execution data and restores demo environment to initial state"
+        >
+          <RotateCcw size={13} className={isResetting ? 'spin' : ''} />
+          <span>{isResetting ? 'Resetting...' : 'Reset Demo Data'}</span>
+        </button>
+
         {/* Refresh Button with Timestamp */}
         <button
           onClick={handleManualRefresh}
@@ -385,6 +426,42 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
           <LogOut size={18} />
         </button>
       </div>
+
+      {/* Confirm Reset Modal */}
+      <Modal 
+        isOpen={showResetConfirm} 
+        onClose={() => setShowResetConfirm(false)} 
+        title="Reset Demo Environment Data"
+        width="440px"
+      >
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          <div style={{ backgroundColor: '#FFF7ED', padding: '16px', borderRadius: '12px', border: '1px solid #FFEDD5', marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <AlertTriangle size={24} color="#EA580C" style={{ flexShrink: 0 }} />
+            <div style={{ textAlign: 'left', fontSize: '13px', color: '#9A3412', lineHeight: 1.5 }}>
+              This will erase all active dispatches, weighbridge scale logs, OTPs, POD uploads, and MIRO invoices, restoring the system to its initial demo state.
+            </div>
+          </div>
+          <p style={{ fontSize: '14px', marginBottom: '24px', color: 'var(--neutral-800)', fontWeight: 600 }}>
+            Do you want to proceed and reset the demo data?
+          </p>
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button 
+              onClick={() => setShowResetConfirm(false)} 
+              className="btn btn-ghost"
+              style={{ padding: '10px 20px', fontWeight: 600 }}
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleResetDemoData} 
+              className="btn"
+              style={{ padding: '10px 20px', backgroundColor: '#EA580C', color: '#FFFFFF', fontWeight: 700, border: 'none' }}
+            >
+              ↺ Confirm & Reset Demo
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Confirm Logout Modal */}
       <Modal 
