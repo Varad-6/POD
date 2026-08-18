@@ -381,7 +381,7 @@ export const DriverDashboard: React.FC = () => {
             subtitle="When you reach the customer's yard, tap here. Your GPS location is recorded."
             icon={<MapPin size={18} />}
             accentColor="#10B981"
-            locked={!isEnRoute && s.status !== 'ASSIGNED'}
+            locked={!['DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status)}
           >
             <button
               onClick={handleConfirmArrival}
