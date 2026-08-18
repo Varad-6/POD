@@ -431,34 +431,6 @@ export const SupervisorDashboard: React.FC = () => {
           )}
         </StepCard>
 
-        {/* ── Step 4: Arrival Stamp ── */}
-        <StepCard
-          step={4}
-          title="Record Customer Arrival Stamp"
-          subtitle="When truck arrives at customer yard, record the GPS stamp here"
-          done={steps.step4Done}
-          active={steps.step4Active}
-          icon={<MapPin size={16} />}
-        >
-          {steps.step4Active && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ backgroundColor: '#F0F9FF', borderRadius: '10px', padding: '14px', border: '1px solid #BAE6FD', fontSize: '13px', color: '#0369A1', fontWeight: 500 }}>
-                Truck is currently driving to the customer yard. When it arrives, click the button below to record the arrival time and GPS location.
-              </div>
-              <button
-                onClick={handleArrivalStamp}
-                disabled={isSubmitting}
-                style={{
-                  padding: '14px', backgroundColor: '#0EA5E9', color: '#fff', border: 'none',
-                  borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer'
-                }}
-              >
-                {isSubmitting ? 'Recording...' : 'Record Arrival Stamp & Save Geolocation'}
-              </button>
-            </div>
-          )}
-        </StepCard>
-
         {/* All done */}
         {steps.isComplete && (
           <div style={{
@@ -466,8 +438,8 @@ export const SupervisorDashboard: React.FC = () => {
             backgroundColor: '#F0FDF4', borderRadius: '14px', border: '1px solid #D1FAE5'
           }}>
             <CheckCircle2 size={40} color="#10B981" style={{ margin: '0 auto 12px' }} />
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#065F46', margin: '0 0 6px' }}>All Done!</h3>
-            <p style={{ fontSize: '13px', color: '#047857', margin: 0 }}>This truck run has been completed and stamped at the customer yard.</p>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#065F46', margin: '0 0 6px' }}>Dispatch Complete!</h3>
+            <p style={{ fontSize: '13px', color: '#047857', margin: 0 }}>Bilty has been uploaded and truck is dispatched on its journey.</p>
           </div>
         )}
       </div>
@@ -521,7 +493,7 @@ export const SupervisorDashboard: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {filteredAssignments.map(a => {
             const steps = getStepStatus(a);
-            const progress = [steps.step1Done, steps.step2Done, steps.step3Done, steps.step4Done].filter(Boolean).length;
+            const progress = [steps.step1Done, steps.step2Done, steps.step3Done].filter(Boolean).length;
 
             return (
               <div
@@ -557,7 +529,7 @@ export const SupervisorDashboard: React.FC = () => {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '6px' }}>Progress</div>
                   <div style={{ display: 'flex', gap: '4px' }}>
-                    {[0, 1, 2, 3].map(i => (
+                    {[0, 1, 2].map(i => (
                       <div key={i} style={{
                         height: '6px', flex: 1, borderRadius: '3px',
                         backgroundColor: i < progress ? '#10B981' : '#E2E8F0',
@@ -565,7 +537,7 @@ export const SupervisorDashboard: React.FC = () => {
                       }} />
                     ))}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>{progress}/4 steps done</div>
+                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>{progress}/3 steps done</div>
                 </div>
 
                 <StatusBadge status={a.status} />
