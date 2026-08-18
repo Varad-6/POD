@@ -55,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
       <aside 
         style={{
           width: collapsed ? '72px' : '260px',
-          backgroundColor: '#0F172A',
+          backgroundColor: '#0A192F',
           color: '#FFFFFF',
           display: 'flex',
           flexDirection: 'column',
@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
           left: 0,
           padding: collapsed ? '20px 8px 16px 8px' : '24px 16px 20px 16px',
           zIndex: 1000,
-          borderRight: '1px solid #1E293B',
+          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
           boxSizing: 'border-box',
           overflowY: 'auto',
           transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -91,16 +91,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
                       width: '6px',
                       height: '6px',
                       borderRadius: '50%',
-                      backgroundColor: '#D92626',
-                      boxShadow: '0 0 8px #D92626'
+                      backgroundColor: '#FF5B00',
+                      boxShadow: '0 0 8px #FF5B00'
                     }} 
                   />
                   <span 
                     style={{ 
                       fontSize: '10px', 
-                      color: '#FF7070', 
-                      backgroundColor: 'rgba(217, 38, 38, 0.15)',
-                      border: '1px solid rgba(217, 38, 38, 0.3)',
+                      color: '#FF5B00', 
+                      backgroundColor: 'rgba(255, 91, 0, 0.15)',
+                      border: '1px solid rgba(255, 91, 0, 0.3)',
                       padding: '1px 8px',
                       borderRadius: '6px',
                       fontWeight: 700, 

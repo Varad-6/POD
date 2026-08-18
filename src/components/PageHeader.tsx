@@ -1,5 +1,5 @@
 // ============================================================
-// POD — Standardized PageHeader Component (AutoRepair Style)
+// POD — Standardized PageHeader Component
 // Title + Subtitle + Right Actions Pattern across all views
 // ============================================================
 
@@ -24,24 +24,20 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '28px',
-        paddingBottom: '16px',
-        borderBottom: '1px solid var(--neutral-200)',
+        marginBottom: '24px',
         flexWrap: 'wrap',
         gap: '16px',
       }}
     >
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--brand-orange)', borderRadius: '2px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <h1
             style={{
-              fontSize: '26px',
+              fontSize: '24px',
               fontWeight: 800,
               color: 'var(--neutral-900)',
               letterSpacing: '-0.03em',
               margin: 0,
-              textTransform: 'uppercase',
             }}
           >
             {title}
@@ -51,11 +47,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         {subtitle && (
           <p
             style={{
-              fontSize: '13.5px',
-              color: 'var(--neutral-600)',
-              marginTop: '6px',
-              marginLeft: '16px',
-              fontWeight: 500,
+              fontSize: '13px',
+              color: 'var(--neutral-500)',
+              marginTop: '4px',
+              fontWeight: 400,
             }}
           >
             {subtitle}
