@@ -919,14 +919,19 @@ router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Resp
     WHERE ta.id = ?
   `).get(assignmentId) as any;
 
-  // Simulate OCR results
-  // Make weight match mostly or deviate slightly
-  const hasMismatch = Math.random() > 0.8;
-  const ocrWeight = hasMismatch ? (acceptedPayload / 1000 - 3.5) : (acceptedPayload / 1000);
-  const confidence = hasMismatch ? 65.0 : 92.5;
-  const ocrWaybill = hasMismatch ? 'WB-MISMATCH-1234' : poInfo.sap_po_no;
+  // Run variance calculation
+  const targetQtyKg = poInfo.target_qty * 1000;
+  const variancePct = ((acceptedPayload - targetQtyKg) / targetQtyKg) * 100;
+  const passBool = Math.abs(variancePct) <= poInfo.tolerance_pct ? 1 : 0;
 
-  const matchStatus = (ocrWaybill === poInfo.sap_po_no && confidence >= 70) ? 'MATCH' : 'MISMATCH';
+  // Simulate OCR results
+  // Make OCR weight match the actual payload (or simulate mismatch only if passBool is 0)
+  const isWeightMatch = passBool === 1;
+  const ocrWeight = isWeightMatch ? (acceptedPayload / 1000) : (acceptedPayload / 1000 - 3.5);
+  const confidence = isWeightMatch ? 92.5 : 65.0;
+  const ocrWaybill = poInfo.sap_po_no;
+
+  const matchStatus = (ocrWaybill === poInfo.sap_po_no && isWeightMatch) ? 'MATCH' : 'MISMATCH';
 
   // Save OCR results
   db.prepare(`
@@ -935,22 +940,21 @@ router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Resp
     WHERE assignment_id = ?
   `).run(ocrWaybill, ocrWeight, confidence, matchStatus, assignmentId);
 
-  // Run variance calculation
-  const targetQtyKg = poInfo.target_qty * 1000;
-  const variancePct = ((acceptedPayload - targetQtyKg) / targetQtyKg) * 100;
-  const passBool = Math.abs(variancePct) <= poInfo.tolerance_pct ? 1 : 0;
-
   db.prepare(`
     INSERT OR REPLACE INTO variance_checks (assignment_id, stage, accepted_payload, po_target_qty, variance_pct, tolerance_pct, pass_bool)
     VALUES (?, 'DEST', ?, ?, ?, ?, ?)
   `).run(assignmentId, acceptedPayload, poInfo.target_qty, variancePct, poInfo.tolerance_pct, passBool);
 
-  // ALWAYS trigger review queue block for manual CA verification (no auto-pass)
+  // Trigger review queue block
   let flagReason = 'AWAITING_CA_VERIFY';
+  let isUnderReview = false;
+
   if (matchStatus === 'MISMATCH' || confidence < 70) {
     flagReason = 'OCR_MISMATCH';
+    isUnderReview = true;
   } else if (passBool === 0) {
     flagReason = 'TOLERANCE_EXCEEDED';
+    isUnderReview = true;
   }
 
   db.prepare(`
@@ -972,7 +976,7 @@ router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Resp
       variance_pct: variancePct,
       pass_bool: passBool === 1
     },
-    under_review: true
+    under_review: isUnderReview
   });
 });
 
