@@ -155,11 +155,15 @@ const MainApp: React.FC = () => {
   );
 };
 
+import { ContractPoProvider } from './contexts/ContractPoContext';
+
 export default function App() {
   return (
     <AuthProviderV3>
       <DemoProvider>
-        <MainApp />
+        <ContractPoProvider>
+          <MainApp />
+        </ContractPoProvider>
       </DemoProvider>
     </AuthProviderV3>
   );

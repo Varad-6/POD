@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { assignmentsApi, srApi, drApi, caApi, TransportAssignmentV3, ReviewQueueItemV3 } from '../lib/api_v3';
+import { useContractPo } from '../contexts/ContractPoContext';
 import {
   ShieldCheck, Scale, CheckCircle2, FileText, MapPin,
   Truck, AlertCircle, ChevronRight, RefreshCw, ArrowLeft, Package, Clock
@@ -49,6 +50,7 @@ const StepCard: React.FC<{
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export const SupervisorDashboard: React.FC = () => {
+  const { selectedPoId, purchaseOrders } = useContractPo();
   const [assignments, setAssignments] = useState<TransportAssignmentV3[]>([]);
   const [reviews, setReviews] = useState<ReviewQueueItemV3[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<TransportAssignmentV3 | null>(null);
@@ -83,6 +85,13 @@ export const SupervisorDashboard: React.FC = () => {
   };
 
   useEffect(() => { loadData(); }, []);
+
+  const activePoObject = selectedPoId === 'ALL' ? null : purchaseOrders.find(p => p.id === Number(selectedPoId));
+
+  const filteredAssignments = assignments.filter(a => {
+    if (selectedPoId !== 'ALL' && activePoObject && a.sap_po_no !== activePoObject.sap_po_no) return false;
+    return true;
+  });
 
   const handleBack = () => { setSelectedAssignment(null); setSuccessMsg(''); setOtpCode(''); };
 
@@ -510,7 +519,7 @@ export const SupervisorDashboard: React.FC = () => {
         <EmptyState icon={<Truck size={48} />} title="No Trucks at Gate" description="No trucks are currently assigned or in transit." />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {assignments.map(a => {
+          {filteredAssignments.map(a => {
             const steps = getStepStatus(a);
             const progress = [steps.step1Done, steps.step2Done, steps.step3Done, steps.step4Done].filter(Boolean).length;
 

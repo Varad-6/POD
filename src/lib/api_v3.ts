@@ -64,6 +64,7 @@ export const authApi = {
 // ─── CA ENDPOINTS ────────────────────────────────────────────
 export const caApi = {
   getContracts: () => request<ContractV3[]>('/contracts'),
+  getPurchaseOrders: () => request<PurchaseOrderV3[]>('/purchase-orders'),
   getContractDetails: (id: number) => request<ContractV3>(`/contracts/${id}`),
   getContractPdf: (id: number) => request<{ pdf_url: string }>(`/contracts/${id}/pdf`),
   distributePo: (poId: number, data: { transporter_id: number; availability_window: string; timebound: string }) =>

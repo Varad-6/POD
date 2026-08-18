@@ -108,7 +108,7 @@ router.get('/assignments', requireAuth, requireRole('CA', 'TA', 'SR'), (req: Req
 });
 
 // GET /api/v3/contracts
-router.get('/contracts', requireAuth, requireRole('CA', 'TA', 'CR'), (req: Request, res: Response) => {
+router.get('/contracts', requireAuth, (req: Request, res: Response) => {
   const db = getDb();
   const contracts = db.prepare(`
     SELECT c.*, cu.name as customer_name
@@ -116,6 +116,18 @@ router.get('/contracts', requireAuth, requireRole('CA', 'TA', 'CR'), (req: Reque
     JOIN customers cu ON cu.id = c.customer_id
   `).all();
   return res.json(contracts);
+});
+
+// GET /api/v3/purchase-orders
+router.get('/purchase-orders', requireAuth, (req: Request, res: Response) => {
+  const db = getDb();
+  const contractId = req.query.contract_id;
+  if (contractId) {
+    const pos = db.prepare('SELECT po.*, c.sap_contract_no FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id WHERE po.contract_id = ?').all(contractId);
+    return res.json(pos);
+  }
+  const pos = db.prepare('SELECT po.*, c.sap_contract_no FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id').all();
+  return res.json(pos);
 });
 
 // GET /api/v3/contracts/:id

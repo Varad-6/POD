@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { searchApi } from '../lib/api_v3';
 import { Modal } from './Modal';
 import { PodzoLogo } from './branding/PodzoLogo';
+import { ContractPoSelector } from './branding/ContractPoSelector';
 
 interface TopBarProps {
   title: string;
@@ -86,7 +87,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         boxShadow: 'var(--shadow-subtle)',
       }}
     >
-      {/* Title & SAP Environment Badge */}
+      {/* Title & SAP Environment Badge & Global Contract/PO Selector */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderRight: '1px solid #E2E8F0', paddingRight: '16px' }}>
           <PodzoLogo variant="compact" height={28} />
@@ -94,6 +95,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
           {title}
         </h2>
+        <ContractPoSelector />
 
         {/* SAP Environment Indicator */}
         <div

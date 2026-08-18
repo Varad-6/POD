@@ -69,6 +69,38 @@ app.use('/api/v2/invoices',     invoiceRoutes);
 app.use('/api/v2/transporters', transporterRoutes);
 app.use('/api/v2/dashboard',    dashboardRoutes);
 
+// Root & API status endpoints
+app.get('/', (_req, res) => {
+  res.send(`
+    <div style="font-family: sans-serif; padding: 40px; line-height: 1.6; color: #0A192F;">
+      <h2>🚀 PODZO Backend API Server (v3) is Running</h2>
+      <p>This is the backend API service running on port <code>3001</code>.</p>
+      <p>To view the web application, visit the Vite Frontend at: <a href="http://localhost:5173" style="color: #FF5B00; font-weight: bold;">http://localhost:5173</a></p>
+      <hr style="border: 0; border-top: 1px solid #E2E8F0; margin: 20px 0;" />
+      <h3>Available API Status Endpoints:</h3>
+      <ul>
+        <li><a href="/api/v3/health">/api/v3/health</a> — Health Status Check</li>
+        <li><a href="/api/v2/health">/api/v2/health</a> — Legacy Health Check</li>
+      </ul>
+    </div>
+  `);
+});
+
+app.get('/api/v3', (_req, res) => {
+  res.json({
+    name: 'PODZO Backend API',
+    version: '3.0.0',
+    status: 'ONLINE',
+    endpoints: {
+      health: '/api/v3/health',
+      auth: '/api/v3/auth',
+      contracts: '/api/v3/contracts',
+      purchaseOrders: '/api/v3/pos',
+      dispatches: '/api/v3/assignments',
+    }
+  });
+});
+
 // Health check
 app.get('/api/v3/health', (_req, res) => {
   res.json({ status: 'OK', time: new Date().toISOString(), version: '3.0.0' });

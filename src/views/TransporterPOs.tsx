@@ -4,6 +4,7 @@ import {
   Package, ArrowLeft, Clock, AlertCircle, ChevronRight, RefreshCw
 } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
+import { useContractPo } from '../contexts/ContractPoContext';
 import { taApi, transportersApi, JobConfigV3, Driver, Vehicle } from '../lib/api_v3';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
@@ -45,6 +46,7 @@ const Divider: React.FC = () => (
 
 export const TransporterPOs: React.FC = () => {
   const { user } = useAuthV3();
+  const { selectedPoId, purchaseOrders } = useContractPo();
   const [jobConfigs, setJobConfigs] = useState<JobConfigV3[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -86,6 +88,15 @@ export const TransporterPOs: React.FC = () => {
 
   useEffect(() => { loadData(); }, []);
 
+  const activePoObject = selectedPoId === 'ALL' ? null : purchaseOrders.find(p => p.id === Number(selectedPoId));
+
+  const filteredJobConfigs = jobConfigs.filter(jc => {
+    if (activeFilter === 'PENDING' && jc.status !== 'PENDING') return false;
+    if (activeFilter === 'ASSIGNED' && jc.status !== 'ASSIGNED') return false;
+    if (selectedPoId !== 'ALL' && activePoObject && jc.sap_po_no !== activePoObject.sap_po_no) return false;
+    return true;
+  });
+
   const handleOpenPO = (jc: JobConfigV3) => {
     setSelectedPO(jc);
     setAssignmentStep(1);
@@ -119,11 +130,8 @@ export const TransporterPOs: React.FC = () => {
     }
   };
 
-  const filtered = jobConfigs.filter(jc => {
-    if (activeFilter === 'PENDING') return jc.status === 'PENDING';
-    if (activeFilter === 'ASSIGNED') return jc.status === 'ASSIGNED';
-    return true;
-  });
+  // Filter jobConfigs
+  const filtered = filteredJobConfigs;
 
   const pendingCount = jobConfigs.filter(j => j.status === 'PENDING').length;
   const assignedCount = jobConfigs.filter(j => j.status === 'ASSIGNED').length;
