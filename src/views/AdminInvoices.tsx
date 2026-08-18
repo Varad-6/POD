@@ -112,10 +112,10 @@ export const AdminInvoices: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--neutral-900)', margin: 0 }}>
-            Invoice Control Desk (SAP MIRO)
+            Invoice & Payment Desk (SAP MIRO)
           </h1>
           <p style={{ fontSize: '14px', color: 'var(--neutral-500)', margin: '4px 0 0 0' }}>
-            Verify delivery invoices, park MIROs, post to SAP S/4HANA Finance (LIV), and log clearings
+            Verify delivery invoices, park MIROs, post to SAP, and confirm clearings
           </p>
         </div>
         <button className="btn btn-ghost" onClick={loadData} disabled={loading}>

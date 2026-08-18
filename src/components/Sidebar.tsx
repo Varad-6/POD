@@ -80,40 +80,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  backgroundColor: '#FFFFFF',
+                  background: 'linear-gradient(135deg, #FF6200 0%, #E05600 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+                  boxShadow: '0 4px 14px rgba(255, 98, 0, 0.4)',
                   flexShrink: 0,
-                  margin: collapsed ? '0 auto' : '0',
-                  overflow: 'hidden',
-                  padding: '2px'
+                  margin: collapsed ? '0 auto' : '0'
                 }}
-                title="PODZO — Let’s make delivery simple."
+                title="POD Control Desk"
               >
-                <img src="/podzo-logo.png" alt="PODZO Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <Truck size={22} color="#FFFFFF" strokeWidth={2.2} />
               </div>
               {!collapsed && (
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <h1 
                     style={{ 
-                      fontSize: '18px', 
-                      fontWeight: 900, 
+                      fontSize: '16px', 
+                      fontWeight: 800, 
                       color: '#FFFFFF', 
-                      letterSpacing: '0.05em', 
+                      letterSpacing: '-0.02em', 
                       margin: 0,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis'
                     }}
                   >
-                    PODZO
+                    POD Control Desk
                   </h1>
-                  <div style={{ fontSize: '10px', color: '#FF9E66', fontWeight: 600, fontStyle: 'italic', marginBottom: '4px' }}>
-                    Let’s make delivery simple.
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
                     <span 
                       style={{ 
                         display: 'inline-block',
@@ -144,22 +139,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
               )}
             </div>
           </div>
-
-          {/* Quick Persona Switcher Bar for Demo Efficiency */}
-          {!collapsed && (
-            <div style={{ margin: '0 4px 16px 4px', padding: '10px 12px', borderRadius: '8px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-              <div style={{ fontSize: '10px', fontWeight: 800, color: '#FF9E66', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '6px' }}>
-                DEMO PERSONA SWITCHER
-              </div>
-              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                <button onClick={() => navigate('/admin/dashboard')} style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', border: 'none', backgroundColor: currentUser.role === 'CA' ? '#FF6200' : 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', fontWeight: 700 }}>Admin</button>
-                <button onClick={() => navigate('/transporter/dashboard')} style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', border: 'none', backgroundColor: currentUser.role === 'TA' ? '#FF6200' : 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', fontWeight: 700 }}>Transporter</button>
-                <button onClick={() => navigate('/supervisor/dashboard')} style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', border: 'none', backgroundColor: currentUser.role === 'SR' ? '#FF6200' : 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', fontWeight: 700 }}>Gate</button>
-                <button onClick={() => navigate('/customer/dashboard')} style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', border: 'none', backgroundColor: currentUser.role === 'CR' ? '#FF6200' : 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', fontWeight: 700 }}>Yard</button>
-                <button onClick={() => navigate('/driver/dashboard')} style={{ fontSize: '10px', padding: '3px 6px', borderRadius: '4px', border: 'none', backgroundColor: currentUser.role === 'DR' ? '#FF6200' : 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', fontWeight: 700 }}>Driver</button>
-              </div>
-            </div>
-          )}
 
           {/* Section Divider Header */}
           {!collapsed && (

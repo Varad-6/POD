@@ -184,22 +184,22 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => {
     const saved = localStorage.getItem('demo_pos');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : PURCHASE_ORDERS as PurchaseOrder[];
   });
 
   const [offloadRecords, setOffloadRecords] = useState<OffloadRecord[]>(() => {
     const saved = localStorage.getItem('demo_offloads');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : OFFLOAD_RECORDS as OffloadRecord[];
   });
 
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
     const saved = localStorage.getItem('demo_invoices');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : INVOICES as Invoice[];
   });
 
   const [contracts, setContracts] = useState<any[]>(() => {
     const saved = localStorage.getItem('demo_contracts');
-    return saved ? JSON.parse(saved) : [];
+    return saved ? JSON.parse(saved) : CONTRACTS;
   });
 
   const [notifications, setNotifications] = useState<DemoNotification[]>(() => {

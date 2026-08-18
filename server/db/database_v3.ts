@@ -1,5 +1,5 @@
 /**
- * Ikwezi Portal — Database Initializer v3
+ * PODZO Portal — Database Initializer v3
  */
 import Database from 'better-sqlite3';
 import { readFileSync } from 'fs';
@@ -10,7 +10,7 @@ import bcrypt from 'bcryptjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
 
-const DB_PATH = join(__dirname, 'ikwezi_portal_v3.db');
+const DB_PATH = join(__dirname, 'podzo_portal_v3.db');
 const SCHEMA_PATH = join(__dirname, 'schema_v3.sql');
 const SEED_PATH   = join(__dirname, 'seed_v3.sql');
 

@@ -1,5 +1,5 @@
 /**
- * Ikwezi Transporter Portal — Express Server v3
+ * PODZO Transporter Portal — Express Server v3
  * Full-stack: SQLite DB + JWT Auth + Real REST APIs
  */
 import express from 'express';
@@ -85,7 +85,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 // ── Start ─────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🚀 Ikwezi Portal Server v3 running on http://localhost:${PORT}`);
+  console.log(`\n🚀 PODZO Portal Server v3 running on http://localhost:${PORT}`);
   console.log(`📋 API Base: http://localhost:${PORT}/api/v3`);
   console.log(`\n📌 V3 Login credentials (Demo@1234):`);
   console.log(`   Role: CA (Company Admin)      → ca_thandiwe`);

@@ -5,16 +5,16 @@
 const API_BASE = 'http://localhost:3001/api/v3';
 
 function getToken(): string | null {
-  return localStorage.getItem('ikwezi_token_v3');
+  return localStorage.getItem('podzo_token_v3');
 }
 
 export function setToken(token: string) {
-  localStorage.setItem('ikwezi_token_v3', token);
+  localStorage.setItem('podzo_token_v3', token);
 }
 
 export function clearToken() {
-  localStorage.removeItem('ikwezi_token_v3');
-  localStorage.removeItem('ikwezi_user_v3');
+  localStorage.removeItem('podzo_token_v3');
+  localStorage.removeItem('podzo_user_v3');
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -86,6 +86,8 @@ export const taApi = {
     request<JobConfigV3[]>(`/job-configs?status=${status}`),
   assignJob: (id: number, data: { driver_id: number; vehicle_id: number; license_no: string; gstin: string; scheduled_date: string; location?: string }) =>
     request<{ id: number; message: string }>(`/job-configs/${id}/assign`, { method: 'POST', body: JSON.stringify(data) }),
+  createDeliveryInvoice: (data: { assignment_id: number; invoice_no: string; file_url: string }) =>
+    request<{ id: number; message: string }>('/delivery-invoices', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ─── SR ENDPOINTS ────────────────────────────────────────────
@@ -96,7 +98,9 @@ export const srApi = {
     request<{ message: string }>(`/assignments/${id}/supervisor-check`, { method: 'POST', body: JSON.stringify(data) }),
   gateCheck: (id: number, data: { license_valid: boolean; prdp_valid: boolean; bilty_valid: boolean; material_match: boolean; reason?: string }) =>
     request<{ status: string; message: string }>(`/assignments/${id}/gate-check`, { method: 'POST', body: JSON.stringify(data) }),
-  stampAssignment: (id: number, data: { gps_lat: number; gps_lng: number; otp_match_bool: boolean; bilty_no?: string; bilty_date?: string; upload_url?: string }) =>
+  biltyUpload: (id: number, data: { bilty_no: string; bilty_date: string; upload_url: string }) =>
+    request<{ message: string }>(`/assignments/${id}/bilty-upload`, { method: 'POST', body: JSON.stringify(data) }),
+  stampAssignment: (id: number, data: { gps_lat: number; gps_lng: number }) =>
     request<{ message: string }>(`/assignments/${id}/stamp`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
@@ -213,6 +217,7 @@ export interface TransportAssignmentV3 {
   to_location?: string;
   driver_name?: string;
   vehicle_reg?: string;
+  supervisor_stamped_count?: number;
 }
 
 export interface ReviewQueueItemV3 {

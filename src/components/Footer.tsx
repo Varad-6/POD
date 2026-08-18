@@ -25,17 +25,9 @@ export const Footer: React.FC = () => {
       >
         {/* Brand Column */}
         <div style={{ gridColumn: 'span 2' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
-            <img src="/podzo-logo.png" alt="PODZO Logo" style={{ height: '40px', backgroundColor: '#FFFFFF', padding: '4px', borderRadius: '6px' }} />
-            <div>
-              <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '0.04em', margin: 0 }}>
-                PODZO
-              </h3>
-              <div style={{ fontSize: '12px', color: 'var(--brand-orange)', fontWeight: 600, fontStyle: 'italic' }}>
-                Let’s make delivery simple.
-              </div>
-            </div>
-          </div>
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em', margin: '0 0 12px 0' }}>
+            POD Control Desk
+          </h3>
           <p style={{ color: '#999999', fontSize: '13px', lineHeight: 1.6, margin: 0, maxWidth: '320px' }}>
             Enterprise Transport Execution & Proof-of-Delivery Platform. Integrated directly with SAP S/4HANA for automated MIRO invoice clearing.
           </p>
@@ -109,7 +101,7 @@ export const Footer: React.FC = () => {
         }}
       >
         <div>
-          © {new Date().getFullYear()} PODZO Logistics Network • POD Control Desk. All rights reserved.
+          © {new Date().getFullYear()} PODZO Limited • POD Control Desk. All rights reserved.
         </div>
         <div style={{ display: 'flex', gap: '20px' }}>
           <span>Global Enterprise Edition</span>

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
-import { useDemo, Invoice } from '../context/DemoContext';
+import React, { useState, useEffect } from 'react';
+import { Plus, ClipboardList } from 'lucide-react';
 import { Card } from '../components/Card';
 import { PageHeader } from '../components/PageHeader';
 import { Tabs } from '../components/Tabs';
@@ -8,27 +7,57 @@ import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { FileUploadBox } from '../components/FileUploadBox';
 import { formatCurrency, formatDate } from '../utils/format';
+import { taApi } from '../lib/api_v3';
 
 export const TransporterInvoices: React.FC = () => {
-  const { invoices, submitInvoice } = useDemo();
   const [activeTab, setActiveTab] = useState<'CREATE' | 'LEDGER'>('CREATE');
+  const [createList, setCreateList] = useState<any[]>([]);
+  const [ledgerList, setLedgerList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Input states for invoice creation
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [fileName, setFileName] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOcrExtracting, setIsOcrExtracting] = useState(false);
+
+  const loadInvoices = async () => {
+    setLoading(true);
+    try {
+      // Fetch createList (pending invoice submission)
+      const resCreate = await fetch('http://localhost:3001/api/v3/delivery-invoices?status=AWAITING_INVOICE_SUBMISSION', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3')}` }
+      });
+      const dataCreate = await resCreate.json();
+      setCreateList(dataCreate);
+
+      // Fetch ledgerList
+      const resLedger = await fetch('http://localhost:3001/api/v3/delivery-invoices?status=LEDGER', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3')}` }
+      });
+      const dataLedger = await resLedger.json();
+      setLedgerList(dataLedger);
+    } catch (err) {
+      console.error('Failed to load invoices:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadInvoices();
+  }, [activeTab]);
 
   const handleFileSelect = (name: string) => {
     setFileName(name);
     if (selectedInvoice) {
       setIsOcrExtracting(true);
       setTimeout(() => {
-        let extractedNum = `INV-2026-0${selectedInvoice.waybillNo.substring(selectedInvoice.waybillNo.length - 3)}`;
-        if (selectedInvoice.waybillNo === "WB-998821") {
+        let extractedNum = `INV-2026-0${selectedInvoice.waybill_no.substring(selectedInvoice.waybill_no.length - 3)}`;
+        if (selectedInvoice.waybill_no === "WB-998821") {
           extractedNum = "INV-2026-0092";
-        } else if (selectedInvoice.waybillNo === "WB-998830") {
+        } else if (selectedInvoice.waybill_no === "WB-998830") {
           extractedNum = "INV-2026-0030";
         }
         setInvoiceNumber(extractedNum);
@@ -37,15 +66,11 @@ export const TransporterInvoices: React.FC = () => {
     }
   };
 
-  // Split invoices
-  const createList = invoices.filter((inv) => inv.status === 'AWAITING_INVOICE_SUBMISSION');
-  const ledgerList = invoices.filter((inv) => inv.status !== 'AWAITING_INVOICE_SUBMISSION');
-
   const totalPaidSum = ledgerList
-    .filter((inv) => inv.status === 'PAID')
+    .filter((inv) => inv.status === 'CLEARED' || inv.status === 'PAID')
     .reduce((sum, inv) => sum + inv.amount, 0);
 
-  const handleInvoiceSelect = (inv: Invoice) => {
+  const handleInvoiceSelect = (inv: any) => {
     setSelectedInvoice(inv);
     setInvoiceNumber('');
     setFileName(null);
@@ -56,13 +81,23 @@ export const TransporterInvoices: React.FC = () => {
     if (!selectedInvoice || !invoiceNumber || !fileName) return;
 
     setIsSubmitting(true);
-    await submitInvoice(selectedInvoice.waybillNo, invoiceNumber, fileName);
-    setIsSubmitting(false);
-
-    setSelectedInvoice(null);
-    setInvoiceNumber('');
-    setFileName(null);
-    setActiveTab('LEDGER');
+    try {
+      await taApi.createDeliveryInvoice({
+        assignment_id: selectedInvoice.assignment_id,
+        invoice_no: invoiceNumber,
+        file_url: fileName
+      });
+      setSelectedInvoice(null);
+      setInvoiceNumber('');
+      setFileName(null);
+      setActiveTab('LEDGER');
+      await loadInvoices();
+    } catch (err) {
+      console.error('Failed to submit invoice:', err);
+      alert('Error submitting invoice: ' + (err as any).message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -70,8 +105,8 @@ export const TransporterInvoices: React.FC = () => {
       
       {/* Page Header */}
       <PageHeader 
-        title="Carrier Invoicing & Payment Ledger"
-        subtitle="Raise formal tax bills against approved proof-of-delivery receipts and track SAP payment clearings"
+        title="Transporter Invoices & Payments"
+        subtitle="Create tax invoices for approved deliveries and track payments"
         actions={
           <Tabs 
             tabs={[
@@ -84,22 +119,25 @@ export const TransporterInvoices: React.FC = () => {
         }
       />
 
-      {activeTab === 'CREATE' && (
+      {loading ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading invoices...</div>
+      ) : activeTab === 'CREATE' && (
         <div>
           {!selectedInvoice ? (
             createList.length === 0 ? (
               <EmptyState 
-                message="No deliveries ready for invoicing" 
-                submessage="Invoicing unlocks automatically once mine supervisors approve your submitted PODs."
+                icon={<ClipboardList size={48} />}
+                title="No Deliveries Ready for Invoice" 
+                description="Invoices can only be created once the Company Admin has approved your delivery receipts."
               />
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
                 {createList.map((inv) => (
-                  <Card key={inv.waybillNo} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                  <Card key={inv.waybill_no} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                       <div>
                         <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)' }}>
-                          #{inv.waybillNo}
+                          #{inv.waybill_no}
                         </h3>
                         <p style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>
                           Approved Net Freight Payload
@@ -125,48 +163,31 @@ export const TransporterInvoices: React.FC = () => {
                         {formatCurrency(inv.amount)}
                       </p>
                       <p style={{ fontSize: '11px', color: 'var(--neutral-500)', marginTop: '2px' }}>
-                        Formula: {inv.quantity.toFixed(2)} Tons × {formatCurrency(inv.rate)} / Ton
+                        Formula: {inv.accepted_payload.toFixed(2)} Tons × {formatCurrency(inv.rate)} / Ton
                       </p>
                     </div>
 
-                    {/* Mandatory CA Verification Rule Check */}
-                    {(() => {
-                      // Waybill WB-998801 and WB-998802 are demo verified by CA; unverified PODs require CA approval first
-                      const isCaVerified = inv.waybillNo === 'WB-998801' || inv.waybillNo === 'WB-998802';
-
-                      return (
-                        <>
-                          {!isCaVerified && (
-                            <div style={{ marginBottom: '14px', padding: '8px 12px', borderRadius: '6px', backgroundColor: '#FEF3C7', border: '1px solid #F59E0B', color: '#92400E', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
-                              🔒 AWAITING COMPANY ADMIN VERIFICATION
-                            </div>
-                          )}
-
-                          <button 
-                            onClick={() => handleInvoiceSelect(inv)}
-                            className="btn btn-primary"
-                            disabled={!isCaVerified}
-                            style={{ width: '100%', marginTop: 'auto', opacity: isCaVerified ? 1 : 0.6 }}
-                            title={isCaVerified ? "Click to raise formal SAP tax invoice bill" : "Invoice generation locked until Company Admin verifies the POD slip"}
-                          >
-                            <Plus size={16} />
-                            {isCaVerified ? 'Raise Tax Invoice Bill' : 'Locked (Pending CA Verification)'}
-                          </button>
-                        </>
-                      );
-                    })()}
+                    <button 
+                      onClick={() => handleInvoiceSelect(inv)}
+                      className="btn btn-primary"
+                      style={{ width: '100%', marginTop: 'auto' }}
+                      title="Click to raise formal SAP tax invoice bill"
+                    >
+                      <Plus size={16} />
+                      Raise Tax Invoice Bill
+                    </button>
                   </Card>
                 ))}
               </div>
             )
           ) : (
             <div style={{ maxWidth: '640px', margin: '0 auto' }}>
-              <Card title={`Raise Invoice — Waybill #${selectedInvoice.waybillNo}`}>
+              <Card title={`Raise Invoice — Waybill #${selectedInvoice.waybill_no}`}>
                 <form onSubmit={handleInvoiceSubmit}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', backgroundColor: 'var(--neutral-50)', padding: '16px', borderRadius: '10px', border: '1px solid var(--neutral-200)', marginBottom: '24px' }}>
                     <div>
                       <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>DELIVERED QUANTITY</p>
-                      <p className="mono" style={{ fontWeight: 700 }}>{selectedInvoice.quantity.toFixed(2)} Tons</p>
+                      <p className="mono" style={{ fontWeight: 700 }}>{selectedInvoice.accepted_payload.toFixed(2)} Tons</p>
                     </div>
                     <div>
                       <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>AGREED RATE</p>
@@ -239,7 +260,7 @@ export const TransporterInvoices: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'LEDGER' && (
+      {!loading && activeTab === 'LEDGER' && (
         <Card title="Transporter Accounts Ledger">
           {ledgerList.length === 0 ? (
             <EmptyState 
@@ -262,11 +283,11 @@ export const TransporterInvoices: React.FC = () => {
                 </thead>
                 <tbody>
                   {ledgerList.map((inv) => (
-                    <tr key={inv.invoiceNo}>
+                    <tr key={inv.id}>
                       <td className="mono" style={{ fontWeight: 800, color: 'var(--neutral-900)' }}>
-                        {inv.invoiceNo}
+                        {inv.invoice_no || 'INV-PENDING'}
                       </td>
-                      <td className="mono" style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>#{inv.waybillNo}</td>
+                      <td className="mono" style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>#{inv.waybill_no || `WB-${inv.assignment_id}`}</td>
                       <td>{formatDate(new Date())}</td>
                       <td className="mono" style={{ textAlign: 'right', fontWeight: 800, fontSize: '14px' }}>
                         {formatCurrency(inv.amount)}
@@ -275,10 +296,10 @@ export const TransporterInvoices: React.FC = () => {
                         <StatusBadge status={inv.status} />
                       </td>
                       <td>
-                        {inv.postingDate ? formatDate(inv.postingDate) : <span style={{ color: 'var(--neutral-400)' }}>—</span>}
+                        {inv.posted_date ? formatDate(inv.posted_date) : <span style={{ color: 'var(--neutral-400)' }}>—</span>}
                       </td>
                       <td className="mono" style={{ fontWeight: 700, color: 'var(--success-600)' }}>
-                        {inv.paymentRef || <span style={{ color: 'var(--neutral-400)' }}>—</span>}
+                        {inv.payment_ref || <span style={{ color: 'var(--neutral-400)' }}>—</span>}
                       </td>
                     </tr>
                   ))}

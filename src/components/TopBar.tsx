@@ -87,21 +87,9 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
     >
       {/* Title & SAP Environment Badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/podzo-logo.png" alt="PODZO Logo" style={{ height: '32px', objectFit: 'contain' }} />
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px', fontWeight: 900, color: 'var(--brand-purple)', letterSpacing: '0.04em' }}>PODZO</span>
-              <span style={{ color: 'var(--neutral-300)' }}>|</span>
-              <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
-                {title}
-              </h2>
-            </div>
-            <div style={{ fontSize: '11px', color: '#FF5B00', fontWeight: 600, fontStyle: 'italic', marginTop: '-2px' }}>
-              Let’s make delivery simple.
-            </div>
-          </div>
-        </div>
+        <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
+          {title}
+        </h2>
 
         {/* SAP Environment Indicator */}
         <div

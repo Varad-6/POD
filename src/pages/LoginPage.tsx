@@ -49,13 +49,13 @@ export default function LoginPage() {
         {/* Left Panel — Branding */}
         <div className="login-hero">
           <div className="login-hero-content">
-            <div className="login-logo" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <div style={{ backgroundColor: '#FFFFFF', padding: '6px 10px', borderRadius: '10px', display: 'flex', alignItems: 'center' }}>
-                <img src="/podzo-logo.png" alt="PODZO Logo" style={{ height: '36px', objectFit: 'contain' }} />
+            <div className="login-logo">
+              <div className="logo-icon">
+                <Shield size={28} strokeWidth={1.5} />
               </div>
               <div>
-                <div className="logo-name" style={{ fontSize: '22px', fontWeight: 900, color: '#FFFFFF', letterSpacing: '0.04em' }}>PODZO</div>
-                <div className="logo-sub" style={{ color: '#FF9E66', fontStyle: 'italic', fontWeight: 600 }}>Let’s make delivery simple.</div>
+                <div className="logo-name">PODZO Portal</div>
+                <div className="logo-sub">Transporter Management</div>
               </div>
             </div>
             <h1 className="login-hero-title">Automate POD-to-Payment</h1>

@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS job_configs (
   acceptance_window_hours     INTEGER DEFAULT 4,
   tender_response_deadline   TEXT DEFAULT (datetime('now', '+4 hours')),
   timebound                   TEXT NOT NULL, -- expiry date/time
-  status                      TEXT NOT NULL CHECK(status IN ('PENDING_TA', 'PENDING', 'ASSIGNED', 'EXPIRED')) DEFAULT 'PENDING_TA'
+  status                      TEXT NOT NULL CHECK(status IN ('PENDING', 'ASSIGNED', 'EXPIRED')) DEFAULT 'PENDING'
 );
 
 CREATE TABLE IF NOT EXISTS drivers (
@@ -179,24 +179,11 @@ CREATE TABLE IF NOT EXISTS otp_verifications (
   assignment_id       INTEGER NOT NULL REFERENCES transport_assignments(id),
   stage               TEXT NOT NULL CHECK(stage IN ('PICKUP', 'DELIVERY')),
   otp_code            TEXT NOT NULL,
-  generated_by        TEXT NOT NULL CHECK(generated_by IN ('DRIVER', 'SYSTEM')) DEFAULT 'DRIVER',
   generated_at        TEXT NOT NULL DEFAULT (datetime('now')),
   verified_at         TEXT,
   verified_by_role    TEXT CHECK(verified_by_role IN ('CA', 'TA', 'DR', 'CR', 'SR')),
   contact             TEXT,
   status              TEXT NOT NULL CHECK(status IN ('PENDING', 'VERIFIED', 'EXPIRED')) DEFAULT 'PENDING'
-);
-
--- Dedicated S/4 Mirror Store Table for Verified POD Data
-CREATE TABLE IF NOT EXISTS sap_s4_store (
-  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-  assignment_id       INTEGER UNIQUE NOT NULL REFERENCES transport_assignments(id),
-  sap_po_no           TEXT NOT NULL,
-  ocr_waybill_no      TEXT,
-  ocr_weight_tons     REAL,
-  verified_by         INTEGER NOT NULL REFERENCES users(id),
-  verified_at         TEXT NOT NULL DEFAULT (datetime('now')),
-  synced_to_s4_bool   INTEGER NOT NULL CHECK(synced_to_s4_bool IN (0, 1)) DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS arrival_confirmations (
@@ -260,6 +247,17 @@ CREATE TABLE IF NOT EXISTS ca_verification (
   notes           TEXT
 );
 
+CREATE TABLE IF NOT EXISTS sap_s4_mirror (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id   INTEGER UNIQUE NOT NULL REFERENCES transport_assignments(id),
+  waybill_no      TEXT UNIQUE NOT NULL,
+  delivered_qty   REAL NOT NULL,
+  rate            REAL NOT NULL,
+  total_value     REAL NOT NULL,
+  verified_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  synced_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- ── 4. INVOICING & SAP INTEGRATION ───────────────────────────
 CREATE TABLE IF NOT EXISTS delivery_invoices (
   id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -267,6 +265,8 @@ CREATE TABLE IF NOT EXISTS delivery_invoices (
   accepted_payload    REAL NOT NULL,
   rate                REAL NOT NULL,
   total_value         REAL NOT NULL,
+  invoice_no          TEXT,
+  file_url            TEXT,
   status              TEXT NOT NULL CHECK(status IN ('DRAFT', 'SENT_TO_CA')) DEFAULT 'DRAFT'
 );
 
