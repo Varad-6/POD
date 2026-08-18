@@ -1,73 +1,73 @@
 /* ============================================================
-   POD — FedEx-Inspired Enterprise Logistics Design System
+   POD — AutoRepair-Inspired UI Transformation System
    Color Palette:
-   - Primary: FedEx Purple (#4D148C)
-   - Accent: FedEx Orange (#FF6200)
-   - Neutrals: White background, Dark text (#333/#111), Light gray dividers (#F5F5F5)
+   - Primary Header / Dark UI: Dark Slate / Charcoal (#0F172A / #1E293B)
+   - Brand Accent: High-Energy Auto Repair Red/Orange (#D92626 / #FF5500 / #EF4444)
+   - Canvas / Neutral: Crisp Light Slate (#F8FAFC / #F1F5F9), Pure White (#FFFFFF)
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  /* ── Brand Palette (FedEx-Inspired) ────────────────────────── */
-  --brand-purple:       #4D148C;   /* FedEx Purple — Primary Header & Nav */
-  --brand-purple-dark:  #380C68;   /* Hover / Dark Active States */
-  --brand-purple-light: #F2ECFB;   /* Subtly tinted background fills */
+  /* ── Brand Palette (AutoRepair-Inspired) ────────────────────────── */
+  --brand-purple:       #0F172A;   /* AutoRepair Dark Slate - Primary Header & Nav */
+  --brand-purple-dark:  #0B1120;   /* Hover / Dark Active States */
+  --brand-purple-light: #F1F5F9;   /* Light section fill */
 
-  --brand-orange:       #FF6200;   /* FedEx Orange — Primary Actions & Badges */
-  --brand-orange-hover: #E05600;   /* Button Hover Darken */
-  --brand-orange-light: #FFF2EB;   /* Accent Highlights */
+  --brand-orange:       #D92626;   /* AutoRepair Vibrant Red Accent */
+  --brand-orange-hover: #B91C1C;   /* Accent Hover Darken */
+  --brand-orange-light: #FEF2F2;   /* Accent Highlights */
 
-  --brand-navy:         #4D148C;   /* Replaced navy references with Primary Purple */
-  --brand-navy-mid:     #380C68;
-  --brand-navy-light:   #2B0852;
+  --brand-navy:         #0F172A;   
+  --brand-navy-mid:     #1E293B;
+  --brand-navy-light:   #334155;
 
-  --accent-blue:        #4D148C;   /* Primary accent mapped to Purple */
-  --accent-blue-hover:  #380C68;
-  --accent-blue-light:  #F2ECFB;
-  --accent-blue-muted:  #9D72DA;
+  --accent-blue:        #2563EB;   /* Tech Blue Accent */
+  --accent-blue-hover:  #1D4ED8;
+  --accent-blue-light:  #EFF6FF;
+  --accent-blue-muted:  #60A5FA;
 
-  --accent-cyan:        #0080A3;   
-  --accent-emerald:     #008A00;   /* Verified Status */
-  --accent-emerald-light:#E6F4E6;
+  --accent-cyan:        #0891B2;   
+  --accent-emerald:     #16A34A;   /* Success Green */
+  --accent-emerald-light:#DCFCE7;
 
-  /* ── Neutrals (Clean Crisp Scale) ─────────────────────────── */
-  --neutral-950: #111111;
-  --neutral-900: #222222;
-  --neutral-800: #333333;
-  --neutral-700: #444444;
-  --neutral-600: #666666;
-  --neutral-500: #767676;
-  --neutral-400: #999999;
-  --neutral-300: #CCCCCC;
-  --neutral-200: #E3E3E3;
-  --neutral-100: #F5F5F5;   /* FedEx Light Gray Dividers */
-  --neutral-50:  #FAFAFA;
+  /* ── Neutrals (AutoRepair Crisp Scale) ─────────────────────────── */
+  --neutral-950: #020617;
+  --neutral-900: #0F172A;
+  --neutral-800: #1E293B;
+  --neutral-700: #334155;
+  --neutral-600: #475569;
+  --neutral-500: #64748B;
+  --neutral-400: #94A3B8;
+  --neutral-300: #CBD5E1;
+  --neutral-200: #E2E8F0;
+  --neutral-100: #F1F5F9;   
+  --neutral-50:  #F8FAFC;
   --neutral-0:   #FFFFFF;
 
   /* ── Semantic Colors ──────────────────────────────────────── */
-  --success-600: #008A00;
-  --success-500: #00A800;
-  --success-100: #E6F4E6;
-  --success-50:  #F2F9F2;
+  --success-600: #15803D;
+  --success-500: #16A34A;
+  --success-100: #DCFCE7;
+  --success-50:  #F0FDF4;
 
-  --warning-600: #D96B00;
-  --warning-500: #FF6200;
-  --warning-100: #FFF2EB;
-  --warning-50:  #FFF9F5;
+  --warning-600: #D97706;
+  --warning-500: #F59E0B;
+  --warning-100: #FEF3C7;
+  --warning-50:  #FFFBEB;
 
   --error-700:   #B91C1C;
-  --error-600:   #D32F2F;
-  --error-100:   #FFEBEE;
-  --error-50:    #FFFAFA;
+  --error-600:   #DC2626;
+  --error-100:   #FEE2E2;
+  --error-50:    #FEF2F2;
 
-  --info-600:    #4D148C;
-  --info-500:    #6722BD;
-  --info-100:    #F2ECFB;
-  --info-50:     #FAF7FE;
+  --info-600:    #0284C7;
+  --info-500:    #0EA5E9;
+  --info-100:    #E0F2FE;
+  --info-50:     #F0F9FF;
 
-  /* ── Typography (FedEx Clean Sans-Serif) ──────────────────── */
-  --font-family:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  /* ── Typography (AutoRepair Clean High-Contrast Sans) ─────── */
+  --font-family:      'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   --font-mono:        'JetBrains Mono', monospace;
 
   --text-xs:    11px;
@@ -100,17 +100,17 @@
   --space-8:  32px;
 
   /* ── Card & Pill Radii ────────────────────────────────────── */
-  --radius-sm:  4px;
-  --radius-md:  6px;
-  --radius-lg:  8px;
-  --radius-xl:  12px;
-  --radius-full:9999px; /* Pill Shape buttons & tracking bars */
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-full:9999px;
 
-  /* ── Enterprise Elevation & Shadows ──────────────────────── */
-  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-card:   0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-hover:  0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-modal:  0 20px 40px rgba(0, 0, 0, 0.2);
+  /* ── AutoRepair Elevation & Shadows ──────────────────────── */
+  --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow-card:   0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-hover:  0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 8px -2px rgba(15, 23, 42, 0.06);
+  --shadow-modal:  0 24px 48px -12px rgba(15, 23, 42, 0.25);
 
   /* ── Layout Dimensions ────────────────────────────────────── */
   --sidebar-width:    260px;

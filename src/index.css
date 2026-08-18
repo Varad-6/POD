@@ -82,8 +82,8 @@ body {
 .sidebar-nav-item.active {
   color: #FFFFFF;
   font-weight: 700;
-  background: linear-gradient(90deg, rgba(255, 98, 0, 0.35) 0%, rgba(255, 98, 0, 0.08) 100%);
-  border-left-color: #FF6200;
+  background: linear-gradient(90deg, rgba(217, 38, 38, 0.4) 0%, rgba(217, 38, 38, 0.08) 100%);
+  border-left-color: #D92626;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 

@@ -19,9 +19,9 @@ export const Card: React.FC<CardProps> = ({
   subtitle,
   action,
   icon,
-  accentColor,
+  accentColor = '#D92626',
   onClick,
-  hoverEffect = false,
+  hoverEffect = true,
   style,
   className = '',
 }) => {
@@ -31,6 +31,13 @@ export const Card: React.FC<CardProps> = ({
       onClick={onClick}
       style={{
         cursor: onClick ? 'pointer' : 'default',
+        borderRadius: 'var(--radius-xl)',
+        boxShadow: 'var(--shadow-card)',
+        border: '1px solid var(--neutral-200)',
+        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+        position: 'relative',
+        overflow: 'hidden',
+        background: '#FFFFFF',
         ...style
       }}
     >
@@ -41,26 +48,26 @@ export const Card: React.FC<CardProps> = ({
             top: 0,
             left: 0,
             right: 0,
-            height: '3px',
+            height: '4px',
             background: accentColor,
           }}
         />
       )}
 
       {(title || subtitle || action || icon) && (
-        <div className="card-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {icon && <div>{icon}</div>}
+        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--neutral-100)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {icon && <div style={{ color: 'var(--brand-orange)' }}>{icon}</div>}
             <div>
-              {title && <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--neutral-900)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{title}</h3>}
-              {subtitle && <p style={{ fontSize: '12px', color: 'var(--neutral-500)', marginTop: '2px' }}>{subtitle}</p>}
+              {title && <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--neutral-900)', textTransform: 'uppercase', letterSpacing: '0.02em', margin: 0 }}>{title}</h3>}
+              {subtitle && <p style={{ fontSize: '12px', color: 'var(--neutral-500)', marginTop: '2px', margin: 0 }}>{subtitle}</p>}
             </div>
           </div>
           {action && <div>{action}</div>}
         </div>
       )}
 
-      <div className="card-body">
+      <div className="card-body" style={{ padding: title || subtitle || action || icon ? '20px' : '24px' }}>
         {children}
       </div>
     </div>

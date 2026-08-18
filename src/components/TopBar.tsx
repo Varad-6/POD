@@ -92,8 +92,9 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
     <header 
       style={{
         height: 'var(--topbar-height)',
-        backgroundColor: '#FFFFFF',
-        borderBottom: '1px solid var(--neutral-200)',
+        backgroundColor: '#0F172A',
+        color: '#FFFFFF',
+        borderBottom: '1px solid #1E293B',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -101,15 +102,15 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         position: 'sticky',
         top: 0,
         zIndex: 90,
-        boxShadow: 'var(--shadow-subtle)',
+        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.15)',
       }}
     >
       {/* Title & SAP Environment Badge & Global Contract/PO Selector */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderRight: '1px solid #E2E8F0', paddingRight: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderRight: '1px solid #334155', paddingRight: '16px' }}>
           <PodzoLogo variant="compact" height={28} />
         </div>
-        <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
+        <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.02em', margin: 0 }}>
           {title}
         </h2>
         <ContractPoSelector />
@@ -120,15 +121,15 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '3px 10px',
-            borderRadius: '12px',
+            padding: '4px 12px',
+            borderRadius: '9999px',
             fontSize: '11px',
             fontWeight: 800,
-            backgroundColor: sapMode === 'LIVE' ? 'rgba(0, 138, 0, 0.1)' : 'var(--brand-purple-light)',
-            color: sapMode === 'LIVE' ? 'var(--success-600)' : 'var(--brand-purple)',
-            border: `1px solid ${sapMode === 'LIVE' ? 'rgba(0, 138, 0, 0.3)' : 'rgba(77, 20, 140, 0.3)'}`,
+            backgroundColor: sapMode === 'LIVE' ? 'rgba(22, 163, 74, 0.2)' : 'rgba(217, 38, 38, 0.2)',
+            color: sapMode === 'LIVE' ? '#4ADE80' : '#F87171',
+            border: `1px solid ${sapMode === 'LIVE' ? 'rgba(74, 222, 128, 0.4)' : 'rgba(248, 113, 113, 0.4)'}`,
             textTransform: 'uppercase',
-            letterSpacing: '0.04em',
+            letterSpacing: '0.05em',
           }}
           title={sapMode === 'LIVE' ? 'Connected to S21 OData Server' : 'Operating in Persistent Mock SAP Mode'}
         >
@@ -365,7 +366,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
 
         {/* User Info & Persona Pill */}
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--neutral-900)', margin: 0 }}>
+          <p style={{ fontWeight: 700, fontSize: '13px', color: '#FFFFFF', margin: 0 }}>
             {currentUser.displayName || currentUser.username}
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
@@ -373,11 +374,11 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
               style={{
                 fontSize: '10px',
                 fontWeight: 800,
-                backgroundColor: 'var(--brand-orange-light)',
-                color: 'var(--brand-orange)',
+                backgroundColor: 'rgba(217, 38, 38, 0.2)',
+                color: '#FF7070',
                 padding: '2px 10px',
                 borderRadius: '12px',
-                border: '1px solid rgba(255, 98, 0, 0.3)',
+                border: '1px solid rgba(217, 38, 38, 0.4)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
               }}
@@ -393,14 +394,14 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
             width: '38px',
             height: '38px',
             borderRadius: '50%',
-            backgroundColor: 'var(--brand-purple)',
+            backgroundColor: '#D92626',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontWeight: 800,
             fontSize: '13px',
-            border: '2px solid #FFFFFF',
+            border: '2px solid rgba(255,255,255,0.2)',
             boxShadow: 'var(--shadow-subtle)',
           }}
         >
