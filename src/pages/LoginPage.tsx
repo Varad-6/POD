@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
-import { Shield, AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { PodzoLogo } from '../components/branding/PodzoLogo';
 
 const DEMO_USERS = [
   { username: 'ca_thandiwe', role: 'Company Admin', color: '#3b82f6' },
@@ -25,10 +26,15 @@ export default function LoginPage() {
     try {
       await login(username, password);
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Login failed. Check your credentials.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const fillQuickUser = (user: string) => {
+    setUsername(user);
+    setPassword('Demo@1234');
   };
 
   const quickLogin = async (u: string) => {
@@ -49,13 +55,9 @@ export default function LoginPage() {
         {/* Left Panel — Branding */}
         <div className="login-hero">
           <div className="login-hero-content">
-            <div className="login-logo">
-              <div className="logo-icon">
-                <Shield size={28} strokeWidth={1.5} />
-              </div>
-              <div>
-                <div className="logo-name">PODZO Portal</div>
-                <div className="logo-sub">Transporter Management</div>
+            <div className="login-logo" style={{ marginBottom: '2.5rem' }}>
+              <div style={{ backgroundColor: '#FFFFFF', padding: '12px 20px', borderRadius: '12px', display: 'inline-block', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}>
+                <PodzoLogo variant="full" height={52} />
               </div>
             </div>
             <h1 className="login-hero-title">Automate POD-to-Payment</h1>

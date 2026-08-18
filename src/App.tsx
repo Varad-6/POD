@@ -6,6 +6,7 @@ import { ToastContainer } from './components/Toast';
 import LoginPage from './pages/LoginPage';
 import { AuthProviderV3, useAuthV3 } from './contexts/AuthContextV3';
 import { DemoProvider } from './context/DemoContext';
+import { PodzoLogo } from './components/branding/PodzoLogo';
 
 import { Footer } from './components/Footer';
 
@@ -34,13 +35,17 @@ function getDefaultRoute(role: string): string {
 }
 
 function getPageTitle(path: string, role: string): string {
-  if (path.includes('/dashboard')) return 'Portal Dashboard';
+  if (path.includes('/admin/dashboard')) return 'Control Tower';
+  if (path.includes('/transporter/dashboard')) return 'Transport Operations';
   if (path.includes('/purchase-orders')) return 'Transport Purchase Orders';
-  if (path.includes('/pods')) return 'Proof of Delivery';
-  if (path.includes('/invoices')) return role === 'CA' ? 'Invoice Control Management' : 'Freight Invoices & Statements';
-  if (path.includes('/approvals')) return 'POD Verification Queue';
-  if (path.includes('/contracts')) return 'Contracts';
-  return 'Portal';
+  if (path.includes('/pods')) return 'Proof of Delivery Upload & Management';
+  if (path.includes('/invoices')) return role === 'CA' ? 'SAP MIRO Invoice Clearing' : 'Freight Invoices & Ledger';
+  if (path.includes('/approvals')) return 'OCR POD Verification Desk';
+  if (path.includes('/contracts')) return 'Outline Contracts';
+  if (path.includes('/supervisor/dashboard')) return 'Pre-Dispatch Weighbridge Console';
+  if (path.includes('/customer/dashboard')) return 'Yard Receiving & Gate Clearance';
+  if (path.includes('/driver/dashboard')) return 'Driver Transport App';
+  return 'Transport Execution Platform';
 }
 
 const MainApp: React.FC = () => {
@@ -68,10 +73,26 @@ const MainApp: React.FC = () => {
     }
   }, [user, loading, location.pathname, navigate]);
 
+  useEffect(() => {
+    if (location.pathname === '/login') {
+      document.title = "PODZO — Sign In";
+    } else if (user) {
+      const pageTitle = getPageTitle(location.pathname, user.role);
+      document.title = `PODZO — ${pageTitle}`;
+    } else {
+      document.title = "PODZO — Let's make delivery simple.";
+    }
+  }, [location.pathname, user]);
+
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-bg)' }}>
-        <div style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>Loading…</div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0A192F', color: '#FFFFFF' }}>
+        <div style={{ backgroundColor: '#FFFFFF', padding: '16px 28px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+          <PodzoLogo variant="full" height={54} />
+        </div>
+        <div style={{ color: '#FF5B00', fontSize: '13px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          Loading PODZO Platform...
+        </div>
       </div>
     );
   }

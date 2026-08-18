@@ -4,6 +4,7 @@ import { useAuthV3 } from '../contexts/AuthContextV3';
 import { useNavigate } from 'react-router-dom';
 import { searchApi } from '../lib/api_v3';
 import { Modal } from './Modal';
+import { PodzoLogo } from './branding/PodzoLogo';
 
 interface TopBarProps {
   title: string;
@@ -87,7 +88,10 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
     >
       {/* Title & SAP Environment Badge */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderRight: '1px solid #E2E8F0', paddingRight: '16px' }}>
+          <PodzoLogo variant="compact" height={28} />
+        </div>
+        <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
           {title}
         </h2>
 

@@ -1,14 +1,15 @@
 import React from 'react';
+import { PodzoLogo } from './branding/PodzoLogo';
 
 export const Footer: React.FC = () => {
   return (
     <footer
       style={{
-        backgroundColor: '#111111',
+        backgroundColor: '#0A192F',
         color: '#FFFFFF',
         padding: '48px 32px 24px 32px',
         marginTop: '60px',
-        borderTop: '4px solid var(--brand-orange)',
+        borderTop: '4px solid #FF5B00',
         fontSize: '13px',
       }}
     >
@@ -25,10 +26,10 @@ export const Footer: React.FC = () => {
       >
         {/* Brand Column */}
         <div style={{ gridColumn: 'span 2' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em', margin: '0 0 12px 0' }}>
-            POD Control Desk
-          </h3>
-          <p style={{ color: '#999999', fontSize: '13px', lineHeight: 1.6, margin: 0, maxWidth: '320px' }}>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '10px 16px', borderRadius: '10px', display: 'inline-block', marginBottom: '14px' }}>
+            <PodzoLogo variant="full" height={44} />
+          </div>
+          <p style={{ color: '#94A3B8', fontSize: '13px', lineHeight: 1.6, margin: 0, maxWidth: '340px' }}>
             Enterprise Transport Execution & Proof-of-Delivery Platform. Integrated directly with SAP S/4HANA for automated MIRO invoice clearing.
           </p>
         </div>

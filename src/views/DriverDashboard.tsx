@@ -3,6 +3,7 @@ import { useAuthV3 } from '../contexts/AuthContextV3';
 import { drApi, TransportAssignmentV3 } from '../lib/api_v3';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
+import { PodzoLogo } from '../components/branding/PodzoLogo';
 import {
   Truck, MapPin, CheckCircle2, Upload, AlertTriangle, Key,
   Navigation, Package, Clock, ArrowRight, ChevronDown, ChevronUp
@@ -206,14 +207,9 @@ export const DriverDashboard: React.FC = () => {
         borderRadius: '16px', padding: '24px 28px', color: '#fff',
         boxShadow: '0 8px 32px rgba(109,40,217,0.3)'
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-          <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
-              Driver App
-            </div>
-            <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#fff', margin: 0 }}>
-              My Trips Today
-            </h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '6px 12px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+            <PodzoLogo variant="compact" height={28} />
           </div>
           <div style={{ backgroundColor: 'rgba(255,255,255,0.15)', padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 700 }}>
             {user?.displayName || 'Driver'}

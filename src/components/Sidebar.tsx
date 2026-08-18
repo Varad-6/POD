@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
 import { Modal } from './Modal';
+import { PodzoLogo } from './branding/PodzoLogo';
 
 interface SidebarProps {
   collapsed?: boolean;
@@ -54,7 +55,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
       <aside 
         style={{
           width: collapsed ? '72px' : '260px',
-          backgroundColor: 'var(--brand-purple)',
+          backgroundColor: '#0A192F',
           color: '#FFFFFF',
           display: 'flex',
           flexDirection: 'column',
@@ -74,70 +75,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
         {/* Top Header & Brand Identity */}
         <div>
           <div style={{ marginBottom: '24px', paddingLeft: collapsed ? '0' : '4px', paddingRight: collapsed ? '0' : '4px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: '12px' }}>
-              <div
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #FF6200 0%, #E05600 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(255, 98, 0, 0.4)',
-                  flexShrink: 0,
-                  margin: collapsed ? '0 auto' : '0'
-                }}
-                title="POD Control Desk"
-              >
-                <Truck size={22} color="#FFFFFF" strokeWidth={2.2} />
+            {collapsed ? (
+              <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#FFFFFF', padding: '6px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                <PodzoLogo variant="mark" height={28} />
               </div>
-              {!collapsed && (
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <h1 
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
+                  <PodzoLogo variant="compact" height={32} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                  <span 
                     style={{ 
-                      fontSize: '16px', 
-                      fontWeight: 800, 
-                      color: '#FFFFFF', 
-                      letterSpacing: '-0.02em', 
-                      margin: 0,
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
+                      display: 'inline-block',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      backgroundColor: '#FF5B00',
+                      boxShadow: '0 0 8px #FF5B00'
+                    }} 
+                  />
+                  <span 
+                    style={{ 
+                      fontSize: '10px', 
+                      color: '#FF5B00', 
+                      backgroundColor: 'rgba(255, 91, 0, 0.15)',
+                      border: '1px solid rgba(255, 91, 0, 0.3)',
+                      padding: '1px 8px',
+                      borderRadius: '6px',
+                      fontWeight: 700, 
+                      letterSpacing: '0.04em',
+                      textTransform: 'uppercase'
                     }}
                   >
-                    POD Control Desk
-                  </h1>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                    <span 
-                      style={{ 
-                        display: 'inline-block',
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: '#FF6200',
-                        boxShadow: '0 0 8px #FF6200'
-                      }} 
-                    />
-                    <span 
-                      style={{ 
-                        fontSize: '11px', 
-                        color: '#FFFFFF', 
-                        backgroundColor: 'rgba(255, 98, 0, 0.3)',
-                        border: '1px solid rgba(255, 98, 0, 0.5)',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        fontWeight: 700, 
-                        letterSpacing: '0.02em',
-                        whiteSpace: 'nowrap'
-                      }}
-                    >
-                      {formatRoleName(currentUser.role)}
-                    </span>
-                  </div>
+                    Control Tower
+                  </span>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Section Divider Header */}
