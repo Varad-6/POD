@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { getDb } from '../db/database_v3.js';
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'ikwezi-portal-jwt-secret-2026';
+export const JWT_SECRET = process.env.JWT_SECRET || 'podzo-portal-jwt-secret-2026';
 
 export interface AuthPayload {
   userId: number;

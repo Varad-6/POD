@@ -25,10 +25,12 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     case 'PENDING_SIGNATURE':
       style.color = 'var(--warning-text)';
       style.backgroundColor = 'var(--warning-bg)';
+      text = 'Ready for Driver';
       break;
     case 'ACCEPTED_SIGNED':
       style.color = 'var(--success-text)';
       style.backgroundColor = 'var(--success-bg)';
+      text = 'Driver Assigned';
       break;
     case 'UNASSIGNED':
       style.color = 'var(--neutral-secondary)';

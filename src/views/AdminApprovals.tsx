@@ -52,8 +52,8 @@ export const AdminApprovals: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
       <PageHeader 
-        title="POD & Weight Verification Queue"
-        subtitle="Audit and override flagged waybills, OCR mismatches, or payloads violating tolerances before SAP BAPI posting"
+        title="Receipt & Weight Check Queue"
+        subtitle="Check and approve flagged delivery papers, OCR mismatches, or weight differences before making payment"
       />
 
       {/* Tabs */}

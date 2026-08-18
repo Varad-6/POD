@@ -48,13 +48,13 @@ const MainApp: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState<boolean>(() => {
-    return localStorage.getItem('ikwezi_sidebar_collapsed') === 'true';
+    return localStorage.getItem('podzo_sidebar_collapsed') === 'true';
   });
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(prev => {
       const next = !prev;
-      localStorage.setItem('ikwezi_sidebar_collapsed', String(next));
+      localStorage.setItem('podzo_sidebar_collapsed', String(next));
       return next;
     });
   };

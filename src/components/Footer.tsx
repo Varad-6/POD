@@ -101,7 +101,7 @@ export const Footer: React.FC = () => {
         }}
       >
         <div>
-          © {new Date().getFullYear()} Ikwezi Mining Limited • POD Control Desk. All rights reserved.
+          © {new Date().getFullYear()} PODZO Limited • POD Control Desk. All rights reserved.
         </div>
         <div style={{ display: 'flex', gap: '20px' }}>
           <span>Global Enterprise Edition</span>

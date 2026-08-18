@@ -18,12 +18,12 @@ export function AuthProviderV3({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('ikwezi_token_v3');
+    const token = localStorage.getItem('podzo_token_v3');
     if (token) {
       authApi.me()
         .then(u => {
           setUser(u);
-          localStorage.setItem('ikwezi_user_v3', JSON.stringify(u));
+          localStorage.setItem('podzo_user_v3', JSON.stringify(u));
         })
         .catch(() => clearToken())
         .finally(() => setLoading(false));
@@ -35,7 +35,7 @@ export function AuthProviderV3({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     const data = await authApi.login(username, password);
     setToken(data.token);
-    localStorage.setItem('ikwezi_user_v3', JSON.stringify(data.user));
+    localStorage.setItem('podzo_user_v3', JSON.stringify(data.user));
     setUser(data.user);
   };
 

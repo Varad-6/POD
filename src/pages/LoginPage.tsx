@@ -54,7 +54,7 @@ export default function LoginPage() {
                 <Shield size={28} strokeWidth={1.5} />
               </div>
               <div>
-                <div className="logo-name">Ikwezi Portal</div>
+                <div className="logo-name">PODZO Portal</div>
                 <div className="logo-sub">Transporter Management</div>
               </div>
             </div>

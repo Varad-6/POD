@@ -247,6 +247,17 @@ CREATE TABLE IF NOT EXISTS ca_verification (
   notes           TEXT
 );
 
+CREATE TABLE IF NOT EXISTS sap_s4_mirror (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id   INTEGER UNIQUE NOT NULL REFERENCES transport_assignments(id),
+  waybill_no      TEXT UNIQUE NOT NULL,
+  delivered_qty   REAL NOT NULL,
+  rate            REAL NOT NULL,
+  total_value     REAL NOT NULL,
+  verified_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  synced_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 -- ── 4. INVOICING & SAP INTEGRATION ───────────────────────────
 CREATE TABLE IF NOT EXISTS delivery_invoices (
   id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -254,6 +265,8 @@ CREATE TABLE IF NOT EXISTS delivery_invoices (
   accepted_payload    REAL NOT NULL,
   rate                REAL NOT NULL,
   total_value         REAL NOT NULL,
+  invoice_no          TEXT,
+  file_url            TEXT,
   status              TEXT NOT NULL CHECK(status IN ('DRAFT', 'SENT_TO_CA')) DEFAULT 'DRAFT'
 );
 

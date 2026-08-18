@@ -1,21 +1,21 @@
 -- ============================================================
--- IKWEZI TRANSPORTER PORTAL — SEED DATA V3
+-- PODZO TRANSPORTER PORTAL — SEED DATA V3
 -- ============================================================
 
 -- USERS (Demo password is "Demo@1234")
 -- We will write actual password hash for Demo@1234: "$2b$10$tMh4zN1W.g2H/C6nQ7i/2e3U7d.F8k.kR0v2z9eY9iY9yY9yY9yY9" 
 -- Note: DB initializer will override this with proper bcrypt hashes on boot anyway.
 INSERT OR IGNORE INTO users (id, username, password_hash, role, display_name, email, phone, entity_id) VALUES
-  (1, 'ca_thandiwe',   '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'CA', 'Thandiwe Nkosi',      'thandiwe@ikwezi.co.za',     '+27110001001', NULL),
+  (1, 'ca_thandiwe',   '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'CA', 'Thandiwe Nkosi',      'thandiwe@podzo.co.za',     '+27110001001', NULL),
   (2, 'ta_sipho',      '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'TA', 'Sipho Dlamini (STS)', 'sipho@siphotransport.co.za','+27830001002', 1),
   (3, 'dr_zweli',      '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Zwelithini Dlamini',  'zweli@driver.co.za',        '+27720001003', 1),
-  (4, 'cr_mining',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'CR', 'Yard Receiver',       'recv@ikwezi.co.za',         '+27110001004', 1),
-  (5, 'sr_gate01',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'SR', 'Jan Mokoena',         'jan@ikwezi.co.za',          '+27110001005', NULL);
+  (4, 'cr_mining',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'CR', 'Yard Receiver',       'recv@podzo.co.za',         '+27110001004', 1),
+  (5, 'sr_gate01',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'SR', 'Jan Mokoena',         'jan@podzo.co.za',          '+27110001005', NULL);
 
 -- CUSTOMERS (Mining Yards)
 INSERT OR IGNORE INTO customers (id, name, sap_customer_no, gps_lat, gps_lng, address) VALUES
-  (1, 'Ikwezi Mining – Emoyeni Siding', 'SAP-CUST-1001', -25.7670, 29.4630, 'Emoyeni Siding, Witbank, ZA'),
-  (2, 'Ikwezi Mining – Leeuwpan Yard',  'SAP-CUST-1002', -26.0145, 29.1785, 'Leeuwpan Yard, Witbank, ZA');
+  (1, 'PODZO Mining – Emoyeni Siding', 'SAP-CUST-1001', -25.7670, 29.4630, 'Emoyeni Siding, Witbank, ZA'),
+  (2, 'PODZO Mining – Leeuwpan Yard',  'SAP-CUST-1002', -26.0145, 29.1785, 'Leeuwpan Yard, Witbank, ZA');
 
 -- TRANSPORTERS
 INSERT OR IGNORE INTO transporters (id, name, gstin) VALUES

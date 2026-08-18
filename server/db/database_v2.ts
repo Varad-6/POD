@@ -11,7 +11,7 @@ import bcrypt from 'bcryptjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
 
-const DB_PATH = join(__dirname, 'ikwezi_portal.db');
+const DB_PATH = join(__dirname, 'podzo_portal.db');
 const SCHEMA_PATH = join(__dirname, 'schema_v2.sql');
 const SEED_PATH   = join(__dirname, 'seed_v2.sql');
 

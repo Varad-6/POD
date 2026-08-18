@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { Truck, Upload, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
-import { useDemo, OffloadRecord } from '../context/DemoContext';
+import React, { useState, useEffect } from 'react';
+import { Truck, Upload, AlertCircle, CheckCircle2, Clock, ClipboardList } from 'lucide-react';
 import { Card } from '../components/Card';
 import { PageHeader } from '../components/PageHeader';
 import { Tabs } from '../components/Tabs';
@@ -12,26 +11,79 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { formatDate } from '../utils/format';
 import { OCR_RESULTS } from '../data/mockData';
 import { useNavigate } from 'react-router-dom';
+import { assignmentsApi, drApi } from '../lib/api_v3';
 
 export const TransporterPODs: React.FC = () => {
-  const { offloadRecords, uploadPOD } = useDemo();
   const navigate = useNavigate();
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'>('ALL');
   
   // Modal states
-  const [uploadingRecord, setUploadingRecord] = useState<OffloadRecord | null>(null);
+  const [uploadingAssignment, setUploadingAssignment] = useState<any | null>(null);
   const [uploadStep, setUploadStep] = useState<'UPLOAD' | 'PROCESSING' | 'RESULT'>('UPLOAD');
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [selectedFileObj, setSelectedFileObj] = useState<File | null>(null);
+  const [ocrData, setOcrData] = useState<any | null>(null);
 
-  // Filters records
-  const filteredRecords = offloadRecords.filter((rec) => {
-    if (activeFilter === 'PENDING') return rec.podStatus === 'PENDING_POD';
-    if (activeFilter === 'SUBMITTED') return rec.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || rec.podStatus === 'LOW_CONFIDENCE';
-    if (activeFilter === 'APPROVED') return rec.podStatus.startsWith('APPROVED');
-    if (activeFilter === 'REJECTED') return rec.podStatus === 'REJECTED';
-    return true;
-  });
+  const loadAssignments = async () => {
+    setLoading(true);
+    try {
+      const list = await assignmentsApi.list();
+      setAssignments(list);
+    } catch (err) {
+      console.error('Failed to load assignments:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAssignments();
+  }, []);
+
+  // Map backend status to frontend podStatus
+  const getMappedPodStatus = (status: string) => {
+    switch (status) {
+      case 'DELIVERED':
+        return 'PENDING_POD';
+      case 'POD_UPLOADED':
+        return 'SUBMITTED_AWAITING_APPROVAL';
+      case 'UNDER_REVIEW':
+        return 'LOW_CONFIDENCE';
+      case 'APPROVED':
+        return 'APPROVED_INVOICE_PENDING';
+      case 'INVOICED':
+      case 'MIRO_PARKED':
+      case 'MIRO_POSTED':
+      case 'CLEARED':
+        return 'APPROVED';
+      case 'GATE_DENIED':
+        return 'REJECTED';
+      default:
+        return 'PENDING_POD';
+    }
+  };
+
+  // Filters assignments
+  const filteredAssignments = assignments
+    .map(a => ({
+      ...a,
+      podStatus: getMappedPodStatus(a.status),
+      waybillNo: a.ocr_waybill_extracted || `WB-${a.id}`,
+      productDescription: a.material || 'Coal Grade A',
+      horseRegNo: a.vehicle_reg || 'TEMP-REG',
+      poRef: a.sap_po_no || 'PO-TEMP',
+      offloadDate: a.scheduled_date || new Date().toISOString(),
+      netWeightKg: a.ocr_weight_extracted ? a.ocr_weight_extracted * 1000 : 34000
+    }))
+    .filter((rec) => {
+      if (activeFilter === 'PENDING') return rec.podStatus === 'PENDING_POD';
+      if (activeFilter === 'SUBMITTED') return rec.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || rec.podStatus === 'LOW_CONFIDENCE';
+      if (activeFilter === 'APPROVED') return rec.podStatus.startsWith('APPROVED') || rec.podStatus === 'APPROVED_INVOICE_PENDING';
+      if (activeFilter === 'REJECTED') return rec.podStatus === 'REJECTED';
+      return true;
+    });
 
   const handleFileSelect = (fileName: string, file: File | null) => {
     setSelectedFileName(fileName);
@@ -44,51 +96,53 @@ export const TransporterPODs: React.FC = () => {
   };
 
   const handleSubmitVerification = () => {
-    if (!uploadingRecord) return;
+    if (!uploadingAssignment) return;
     setUploadStep('PROCESSING');
 
     setTimeout(() => {
+      let key = "WB-998807";
+      if (selectedFileName && selectedFileName.includes('mismatch')) {
+        key = "WB-998808";
+      } else if (selectedFileName && selectedFileName.includes('blurry')) {
+        key = "WB-998809";
+      }
+      const data = OCR_RESULTS[key as keyof typeof OCR_RESULTS];
+      setOcrData(data);
       setUploadStep('RESULT');
     }, 2100);
   };
 
   const handleFinalSubmit = async () => {
-    if (!uploadingRecord || !selectedFileName) return;
-    await uploadPOD(uploadingRecord.waybillNo, selectedFileName);
-    setUploadingRecord(null);
-    setUploadStep('UPLOAD');
-    setSelectedFileName(null);
-    setSelectedFileObj(null);
-  };
-
-  const getOCRData = () => {
-    if (!uploadingRecord || !selectedFileName) return null;
-    let key = "WB-998807";
-    if (selectedFileName.includes('mismatch')) {
-      key = "WB-998808";
-    } else if (selectedFileName.includes('blurry')) {
-      key = "WB-998809";
+    if (!uploadingAssignment || !selectedFileName) return;
+    try {
+      await drApi.uploadPod(uploadingAssignment.id, { pod_file_url: selectedFileName });
+      setUploadingAssignment(null);
+      setUploadStep('UPLOAD');
+      setSelectedFileName(null);
+      setSelectedFileObj(null);
+      setOcrData(null);
+      loadAssignments();
+    } catch (err) {
+      console.error('Failed to submit POD:', err);
+      alert('Error submitting POD for verification');
     }
-    return OCR_RESULTS[key as keyof typeof OCR_RESULTS];
   };
-
-  const ocrData = getOCRData() as any;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
       {/* Page Header */}
       <PageHeader 
-        title="Proof of Delivery Uploads Desk"
-        subtitle="Upload scanned delivery slips for AI OCR validation, 4-point weight verification, and admin approval"
+        title="Delivery Receipts (POD) Upload Desk"
+        subtitle="Upload signed delivery papers for OCR checking and approval"
         actions={
           <Tabs 
             tabs={[
-              { id: 'ALL', label: 'All Runs', count: offloadRecords.length },
-              { id: 'PENDING', label: 'Pending POD', count: offloadRecords.filter(r => r.podStatus === 'PENDING_POD').length },
-              { id: 'SUBMITTED', label: 'Submitted', count: offloadRecords.filter(r => r.podStatus === 'SUBMITTED_AWAITING_APPROVAL' || r.podStatus === 'LOW_CONFIDENCE').length },
-              { id: 'APPROVED', label: 'Approved', count: offloadRecords.filter(r => r.podStatus.startsWith('APPROVED')).length },
-              { id: 'REJECTED', label: 'Rejected', count: offloadRecords.filter(r => r.podStatus === 'REJECTED').length },
+              { id: 'ALL', label: 'All Trips', count: assignments.length },
+              { id: 'PENDING', label: 'Need Receipt (POD)', count: assignments.filter(r => getMappedPodStatus(r.status) === 'PENDING_POD').length },
+              { id: 'SUBMITTED', label: 'Waiting for Approval', count: assignments.filter(r => getMappedPodStatus(r.status) === 'SUBMITTED_AWAITING_APPROVAL' || getMappedPodStatus(r.status) === 'LOW_CONFIDENCE').length },
+              { id: 'APPROVED', label: 'Approved', count: assignments.filter(r => getMappedPodStatus(r.status).startsWith('APPROVED') || getMappedPodStatus(r.status) === 'APPROVED_INVOICE_PENDING').length },
+              { id: 'REJECTED', label: 'Rejected', count: assignments.filter(r => getMappedPodStatus(r.status) === 'REJECTED').length },
             ]}
             activeTab={activeFilter}
             onChange={(id) => setActiveFilter(id as any)}
@@ -96,16 +150,18 @@ export const TransporterPODs: React.FC = () => {
         }
       />
 
-      {/* Grid List */}
-      {filteredRecords.length === 0 ? (
+      {loading ? (
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading receipts...</div>
+      ) : filteredAssignments.length === 0 ? (
         <EmptyState 
-          message="No delivery records match active filter" 
-          submessage="Wait for weighbridge offload logging or toggle filters to view past runs."
+          icon={<ClipboardList size={48} />}
+          title="No Trips Found"
+          description="Wait for unloading yard to weigh the truck or change tabs to see past runs."
         />
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
-          {filteredRecords.map((rec) => (
-            <Card key={rec.waybillNo} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {filteredAssignments.map((rec) => (
+            <Card key={rec.id} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px' }}>
                 <div>
                   <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)', marginBottom: '2px' }}>
@@ -155,7 +211,7 @@ export const TransporterPODs: React.FC = () => {
               {/* Action Buttons */}
               {rec.podStatus === 'PENDING_POD' && (
                 <button 
-                  onClick={() => setUploadingRecord(rec)}
+                  onClick={() => setUploadingAssignment(rec)}
                   className="btn btn-primary"
                   style={{ width: '100%', marginTop: 'auto' }}
                 >
@@ -180,7 +236,7 @@ export const TransporterPODs: React.FC = () => {
 
               {rec.podStatus === 'REJECTED' && (
                 <button 
-                  onClick={() => setUploadingRecord(rec)}
+                  onClick={() => setUploadingAssignment(rec)}
                   className="btn btn-dark"
                   style={{ width: '100%', marginTop: 'auto' }}
                 >
@@ -189,10 +245,10 @@ export const TransporterPODs: React.FC = () => {
                 </button>
               )}
 
-              {(rec.podStatus === 'APPROVED' || rec.podStatus === 'APPROVED_MISMATCH_OVERRIDE') && (
+              {(rec.podStatus === 'APPROVED') && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--success-600)', fontWeight: 600, fontSize: '13px', marginTop: 'auto', padding: '8px' }}>
                   <CheckCircle2 size={16} />
-                  Approved — Ready to Invoice
+                  Approved — Invoice Raised
                 </div>
               )}
 
@@ -212,9 +268,9 @@ export const TransporterPODs: React.FC = () => {
 
       {/* Upload POD Modal */}
       <Modal
-        isOpen={!!uploadingRecord}
-        onClose={() => { if (uploadStep !== 'PROCESSING') setUploadingRecord(null); }}
-        title={uploadingRecord ? `Upload Proof of Delivery — Waybill #${uploadingRecord.waybillNo}` : ''}
+        isOpen={!!uploadingAssignment}
+        onClose={() => { if (uploadStep !== 'PROCESSING') setUploadingAssignment(null); }}
+        title={uploadingAssignment ? `Upload Proof of Delivery — Waybill #${uploadingAssignment.waybillNo}` : ''}
         width={uploadStep === 'RESULT' ? '720px' : '500px'}
       >
         {uploadStep === 'UPLOAD' && (
@@ -225,7 +281,7 @@ export const TransporterPODs: React.FC = () => {
               onClear={handleClearFile}
             />
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-              <button onClick={() => setUploadingRecord(null)} className="btn btn-ghost">Cancel</button>
+              <button onClick={() => setUploadingAssignment(null)} className="btn btn-ghost">Cancel</button>
               <button 
                 onClick={handleSubmitVerification} 
                 disabled={!selectedFileName}
@@ -241,7 +297,7 @@ export const TransporterPODs: React.FC = () => {
           <LoadingSpinner />
         )}
 
-        {uploadStep === 'RESULT' && ocrData && uploadingRecord && (
+        {uploadStep === 'RESULT' && ocrData && uploadingAssignment && (
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
               <div>
@@ -274,7 +330,7 @@ export const TransporterPODs: React.FC = () => {
                     <div style={{ textAlign: 'right' }}>
                       <p style={{ fontSize: '10px', color: 'var(--neutral-500)', fontWeight: 700 }}>SAP SYSTEM</p>
                       <p className="mono" style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-600)' }}>
-                        {uploadingRecord.waybillNo}
+                        {uploadingAssignment.waybillNo}
                       </p>
                     </div>
                   </div>

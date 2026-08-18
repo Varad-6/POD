@@ -82,12 +82,21 @@ router.get('/assignments', requireAuth, requireRole('CA', 'TA', 'SR'), (req: Req
   const db = getDb();
   const status = req.query.status;
   let query = `
-    SELECT ta.*, d.name as driver_name, d.phone as driver_phone, v.reg_no as vehicle_reg, po.sap_po_no, po.material
+    SELECT ta.*, d.name as driver_name, d.phone as driver_phone, v.reg_no as vehicle_reg, po.sap_po_no, po.material, po.tolerance_pct,
+           pd.pod_file_url, pd.ocr_waybill_extracted, pd.ocr_weight_extracted, pd.ocr_confidence_pct, pd.match_status as pod_match_status,
+           (SELECT COUNT(*) FROM supervisor_stamp ss WHERE ss.assignment_id = ta.id) as supervisor_stamped_count,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_GROSS' LIMIT 1) as dest_gross_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_TARE' LIMIT 1) as dest_tare_kg,
+           bu.bilty_no, bu.bilty_date, bu.upload_url as bilty_url
     FROM transport_assignments ta
     JOIN job_configs jc ON jc.id = ta.job_config_id
     JOIN purchase_orders po ON po.id = jc.po_id
     JOIN drivers d ON d.id = ta.driver_id
     JOIN vehicles v ON v.id = ta.vehicle_id
+    LEFT JOIN pod_documents pd ON pd.assignment_id = ta.id
+    LEFT JOIN bilty_uploads bu ON bu.assignment_id = ta.id
   `;
   const params: any[] = [];
   if (status) {
@@ -223,10 +232,45 @@ router.patch('/review-queue/:id/resolve', requireAuth, requireRole('CA', 'SR'), 
   `).get(review.assignment_id) as any;
 
   if (remainingBlock.count === 0) {
+    // Record CA verification
+    db.prepare(`
+      INSERT OR REPLACE INTO ca_verification (assignment_id, verified_bool, verified_by, notes)
+      VALUES (?, 1, ?, ?)
+    `).run(review.assignment_id, req.user!.userId, resolution_notes ?? 'Verified manually');
+
+    // Fetch weights & PO target info
+    const assignment = db.prepare(`
+      SELECT ta.*, po.rate, po.id as po_id
+      FROM transport_assignments ta
+      JOIN job_configs jc ON jc.id = ta.job_config_id
+      JOIN purchase_orders po ON po.id = jc.po_id
+      WHERE ta.id = ?
+    `).get(review.assignment_id) as any;
+
+    if (assignment) {
+      // Compute accepted payload from destination weighbridge logs (DEST_GROSS - DEST_TARE)
+      const weights = db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(review.assignment_id) as any[];
+      const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg || 0;
+      const destTare = weights.find(w => w.stage === 'DEST_TARE')?.weight_kg || 0;
+      const acceptedPayload = (destGross - destTare) || 34000.0;
+
+      const totalValue = (acceptedPayload / 1000) * assignment.rate;
+
+      // Fetch waybill from pod_documents
+      const podDoc = db.prepare('SELECT ocr_waybill_extracted FROM pod_documents WHERE assignment_id = ?').get(review.assignment_id) as any;
+      const waybillNo = podDoc?.ocr_waybill_extracted || `WB-${review.assignment_id}`;
+
+      // Create S/4 Mirror Row
+      db.prepare(`
+        INSERT OR REPLACE INTO sap_s4_mirror (assignment_id, waybill_no, delivered_qty, rate, total_value, verified_at, synced_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      `).run(review.assignment_id, waybillNo, acceptedPayload / 1000, assignment.rate, totalValue);
+    }
+
     db.prepare("UPDATE transport_assignments SET status = 'APPROVED' WHERE id = ?").run(review.assignment_id);
   }
 
-  return res.json({ message: 'Review resolved and MIRO blocks lifted' });
+  return res.json({ message: 'Review resolved and MIRO unblocked' });
 });
 
 // POST /api/v3/ca-verification/:assignmentId
@@ -258,45 +302,148 @@ router.post('/ca-verification/:assignmentId', requireAuth, requireRole('CA'), (r
     if (!assignment) return res.status(404).json({ error: 'Assignment not found' });
 
     // Compute accepted payload from destination weighbridge logs (DEST_GROSS - DEST_TARE)
-    const weights = db.prepare('SELECT checkpoint, weight_kg FROM weight_logs WHERE assignment_id = ?').all(assignmentId) as any[];
+    const weights = db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(assignmentId) as any[];
     const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg || 0;
     const destTare = weights.find(w => w.stage === 'DEST_TARE')?.weight_kg || 0;
     const acceptedPayload = (destGross - destTare) || 34000.0; // fallback if weigh logs empty in demo
 
     const totalValue = (acceptedPayload / 1000) * assignment.rate;
 
-    // Create delivery invoice
-    const delInv = db.prepare(`
-      INSERT OR REPLACE INTO delivery_invoices (assignment_id, accepted_payload, rate, total_value, status)
-      VALUES (?, ?, ?, ?, 'SENT_TO_CA')
-    `).run(assignmentId, acceptedPayload, assignment.rate, totalValue);
+    // Fetch waybill from pod_documents
+    const podDoc = db.prepare('SELECT ocr_waybill_extracted FROM pod_documents WHERE assignment_id = ?').get(assignmentId) as any;
+    const waybillNo = podDoc?.ocr_waybill_extracted || `WB-${assignmentId}`;
 
-    // Create main invoice
+    // Create S/4 Mirror Row representing S/4 integration
     db.prepare(`
-      INSERT OR REPLACE INTO main_invoices (delivery_invoice_id, po_id, status)
-      VALUES (?, ?, 'PO_DONE')
-    `).run(delInv.lastInsertRowid, assignment.po_id);
+      INSERT OR REPLACE INTO sap_s4_mirror (assignment_id, waybill_no, delivered_qty, rate, total_value, verified_at, synced_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(assignmentId, waybillNo, acceptedPayload / 1000, assignment.rate, totalValue);
 
     db.prepare("UPDATE transport_assignments SET status = 'APPROVED' WHERE id = ?").run(assignmentId);
   }
 
-  return res.json({ message: 'CA Verification recorded' });
+  return res.json({ message: 'CA Verification recorded and synced to S/4 mirror' });
 });
 
 // GET /api/v3/delivery-invoices
 router.get('/delivery-invoices', requireAuth, requireRole('CA', 'TA'), (req: Request, res: Response) => {
   const db = getDb();
   const status = req.query.status || 'SENT_TO_CA';
-  const invoices = db.prepare(`
-    SELECT di.*, ta.scheduled_date, d.name as driver_name, po.sap_po_no, po.material
-    FROM delivery_invoices di
-    JOIN transport_assignments ta ON ta.id = di.assignment_id
+
+  if (status === 'AWAITING_INVOICE_SUBMISSION') {
+    const list = db.prepare(`
+      SELECT 
+        NULL AS id,
+        ssm.assignment_id,
+        ssm.delivered_qty AS accepted_payload,
+        ssm.rate,
+        ssm.total_value AS amount,
+        ssm.total_value,
+        NULL AS invoice_no,
+        NULL AS file_url,
+        'AWAITING_INVOICE_SUBMISSION' AS status,
+        ta.scheduled_date,
+        d.name as driver_name,
+        po.sap_po_no,
+        po.material,
+        ssm.waybill_no
+      FROM sap_s4_mirror ssm
+      JOIN transport_assignments ta ON ta.id = ssm.assignment_id
+      JOIN job_configs jc ON jc.id = ta.job_config_id
+      JOIN purchase_orders po ON po.id = jc.po_id
+      JOIN drivers d ON d.id = ta.driver_id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM delivery_invoices di WHERE di.assignment_id = ssm.assignment_id
+      )
+    `).all();
+    return res.json(list);
+  } else if (status === 'LEDGER') {
+    const list = db.prepare(`
+      SELECT 
+        di.id,
+        di.assignment_id,
+        di.accepted_payload,
+        di.rate,
+        di.total_value AS amount,
+        di.total_value,
+        di.invoice_no,
+        di.file_url,
+        COALESCE(mi.status, di.status) AS status,
+        mi.posted_date,
+        mi.sap_ref AS payment_ref,
+        ta.scheduled_date,
+        d.name as driver_name,
+        po.sap_po_no,
+        po.material
+      FROM delivery_invoices di
+      JOIN transport_assignments ta ON ta.id = di.assignment_id
+      JOIN job_configs jc ON jc.id = ta.job_config_id
+      JOIN purchase_orders po ON po.id = jc.po_id
+      JOIN drivers d ON d.id = ta.driver_id
+      LEFT JOIN main_invoices mai ON mai.delivery_invoice_id = di.id
+      LEFT JOIN miro_invoices mi ON mi.main_invoice_id = mai.id
+      ORDER BY di.id DESC
+    `).all();
+    return res.json(list);
+  } else {
+    const invoices = db.prepare(`
+      SELECT di.*, di.total_value AS amount, ta.scheduled_date, d.name as driver_name, po.sap_po_no, po.material
+      FROM delivery_invoices di
+      JOIN transport_assignments ta ON ta.id = di.assignment_id
+      JOIN job_configs jc ON jc.id = ta.job_config_id
+      JOIN purchase_orders po ON po.id = jc.po_id
+      JOIN drivers d ON d.id = ta.driver_id
+      WHERE di.status = ?
+      ORDER BY di.id DESC
+    `).all(status);
+    return res.json(invoices);
+  }
+});
+
+// POST /api/v3/delivery-invoices
+router.post('/delivery-invoices', requireAuth, requireRole('TA'), (req: Request, res: Response) => {
+  const db = getDb();
+  const { assignment_id, invoice_no, file_url } = req.body;
+
+  if (!assignment_id || !invoice_no || !file_url) {
+    return res.status(400).json({ error: 'assignment_id, invoice_no, and file_url are required' });
+  }
+
+  // 1. HARD GATE Check: Check if this assignment is in sap_s4_mirror (i.e. CA verified)
+  const mirrorRow = db.prepare('SELECT * FROM sap_s4_mirror WHERE assignment_id = ?').get(assignment_id) as any;
+  if (!mirrorRow) {
+    return res.status(403).json({ error: 'Access Denied: Assignment is not verified by Company Admin.' });
+  }
+
+  // 2. Retrieve PO info for main_invoices
+  const assignment = db.prepare(`
+    SELECT ta.id, po.id as po_id
+    FROM transport_assignments ta
     JOIN job_configs jc ON jc.id = ta.job_config_id
     JOIN purchase_orders po ON po.id = jc.po_id
-    JOIN drivers d ON d.id = ta.driver_id
-    WHERE di.status = ?
-  `).all(status);
-  return res.json(invoices);
+    WHERE ta.id = ?
+  `).get(assignment_id) as any;
+
+  if (!assignment) {
+    return res.status(404).json({ error: 'Assignment not found.' });
+  }
+
+  // 3. Create delivery invoice row
+  const result = db.prepare(`
+    INSERT OR REPLACE INTO delivery_invoices (assignment_id, accepted_payload, rate, total_value, invoice_no, file_url, status)
+    VALUES (?, ?, ?, ?, ?, ?, 'SENT_TO_CA')
+  `).run(assignment_id, mirrorRow.delivered_qty, mirrorRow.rate, mirrorRow.total_value, invoice_no, file_url);
+
+  // 4. Create main invoice row
+  db.prepare(`
+    INSERT OR REPLACE INTO main_invoices (delivery_invoice_id, po_id, status)
+    VALUES (?, ?, 'PO_DONE')
+  `).run(result.lastInsertRowid, assignment.po_id);
+
+  // 5. Update assignment status to 'INVOICED'
+  db.prepare("UPDATE transport_assignments SET status = 'INVOICED' WHERE id = ?").run(assignment_id);
+
+  return res.status(201).json({ id: result.lastInsertRowid, message: 'Delivery Invoice generated and sent to CA.' });
 });
 
 // GET /api/v3/miro
@@ -505,29 +652,42 @@ router.post('/assignments/:id/gate-check', requireAuth, requireRole('SR'), (req:
   return res.json({ status: 'MINE_TARE_LOGGED', message: 'Gate check passed. Vehicle cleared for tare log.' });
 });
 
-// POST /api/v3/assignments/:id/stamp
+// POST /api/v3/assignments/:id/bilty-upload
+router.post('/assignments/:id/bilty-upload', requireAuth, requireRole('SR'), (req: Request, res: Response) => {
+  const db = getDb();
+  const assignmentId = req.params.id;
+  const { bilty_no, bilty_date, upload_url } = req.body;
+
+  if (!bilty_no || !bilty_date || !upload_url) {
+    return res.status(400).json({ error: 'bilty_no, bilty_date, and upload_url are required' });
+  }
+
+  db.prepare(`
+    INSERT OR REPLACE INTO bilty_uploads (assignment_id, bilty_no, bilty_date, upload_url)
+    VALUES (?, ?, ?, ?)
+  `).run(assignmentId, bilty_no, bilty_date, upload_url);
+
+  db.prepare("UPDATE transport_assignments SET status = 'DISPATCHED' WHERE id = ?").run(assignmentId);
+
+  return res.json({ message: 'Bilty uploaded successfully. Vehicle dispatched.' });
+});
+
+// POST /api/v3/assignments/:id/stamp (Supervisor Stamp - Arrival Capture at Customer)
 router.post('/assignments/:id/stamp', requireAuth, requireRole('SR'), (req: Request, res: Response) => {
   const db = getDb();
   const assignmentId = req.params.id;
-  const { gps_lat, gps_lng, otp_match_bool, bilty_no, bilty_date, upload_url } = req.body;
+  const { gps_lat, gps_lng } = req.body;
 
   const ip = getClientIp(req);
 
   db.prepare(`
     INSERT INTO supervisor_stamp (assignment_id, ip_address, gps_lat, gps_lng, otp_match_bool)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(assignmentId, ip, gps_lat ?? 0.0, gps_lng ?? 0.0, otp_match_bool ? 1 : 0);
+    VALUES (?, ?, ?, ?, 1)
+  `).run(assignmentId, ip, gps_lat ?? 0.0, gps_lng ?? 0.0);
 
-  if (bilty_no && bilty_date && upload_url) {
-    db.prepare(`
-      INSERT OR REPLACE INTO bilty_uploads (assignment_id, bilty_no, bilty_date, upload_url)
-      VALUES (?, ?, ?, ?)
-    `).run(assignmentId, bilty_no, bilty_date, upload_url);
-  }
+  db.prepare("UPDATE transport_assignments SET status = 'ARRIVED' WHERE id = ?").run(assignmentId);
 
-  db.prepare("UPDATE transport_assignments SET status = 'DISPATCHED' WHERE id = ?").run(assignmentId);
-
-  return res.json({ message: 'Supervisor stamp captured. Vehicle dispatched.' });
+  return res.json({ message: 'Arrival stamp captured. Status updated to ARRIVED.', ip_address: ip });
 });
 
 // ─── DRIVER (DR) ENDPOINTS ────────────────────────────────────
@@ -538,10 +698,16 @@ router.get('/assignments/mine', requireAuth, requireRole('DR'), (req: Request, r
   const list = db.prepare(`
     SELECT ta.*, po.sap_po_no, po.material, 
            'Emoyeni Mine Siding' AS from_location, 
-           'Duvha Power Station' AS to_location
+           'Duvha Power Station' AS to_location,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_GROSS' LIMIT 1) as dest_gross_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_TARE' LIMIT 1) as dest_tare_kg,
+           bu.bilty_no, bu.bilty_date, bu.upload_url as bilty_url
     FROM transport_assignments ta
     JOIN job_configs jc ON jc.id = ta.job_config_id
     JOIN purchase_orders po ON po.id = jc.po_id
+    LEFT JOIN bilty_uploads bu ON bu.assignment_id = ta.id
     WHERE ta.driver_id = ?
     ORDER BY ta.id DESC
   `).all(req.user!.entityId || 1);
@@ -608,6 +774,18 @@ router.post('/assignments/:id/weight-log', requireAuth, (req: Request, res: Resp
 
   if (!stage || !weight_kg) {
     return res.status(400).json({ error: 'stage and weight_kg required' });
+  }
+
+  // Enforce OTP verified before weigh log (only for mine tare/gross logging)
+  if (stage === 'MINE_TARE' || stage === 'MINE_GROSS') {
+    const verifiedOtp = db.prepare(`
+      SELECT id FROM otp_verifications 
+      WHERE assignment_id = ? AND stage = 'PICKUP' AND status = 'VERIFIED'
+    `).get(assignmentId);
+
+    if (!verifiedOtp) {
+      return res.status(403).json({ error: 'Access Denied: Weighing is disabled until Pickup OTP is verified.' });
+    }
   }
 
   db.prepare(`
@@ -755,32 +933,23 @@ router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Resp
     VALUES (?, 'DEST', ?, ?, ?, ?, ?)
   `).run(assignmentId, acceptedPayload, poInfo.target_qty, variancePct, poInfo.tolerance_pct, passBool);
 
-  let underReview = false;
-  // Trigger review queue if checks fail
+  // ALWAYS trigger review queue block for manual CA verification (no auto-pass)
+  let flagReason = 'AWAITING_CA_VERIFY';
   if (matchStatus === 'MISMATCH' || confidence < 70) {
-    db.prepare(`
-      INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
-      VALUES (?, 'OCR_MISMATCH', 'OPEN', 1)
-    `).run(assignmentId);
-    underReview = true;
+    flagReason = 'OCR_MISMATCH';
+  } else if (passBool === 0) {
+    flagReason = 'TOLERANCE_EXCEEDED';
   }
 
-  if (passBool === 0) {
-    db.prepare(`
-      INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
-      VALUES (?, 'TOLERANCE_EXCEEDED', 'OPEN', 1)
-    `).run(assignmentId);
-    underReview = true;
-  }
+  db.prepare(`
+    INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
+    VALUES (?, ?, 'OPEN', 1)
+  `).run(assignmentId, flagReason);
 
-  if (underReview) {
-    db.prepare("UPDATE transport_assignments SET status = 'UNDER_REVIEW' WHERE id = ?").run(assignmentId);
-  } else {
-    db.prepare("UPDATE transport_assignments SET status = 'APPROVED' WHERE id = ?").run(assignmentId);
-  }
+  db.prepare("UPDATE transport_assignments SET status = 'UNDER_REVIEW' WHERE id = ?").run(assignmentId);
 
   return res.json({
-    message: 'POD processed successfully',
+    message: 'POD processed successfully, queued for CA verification',
     ocr: {
       ocr_waybill_extracted: ocrWaybill,
       ocr_weight_extracted: ocrWeight,
@@ -791,7 +960,7 @@ router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Resp
       variance_pct: variancePct,
       pass_bool: passBool === 1
     },
-    under_review: underReview
+    under_review: true
   });
 });
 
@@ -807,7 +976,12 @@ router.get('/assignments/incoming', requireAuth, requireRole('CR'), (req: Reques
     SELECT ta.*, po.sap_po_no, po.material, 
            'Emoyeni Mine Siding' AS from_location, 
            'Duvha Power Station' AS to_location, 
-           d.name as driver_name, v.reg_no as vehicle_reg
+           d.name as driver_name, v.reg_no as vehicle_reg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_GROSS' LIMIT 1) as dest_gross_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_TARE' LIMIT 1) as dest_tare_kg,
+           bu.bilty_no, bu.bilty_date, bu.upload_url as bilty_url
     FROM transport_assignments ta
     JOIN job_configs jc ON jc.id = ta.job_config_id
     JOIN purchase_orders po ON po.id = jc.po_id
@@ -815,6 +989,7 @@ router.get('/assignments/incoming', requireAuth, requireRole('CR'), (req: Reques
     JOIN customers cu ON cu.id = c.customer_id
     JOIN drivers d ON d.id = ta.driver_id
     JOIN vehicles v ON v.id = ta.vehicle_id
+    LEFT JOIN bilty_uploads bu ON bu.assignment_id = ta.id
     WHERE cu.id = ? AND ta.status IN ('DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED')
   `).all(customerId);
 
