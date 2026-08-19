@@ -70,6 +70,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
     if (!searchQuery.trim()) return;
     setIsSearching(true);
     try {
+      // Note: Search is executed on form submission (pressing Enter) or explicit search trigger.
       const results = await searchApi.globalSearch(searchQuery.trim());
       setSearchResults(results);
     } catch (err) {

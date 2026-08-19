@@ -14,8 +14,18 @@ interface AuthContextV3Value {
 const AuthContextV3 = createContext<AuthContextV3Value | null>(null);
 
 export function AuthProviderV3({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserV3 | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserV3 | null>(() => {
+    const token = localStorage.getItem('podzo_token_v3');
+    const cachedUser = localStorage.getItem('podzo_user_v3');
+    if (token && cachedUser) {
+      try { return JSON.parse(cachedUser); } catch { return null; }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    const token = localStorage.getItem('podzo_token_v3');
+    return !token; // Only set loading to true initially if a token exists and needs validation
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('podzo_token_v3');
@@ -25,7 +35,11 @@ export function AuthProviderV3({ children }: { children: ReactNode }) {
           setUser(u);
           localStorage.setItem('podzo_user_v3', JSON.stringify(u));
         })
-        .catch(() => clearToken())
+        .catch(() => {
+          clearToken();
+          localStorage.removeItem('podzo_user_v3');
+          setUser(null);
+        })
         .finally(() => setLoading(false));
     } else {
       setLoading(false);

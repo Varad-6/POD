@@ -234,21 +234,7 @@ export const DemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('demo_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
-  // Initial Sync from SAP Adapter (Live S21 or Mock)
-  useEffect(() => {
-    const adapter = getSAPAdapter();
-    adapter.fetchContracts().then((fetchedContracts) => {
-      if (fetchedContracts && fetchedContracts.length > 0) {
-        setContracts(fetchedContracts);
-      }
-    }).catch(err => console.warn('Contracts sync warning:', err));
-
-    adapter.fetchPurchaseOrders().then((fetchedPOs) => {
-      if (fetchedPOs && fetchedPOs.length > 0) {
-        setPurchaseOrders(fetchedPOs as any);
-      }
-    }).catch(err => console.warn('POs sync warning:', err));
-  }, []);
+  // Note: Contract & PO data synchronization is handled through ContractPoContext & V3 API.
 
   // Toast Helpers
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
