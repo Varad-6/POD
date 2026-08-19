@@ -90,180 +90,232 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
   };
 
   return (
-    <header 
-      style={{
-        height: 'var(--topbar-height)',
-        backgroundColor: '#FFFFFF',
-        borderBottom: '1px solid var(--neutral-200)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 32px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 90,
-        boxShadow: 'var(--shadow-subtle)',
-      }}
-    >
+    <header className="topbar">
+      <style>{`
+        /* Responsive TopBar Styles - Designed for Standard & Compact Views */
+        .topbar {
+          height: var(--topbar-height);
+          background-color: #FFFFFF;
+          border-bottom: 1px solid var(--neutral-200);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 24px;
+          position: sticky;
+          top: 0;
+          z-index: 90;
+          box-shadow: var(--shadow-subtle);
+          box-sizing: border-box;
+          width: 100%;
+        }
+        .topbar-left {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          min-width: 0;
+          flex-shrink: 1;
+        }
+        .topbar-logo-container {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          border-right: 1px solid #E2E8F0;
+          padding-right: 16px;
+          flex-shrink: 0;
+        }
+        .topbar-right {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-shrink: 0;
+        }
+        .topbar-btn-reset {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 9999px;
+          color: #C2410C;
+          border: 1px solid #FFEDD5;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .topbar-user-info {
+          text-align: right;
+          flex-shrink: 0;
+        }
+        .topbar-avatar {
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background-color: var(--brand-purple);
+          color: #FFFFFF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 800;
+          font-size: 13px;
+          border: 2px solid #FFFFFF;
+          box-shadow: var(--shadow-subtle);
+          flex-shrink: 0;
+        }
+        .topbar-btn-logout {
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: var(--neutral-500);
+          display: flex;
+          align-items: center;
+          padding: 7px;
+          border-radius: 8px;
+          transition: all 0.15s ease;
+          flex-shrink: 0;
+        }
+        .topbar-btn-logout:hover {
+          background-color: var(--neutral-100);
+          color: var(--neutral-800);
+        }
+
+        /* ContractPoSelector styles */
+        .contract-po-selector {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background-color: #F8FAFC;
+          padding: 4px 10px;
+          border-radius: 10px;
+          border: 1px solid #E2E8F0;
+          font-size: 12px;
+          max-width: 100%;
+          flex-shrink: 1;
+          min-width: 0;
+        }
+        .contract-po-label {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          color: var(--brand-orange);
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+        .contract-po-select-wrapper {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background-color: #FFFFFF;
+          padding: 4px 8px;
+          border-radius: 6px;
+          border: 1px solid #CBD5E1;
+          max-width: 180px;
+          flex-shrink: 1;
+          min-width: 0;
+        }
+        .contract-po-select {
+          border: none;
+          outline: none;
+          background: transparent;
+          font-size: 12px;
+          font-weight: 700;
+          color: #0A192F;
+          cursor: pointer;
+          width: 100%;
+          max-width: 100%;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+        }
+        .contract-po-arrow {
+          color: #94A3B8;
+          font-weight: 600;
+          flex-shrink: 0;
+        }
+
+        /* Responsive breakpoints */
+        @media (max-width: 1400px) {
+          .topbar-logo-container {
+            display: none; /* Hide TopBar Logo - Sidebar already has it */
+          }
+        }
+        @media (max-width: 1280px) {
+          .contract-po-select-wrapper {
+            max-width: 130px; /* Compress selects */
+          }
+        }
+        @media (max-width: 1200px) {
+          .topbar {
+            padding: 0 16px;
+          }
+          .topbar-btn-reset span {
+            display: none; /* Icon-only on reset */
+          }
+          .topbar-btn-reset {
+            padding: 8px;
+            border-radius: 50%;
+          }
+        }
+        @media (max-width: 1150px) {
+          .contract-po-label {
+            display: none !important; /* Hide label */
+          }
+        }
+        @media (max-width: 1024px) {
+          .topbar-user-info {
+            display: none; /* Hide username string, keep avatar */
+          }
+        }
+        @media (max-width: 640px) {
+          .topbar {
+            padding: 0 8px;
+            gap: 4px;
+          }
+          .topbar-left {
+            gap: 8px;
+          }
+          .topbar-right {
+            gap: 6px;
+          }
+          .contract-po-selector {
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 8px;
+          }
+          .contract-po-select-wrapper {
+            max-width: 90px;
+            padding: 2px 4px;
+            border-radius: 4px;
+          }
+          .contract-po-arrow {
+            font-size: 10px;
+          }
+        }
+      `}</style>
+
       {/* Title & SAP Environment Badge & Global Contract/PO Selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderRight: '1px solid #E2E8F0', paddingRight: '16px' }}>
+      <div className="topbar-left">
+        <div className="topbar-logo-container">
           <PodzoLogo variant="compact" height={28} />
         </div>
-        <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
-          {title}
-        </h2>
         <ContractPoSelector />
-
-        {/* SAP Environment Indicator */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '3px 10px',
-            borderRadius: '12px',
-            fontSize: '11px',
-            fontWeight: 800,
-            backgroundColor: sapMode === 'LIVE' ? 'rgba(0, 138, 0, 0.1)' : 'var(--brand-purple-light)',
-            color: sapMode === 'LIVE' ? 'var(--success-600)' : 'var(--brand-purple)',
-            border: `1px solid ${sapMode === 'LIVE' ? 'rgba(0, 138, 0, 0.3)' : 'rgba(77, 20, 140, 0.3)'}`,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-          }}
-          title={sapMode === 'LIVE' ? 'Connected to S21 OData Server' : 'Operating in Persistent Mock SAP Mode'}
-        >
-          <Server size={12} />
-          <span>{sapMode === 'LIVE' ? 'S21 SAP' : 'MOCK SAP'}</span>
-        </div>
       </div>
 
-      {/* Global Search Bar */}
-      <form onSubmit={handleSearch} style={{ position: 'relative', flex: 1, maxWidth: '380px', margin: '0 24px' }}>
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={16} color="var(--neutral-400)" style={{ position: 'absolute', left: '14px' }} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search PO, Contract, Driver, Truck, POD..."
-            style={{
-              width: '100%',
-              padding: '8px 14px 8px 38px',
-              fontSize: '12.5px',
-              borderRadius: '9999px',
-              border: '1px solid var(--neutral-300)',
-              backgroundColor: 'var(--neutral-50)',
-              outline: 'none',
-              transition: 'all 0.15s ease',
-            }}
-          />
-        </div>
-
-        {/* Search Results Dropdown Card */}
-        {searchResults && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '44px',
-              left: 0,
-              right: 0,
-              backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
-              border: '1px solid var(--neutral-200)',
-              boxShadow: 'var(--shadow-modal)',
-              zIndex: 200,
-              maxHeight: '360px',
-              overflowY: 'auto',
-              padding: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--neutral-100)' }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-500)', textTransform: 'uppercase' }}>
-                Search Results for "{searchResults.query}"
-              </span>
-              <button onClick={() => setSearchResults(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--brand-purple)', fontWeight: 700 }}>
-                Close
-              </button>
-            </div>
-
-            {searchResults.contracts.length > 0 && (
-              <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase' }}>Contracts ({searchResults.contracts.length})</span>
-                {searchResults.contracts.map((c: any) => (
-                  <div key={c.id} onClick={() => { setSearchResults(null); navigate('/admin/contracts'); }} style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', backgroundColor: 'var(--neutral-50)', marginTop: '4px', fontSize: '12px', fontWeight: 600 }}>
-                    📄 {c.sap_contract_no} — {c.customer_name}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.purchaseOrders.length > 0 && (
-              <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase' }}>Purchase Orders ({searchResults.purchaseOrders.length})</span>
-                {searchResults.purchaseOrders.map((po: any) => (
-                  <div key={po.id} onClick={() => { setSearchResults(null); navigate('/transporter/purchase-orders'); }} style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', backgroundColor: 'var(--neutral-50)', marginTop: '4px', fontSize: '12px', fontWeight: 600 }}>
-                    📋 {po.sap_po_no} — {po.material} ({po.target_qty} TON)
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.assignments.length > 0 && (
-              <div>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase' }}>Dispatches ({searchResults.assignments.length})</span>
-                {searchResults.assignments.map((a: any) => (
-                  <div key={a.id} onClick={() => { setSearchResults(null); navigate('/admin/dashboard'); }} style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', backgroundColor: 'var(--neutral-50)', marginTop: '4px', fontSize: '12px', fontWeight: 600 }}>
-                    🚚 Dispatch #{a.id} — {a.driver_name} ({a.vehicle_reg}) • {a.status}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.contracts.length === 0 && searchResults.purchaseOrders.length === 0 && searchResults.assignments.length === 0 && (
-              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--neutral-500)', fontSize: '12px' }}>
-                No records found matching "{searchResults.query}"
-              </div>
-            )}
-          </div>
-        )}
-      </form>
-
       {/* Right User Controls & Refresh Button */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <div className="topbar-right">
         {/* Reset Demo Data Button */}
         <button
           onClick={() => setShowResetConfirm(true)}
           disabled={isResetting}
+          className="topbar-btn-reset"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 12px',
-            borderRadius: '9999px',
             backgroundColor: '#FFF7ED',
-            color: '#C2410C',
-            border: '1px solid #FFEDD5',
-            fontSize: '11px',
-            fontWeight: 700,
-            cursor: isResetting ? 'wait' : 'pointer',
-            transition: 'all 0.15s ease',
           }}
           title="Erases execution data and restores demo environment to initial state"
         >
-          <RotateCcw size={13} className={isResetting ? 'spin' : ''} />
+          <RotateCcw size={13} className={isResetting ? 'spin' : ''} style={{ flexShrink: 0 }} />
           <span>{isResetting ? 'Resetting...' : 'Reset Demo Data'}</span>
-        </button>
-
-        {/* Refresh Button with Timestamp */}
-        <button
-          onClick={handleManualRefresh}
-          className="btn btn-ghost btn-sm"
-          style={{ gap: '6px', fontSize: '11px', borderRadius: '9999px' }}
-          title={`Click to refresh data. Last refreshed at ${lastRefreshed}`}
-        >
-          <RefreshCw size={14} className={isRefreshing ? 'spin' : ''} />
-          <span>{isRefreshing ? 'Refreshing...' : `Refreshed ${lastRefreshed}`}</span>
         </button>
 
         {/* Notifications Button */}
@@ -284,7 +336,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
               }}
               title="Notifications"
             >
-              <Bell size={17} />
+              <Bell size={17} style={{ flexShrink: 0 }} />
               
               {unreadCount > 0 && (
                 <span
@@ -365,8 +417,8 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         )}
 
         {/* User Info & Persona Pill */}
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--neutral-900)', margin: 0 }}>
+        <div className="topbar-user-info">
+          <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--neutral-900)', margin: 0, whiteSpace: 'nowrap' }}>
             {currentUser.displayName || currentUser.username}
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
@@ -389,42 +441,17 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         </div>
 
         {/* User Avatar */}
-        <div 
-          style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--brand-purple)',
-            color: '#FFFFFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '13px',
-            border: '2px solid #FFFFFF',
-            boxShadow: 'var(--shadow-subtle)',
-          }}
-        >
+        <div className="topbar-avatar">
           {getInitials()}
         </div>
 
         {/* Logout Button */}
         <button
           onClick={() => setShowLogoutConfirm(true)}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--neutral-500)',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '7px',
-            borderRadius: '8px',
-            transition: 'all 0.15s ease'
-          }}
+          className="topbar-btn-logout"
           title="Sign Out"
         >
-          <LogOut size={18} />
+          <LogOut size={18} style={{ flexShrink: 0 }} />
         </button>
       </div>
 

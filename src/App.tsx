@@ -109,49 +109,51 @@ const MainApp: React.FC = () => {
   const sidebarWidth = isSidebarCollapsed ? '72px' : '260px';
 
   return (
-    <div 
-      style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        minHeight: '100vh',
-        ['--sidebar-width' as any]: sidebarWidth
-      }}
-    >
-      <div className="app-container">
-        <Sidebar collapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
-        <div className="main-wrapper" style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <TopBar title={getPageTitle(location.pathname, user.role)} onToggleSidebar={toggleSidebar} isSidebarCollapsed={isSidebarCollapsed} />
-          <main className="content-container">
-            <Routes>
-              {/* Transporter Routes */}
-              <Route path="/transporter/dashboard"      element={<TransporterDashboard />} />
-              <Route path="/transporter/purchase-orders" element={<TransporterPOs />} />
-              <Route path="/transporter/pods"           element={<TransporterPODs />} />
-              <Route path="/transporter/invoices"       element={<TransporterInvoices />} />
+    <ContractPoProvider>
+      <div 
+        style={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          minHeight: '100vh',
+          ['--sidebar-width' as any]: sidebarWidth
+        }}
+      >
+        <div className="app-container">
+          <Sidebar collapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
+          <div className="main-wrapper" style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+            <TopBar title={getPageTitle(location.pathname, user.role)} onToggleSidebar={toggleSidebar} isSidebarCollapsed={isSidebarCollapsed} />
+            <main className="content-container">
+              <Routes>
+                {/* Transporter Routes */}
+                <Route path="/transporter/dashboard"      element={<TransporterDashboard />} />
+                <Route path="/transporter/purchase-orders" element={<TransporterPOs />} />
+                <Route path="/transporter/pods"           element={<TransporterPODs />} />
+                <Route path="/transporter/invoices"       element={<TransporterInvoices />} />
 
-              {/* Admin Routes */}
-              <Route path="/admin/dashboard"  element={<AdminDashboard />} />
-              <Route path="/admin/contracts"  element={<AdminContracts />} />
-              <Route path="/admin/approvals"  element={<AdminApprovals />} />
-              <Route path="/admin/invoices"   element={<AdminInvoices />} />
+                {/* Admin Routes */}
+                <Route path="/admin/dashboard"  element={<AdminDashboard />} />
+                <Route path="/admin/contracts"  element={<AdminContracts />} />
+                <Route path="/admin/approvals"  element={<AdminApprovals />} />
+                <Route path="/admin/invoices"   element={<AdminInvoices />} />
 
-              {/* Supervisor Routes */}
-              <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
+                {/* Supervisor Routes */}
+                <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
 
-              {/* Customer Routes */}
-              <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+                {/* Customer Routes */}
+                <Route path="/customer/dashboard" element={<CustomerDashboard />} />
 
-              {/* Driver Routes */}
-              <Route path="/driver/dashboard" element={<DriverDashboard />} />
+                {/* Driver Routes */}
+                <Route path="/driver/dashboard" element={<DriverDashboard />} />
 
-              {/* Catch-all */}
-              <Route path="*" element={<Navigate to={getDefaultRoute(user.role)} replace />} />
-            </Routes>
-          </main>
-          <Footer />
+                {/* Catch-all */}
+                <Route path="*" element={<Navigate to={getDefaultRoute(user.role)} replace />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
         </div>
       </div>
-    </div>
+    </ContractPoProvider>
   );
 };
 
@@ -161,9 +163,7 @@ export default function App() {
   return (
     <AuthProviderV3>
       <DemoProvider>
-        <ContractPoProvider>
-          <MainApp />
-        </ContractPoProvider>
+        <MainApp />
       </DemoProvider>
     </AuthProviderV3>
   );

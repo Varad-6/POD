@@ -17,38 +17,19 @@ export const ContractPoSelector: React.FC = () => {
   if (loading) return null;
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        backgroundColor: '#F8FAFC',
-        padding: '4px 10px',
-        borderRadius: '10px',
-        border: '1px solid #E2E8F0',
-        fontSize: '12px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--brand-orange)', fontWeight: 700 }}>
-        <Filter size={14} />
+    <div className="contract-po-selector">
+      <div className="contract-po-label">
+        <Filter size={14} style={{ flexShrink: 0 }} />
         <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Context:</span>
       </div>
 
       {/* Contract Selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', padding: '4px 8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
-        <FileText size={13} color="#0B192F" />
+      <div className="contract-po-select-wrapper">
+        <FileText size={13} color="#0B192F" style={{ flexShrink: 0 }} />
         <select
           value={selectedContractId}
           onChange={(e) => setSelectedContractId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-          style={{
-            border: 'none',
-            outline: 'none',
-            background: 'transparent',
-            fontSize: '12px',
-            fontWeight: 700,
-            color: '#0A192F',
-            cursor: 'pointer',
-          }}
+          className="contract-po-select"
         >
           <option value="ALL">All Contracts ({contracts.length})</option>
           {contracts.map((c: ContractV3) => (
@@ -59,23 +40,15 @@ export const ContractPoSelector: React.FC = () => {
         </select>
       </div>
 
-      <span style={{ color: '#94A3B8', fontWeight: 600 }}>➜</span>
+      <span className="contract-po-arrow">➜</span>
 
       {/* PO Selector */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#FFFFFF', padding: '4px 8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}>
-        <Package size={13} color="#FF5B00" />
+      <div className="contract-po-select-wrapper">
+        <Package size={13} color="#FF5B00" style={{ flexShrink: 0 }} />
         <select
           value={selectedPoId}
           onChange={(e) => setSelectedPoId(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
-          style={{
-            border: 'none',
-            outline: 'none',
-            background: 'transparent',
-            fontSize: '12px',
-            fontWeight: 700,
-            color: '#0A192F',
-            cursor: 'pointer',
-          }}
+          className="contract-po-select"
         >
           <option value="ALL">All POs ({filteredPOs.length})</option>
           {filteredPOs.map((po: PurchaseOrderV3) => (
