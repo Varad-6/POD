@@ -84,7 +84,7 @@ const MainApp: React.FC = () => {
     }
   }, [location.pathname, user]);
 
-  if (loading) {
+  if (loading && location.pathname !== '/login') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0A192F', color: '#FFFFFF' }}>
         <div style={{ backgroundColor: '#FFFFFF', padding: '16px 28px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>

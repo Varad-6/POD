@@ -23,6 +23,11 @@ export const ContractPoProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [loading, setLoading] = useState<boolean>(true);
 
   const loadData = async () => {
+    const token = localStorage.getItem('podzo_token_v3');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       const c = await caApi.getContracts();
