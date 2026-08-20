@@ -33,8 +33,26 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error('Unauthorized');
   }
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  const contentType = res.headers.get('content-type') || '';
+  let data: any = {};
+
+  if (contentType.includes('application/json')) {
+    try {
+      data = await res.json();
+    } catch (e) {
+      console.warn('[API Client JSON Parse Error]', e);
+    }
+  } else {
+    const rawText = await res.text();
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} — ${res.statusText || 'Server Endpoint Error'}`);
+    }
+    data = { text: rawText };
+  }
+
+  if (!res.ok) {
+    throw new Error(data.message || data.error || `HTTP ${res.status}`);
+  }
   return data as T;
 }
 
@@ -76,6 +94,8 @@ export const caApi = {
     request<{ id: number; message: string }>(`/po/${poId}/distribute`, { method: 'POST', body: JSON.stringify(data) }),
   getReviewQueue: (status: 'OPEN' | 'RESOLVED' = 'OPEN') =>
     request<ReviewQueueItemV3[]>(`/review-queue?status=${status}`),
+  clearReviewQueue: () =>
+    request<{ success: boolean; cleared: number; remaining: number; message: string }>('/review-queue', { method: 'DELETE' }),
   resolveReview: (id: number, notes: string) =>
     request<{ message: string }>(`/review-queue/${id}/resolve`, { method: 'PATCH', body: JSON.stringify({ resolution_notes: notes }) }),
   verifyCA: (assignmentId: number, verified_bool: boolean, notes?: string) =>

@@ -29,6 +29,14 @@ export const AdminApprovals: React.FC = () => {
 
   useEffect(() => {
     loadReviews();
+
+    const handleDataRefreshed = () => {
+      loadReviews();
+    };
+    window.addEventListener('pod_data_refreshed', handleDataRefreshed);
+    return () => {
+      window.removeEventListener('pod_data_refreshed', handleDataRefreshed);
+    };
   }, [activeTab]);
 
   const handleResolve = async () => {
@@ -51,10 +59,36 @@ export const AdminApprovals: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      <PageHeader 
-        title="Receipt & Weight Check Queue"
-        subtitle="Check and approve flagged delivery papers, OCR mismatches, or weight differences before making payment"
-      />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <PageHeader 
+          title="Receipt & Weight Check Queue"
+          subtitle="Check and approve flagged delivery papers, OCR mismatches, or weight differences before making payment"
+        />
+        <button
+          onClick={async () => {
+            try {
+              const res = await caApi.clearReviewQueue();
+              await loadReviews();
+              window.dispatchEvent(new Event('pod_data_refreshed'));
+              alert(`Review queue cleared successfully! (${res.cleared} items removed)`);
+            } catch (e: any) {
+              alert('Failed to clear review queue: ' + (e.message || 'Error occurred'));
+            }
+          }}
+          style={{
+            padding: '8px 14px',
+            backgroundColor: '#FEF2F2',
+            color: '#991B1B',
+            border: '1px solid #FCA5A5',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer'
+          }}
+        >
+          CLEAR QUEUE
+        </button>
+      </div>
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid var(--neutral-200)', paddingBottom: '12px' }}>
