@@ -1,0 +1,33 @@
+{
+  "version": "3.0.0",
+  "generated_at": "2026-08-20T09:24:13.830Z",
+  "demo_only": true,
+  "documents": [
+    {
+      "document_id": "DEMO-BILTY-001",
+      "document_type": "BILTY",
+      "file_name": "BLT-778899_po_4500001714.svg",
+      "file_path": "demo-data/documents/bilty/BLT-778899_po_4500001714.svg",
+      "persona": "SUPERVISOR",
+      "workflow_step": "DISPATCH_BILTY_UPLOAD",
+      "po_reference": "4500001714",
+      "contract_reference": "4600000017",
+      "vehicle_reg": "KV44RCGP",
+      "driver_name": "Zwelithini Dlamini",
+      "demo_only": true
+    },
+    {
+      "document_id": "DEMO-POD-001",
+      "document_type": "POD",
+      "file_name": "pod_po_4500001714_match.svg",
+      "file_path": "demo-data/documents/pod/pod_po_4500001714_match.svg",
+      "persona": "DRIVER",
+      "workflow_step": "POD_UPLOAD",
+      "po_reference": "4500001714",
+      "contract_reference": "4600000017",
+      "expected_ocr_status": "MATCH",
+      "confidence_pct": 92.5,
+      "demo_only": true
+    }
+  ]
+}
