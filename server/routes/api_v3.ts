@@ -24,9 +24,23 @@ function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: nu
 }
 
 // POST /api/v3/demo/reset
-router.post('/demo/reset', requireAuth, (_req: Request, res: Response) => {
+router.post('/demo/reset', requireAuth, (req: Request, res: Response) => {
   const db = getDb();
-  try {
+
+  const resetTransaction = db.transaction(() => {
+    // Count records before reset for audit response
+    const assignmentsCount = (db.prepare('SELECT COUNT(*) as c FROM transport_assignments').get() as any)?.c || 0;
+    const configsCount = (db.prepare('SELECT COUNT(*) as c FROM job_configs').get() as any)?.c || 0;
+    const weightLogsCount = (db.prepare('SELECT COUNT(*) as c FROM weight_logs').get() as any)?.c || 0;
+    const otpsCount = (db.prepare('SELECT COUNT(*) as c FROM otp_verifications').get() as any)?.c || 0;
+    const podsCount = (db.prepare('SELECT COUNT(*) as c FROM pod_documents').get() as any)?.c || 0;
+    const reviewsCount = (db.prepare('SELECT COUNT(*) as c FROM review_queue').get() as any)?.c || 0;
+    const invoicesCount = (db.prepare('SELECT COUNT(*) as c FROM delivery_invoices').get() as any)?.c || 0;
+
+    // Preserved S21 counts
+    const contractsCount = (db.prepare('SELECT COUNT(*) as c FROM contracts').get() as any)?.c || 0;
+    const posCount = (db.prepare('SELECT COUNT(*) as c FROM purchase_orders').get() as any)?.c || 0;
+
     // 1. Wipe execution tables in reverse dependency order
     db.prepare('DELETE FROM miro_invoices').run();
     db.prepare('DELETE FROM main_invoices').run();
@@ -46,17 +60,46 @@ router.post('/demo/reset', requireAuth, (_req: Request, res: Response) => {
     db.prepare('DELETE FROM weight_logs').run();
     db.prepare('DELETE FROM driver_assignment_data').run();
 
-    // 2. Reset transport assignments status back to ASSIGNED
-    db.prepare("UPDATE transport_assignments SET status = 'ASSIGNED', location = 'Emoyeni Mine Siding'").run();
+    // 2. Wipe transport assignments and job configs completely for a clean state
+    db.prepare('DELETE FROM transport_assignments').run();
+    db.prepare('DELETE FROM job_configs').run();
 
-    // 3. Reset job configs status
-    db.prepare("UPDATE job_configs SET status = 'ASSIGNED' WHERE id IN (SELECT job_config_id FROM transport_assignments)").run();
+    // 3. Reset all purchase orders status to OPEN (S21 POs preserved)
+    db.prepare("UPDATE purchase_orders SET status = 'OPEN'").run();
 
-    console.log('[DB V3] Demo execution data reset successfully to clean initial state.');
-    return res.json({ status: 'OK', message: 'Demo execution data reset successfully to clean initial state.' });
+    // 4. Log reset audit event
+    const totalReset = assignmentsCount + configsCount + weightLogsCount + otpsCount + podsCount + reviewsCount + invoicesCount;
+    db.prepare(`
+      INSERT INTO demo_reset_audit (user_id, user_role, records_reset, s21_preserved)
+      VALUES (?, ?, ?, ?)
+    `).run(req.user!.userId, req.user!.role, totalReset, posCount);
+
+    return {
+      success: true,
+      message: 'Demo reset successfully',
+      reset: {
+        transport_executions: configsCount,
+        assignments: assignmentsCount,
+        weighbridge_records: weightLogsCount,
+        otp_records: otpsCount,
+        pod_records: podsCount,
+        review_records: reviewsCount,
+        invoices: invoicesCount,
+      },
+      preserved: {
+        s21_contracts: contractsCount,
+        s21_purchase_orders: posCount
+      }
+    };
+  });
+
+  try {
+    const result = resetTransaction();
+    console.log('[DB V3] Demo reset transaction executed successfully.');
+    return res.json(result);
   } catch (err: any) {
     console.error('[DB V3 Reset Error]', err);
-    return res.status(500).json({ error: 'Failed to reset demo data', message: err.message });
+    return res.status(500).json({ error: 'Demo reset failed. No data was changed.', message: err.message });
   }
 });
 
@@ -837,6 +880,14 @@ router.post('/assignments/:id/weight-log', requireAuth, (req: Request, res: Resp
     }
   }
 
+  // Anti-tampering check: Prevent overwriting origin weights
+  if (['MINE_TARE', 'MINE_GROSS'].includes(stage)) {
+    const existing = db.prepare('SELECT id FROM weight_logs WHERE assignment_id = ? AND stage = ?').get(assignmentId, stage);
+    if (existing) {
+      return res.status(403).json({ error: 'Origin Weighbridge measurements are immutable and cannot be overwritten.' });
+    }
+  }
+
   db.prepare(`
     INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail)
     VALUES (?, ?, ?, ?)
@@ -847,11 +898,59 @@ router.post('/assignments/:id/weight-log', requireAuth, (req: Request, res: Resp
     db.prepare("UPDATE transport_assignments SET status = 'MINE_TARE_LOGGED' WHERE id = ?").run(assignmentId);
   } else if (stage === 'MINE_GROSS') {
     db.prepare("UPDATE transport_assignments SET status = 'MINE_GROSS_LOGGED' WHERE id = ?").run(assignmentId);
-  } else if (stage === 'DEST_GROSS') {
-    db.prepare("UPDATE transport_assignments SET status = 'DELIVERED' WHERE id = ?").run(assignmentId);
+  } else if (stage === 'DEST_GROSS' || stage === 'DEST_TARE') {
+    // Check if both DEST_GROSS and DEST_TARE are logged
+    const weights = db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(assignmentId) as any[];
+    const mineTare = weights.find(w => w.stage === 'MINE_TARE')?.weight_kg || 10000;
+    const mineGross = weights.find(w => w.stage === 'MINE_GROSS')?.weight_kg || 44000;
+    const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg;
+    const destTare = weights.find(w => w.stage === 'DEST_TARE')?.weight_kg;
+
+    const dispatchNet = mineGross - mineTare;
+
+    if (destGross !== undefined && destTare !== undefined) {
+      const receivedNet = destGross - destTare;
+      const varianceKg = receivedNet - dispatchNet;
+      const variancePct = dispatchNet > 0 ? parseFloat(((varianceKg / dispatchNet) * 100).toFixed(2)) : 0;
+
+      const poInfo = db.prepare(`
+        SELECT po.id as po_id, po.tolerance_pct, po.target_qty
+        FROM transport_assignments ta
+        JOIN job_configs jc ON jc.id = ta.job_config_id
+        JOIN purchase_orders po ON po.id = jc.po_id
+        WHERE ta.id = ?
+      `).get(assignmentId) as any;
+
+      const tolerancePct = poInfo?.tolerance_pct || 0.5;
+      const isOutsideTolerance = Math.abs(variancePct) > tolerancePct;
+      const reconStatus = isOutsideTolerance ? 'OUTSIDE_TOLERANCE' : 'WITHIN_TOLERANCE';
+
+      // Save reconciliation record
+      db.prepare(`
+        INSERT OR REPLACE INTO weight_reconciliations (
+          assignment_id, po_id, dispatch_net_kg, received_net_kg, variance_kg, variance_pct, tolerance_pct, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        assignmentId, poInfo?.po_id || 1, dispatchNet, receivedNet, varianceKg, variancePct, tolerancePct, reconStatus
+      );
+
+      // Create exception if outside tolerance
+      if (isOutsideTolerance) {
+        db.prepare(`
+          INSERT INTO delivery_exceptions (
+            assignment_id, exception_type, dispatch_qty_kg, received_qty_kg, difference_kg,
+            variance_pct, tolerance_pct, reason_category, comment, status, logged_by
+          ) VALUES (?, 'WEIGHT_VARIANCE', ?, ?, ?, ?, ?, 'Measurement Difference', 'Net weight variance exceeds allowed tolerance', 'OPEN', ?)
+        `).run(assignmentId, dispatchNet, receivedNet, varianceKg, variancePct, tolerancePct, req.user!.userId);
+
+        db.prepare("UPDATE transport_assignments SET status = 'UNDER_REVIEW' WHERE id = ?").run(assignmentId);
+      } else {
+        db.prepare("UPDATE transport_assignments SET status = 'DELIVERED' WHERE id = ?").run(assignmentId);
+      }
+    }
   }
 
-  return res.json({ message: 'Weight log recorded' });
+  return res.json({ message: 'Weight log recorded successfully' });
 });
 
 // POST /api/v3/assignments/:id/transit-event
@@ -933,88 +1032,90 @@ router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Resp
     return res.status(400).json({ error: 'pod_file_url required' });
   }
 
-  // Insert base POD record
-  db.prepare(`
-    INSERT OR REPLACE INTO pod_documents (assignment_id, pod_file_url, match_status)
-    VALUES (?, ?, 'PENDING')
-  `).run(assignmentId, pod_file_url);
+  try {
+    // Insert base POD record
+    db.prepare(`
+      INSERT OR REPLACE INTO pod_documents (assignment_id, pod_file_url, match_status)
+      VALUES (?, ?, 'PENDING')
+    `).run(assignmentId, pod_file_url);
 
-  db.prepare("UPDATE transport_assignments SET status = 'POD_UPLOADED' WHERE id = ?").run(assignmentId);
+    db.prepare("UPDATE transport_assignments SET status = 'POD_UPLOADED' WHERE id = ?").run(assignmentId);
 
-  // ──────── DOCUMENT PROCESSING / AI SIMULATION ────────
-  // Read weights & PO details
-  const weights = db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(assignmentId) as any[];
-  const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg || 0;
-  const destTare = weights.find(w => w.stage === 'DEST_TARE')?.weight_kg || 0;
-  const acceptedPayload = (destGross - destTare) || 34000.0; // in kg
+    // Read weights & PO details
+    const weights = (db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(assignmentId) as any[]) || [];
+    const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg || 0;
+    const destTare = weights.find(w => w.stage === 'DEST_TARE')?.weight_kg || 0;
+    const acceptedPayload = (destGross - destTare) || 34000.0; // in kg
 
-  const poInfo = db.prepare(`
-    SELECT po.target_qty, po.tolerance_pct, po.sap_po_no
-    FROM transport_assignments ta
-    JOIN job_configs jc ON jc.id = ta.job_config_id
-    JOIN purchase_orders po ON po.id = jc.po_id
-    WHERE ta.id = ?
-  `).get(assignmentId) as any;
+    const poInfo = (db.prepare(`
+      SELECT po.target_qty, po.tolerance_pct, po.sap_po_no
+      FROM transport_assignments ta
+      JOIN job_configs jc ON jc.id = ta.job_config_id
+      JOIN purchase_orders po ON po.id = jc.po_id
+      WHERE ta.id = ?
+    `).get(assignmentId) as any) || { target_qty: 34.0, tolerance_pct: 0.5, sap_po_no: '4500001714' };
 
-  // Run variance calculation
-  const targetQtyKg = poInfo.target_qty * 1000;
-  const variancePct = ((acceptedPayload - targetQtyKg) / targetQtyKg) * 100;
-  const passBool = Math.abs(variancePct) <= poInfo.tolerance_pct ? 1 : 0;
+    // Run variance calculation
+    const targetQtyKg = (poInfo.target_qty || 34.0) * 1000;
+    const tolerancePct = poInfo.tolerance_pct || 0.5;
+    const sapPoNo = poInfo.sap_po_no || '4500001714';
+    const variancePct = ((acceptedPayload - targetQtyKg) / targetQtyKg) * 100;
+    const passBool = Math.abs(variancePct) <= tolerancePct ? 1 : 0;
 
-  // Simulate OCR results
-  // Make OCR weight match the actual payload (or simulate mismatch only if passBool is 0)
-  const isWeightMatch = passBool === 1;
-  const ocrWeight = isWeightMatch ? (acceptedPayload / 1000) : (acceptedPayload / 1000 - 3.5);
-  const confidence = isWeightMatch ? 92.5 : 65.0;
-  const ocrWaybill = poInfo.sap_po_no;
+    // Simulate OCR results based on the selected mock file
+    const isMismatchDemo = pod_file_url.includes('pod_9.jpg') || pod_file_url.includes('887711') || pod_file_url.includes('Mismatch');
+    const isWeightMatch = passBool === 1 && !isMismatchDemo;
+    const ocrWeight = isWeightMatch ? (acceptedPayload / 1000) : (acceptedPayload / 1000 - 3.5);
+    const confidence = isWeightMatch ? 92.5 : 65.0;
+    const ocrWaybill = isMismatchDemo ? 'WB-887711-MISMATCH' : sapPoNo;
 
-  const matchStatus = (ocrWaybill === poInfo.sap_po_no && isWeightMatch) ? 'MATCH' : 'MISMATCH';
+    const matchStatus = (ocrWaybill === sapPoNo && isWeightMatch) ? 'MATCH' : 'MISMATCH';
 
-  // Save OCR results
-  db.prepare(`
-    UPDATE pod_documents
-    SET ocr_waybill_extracted = ?, ocr_weight_extracted = ?, ocr_confidence_pct = ?, match_status = ?
-    WHERE assignment_id = ?
-  `).run(ocrWaybill, ocrWeight, confidence, matchStatus, assignmentId);
+    // Save OCR results
+    db.prepare(`
+      UPDATE pod_documents
+      SET ocr_waybill_extracted = ?, ocr_weight_extracted = ?, ocr_confidence_pct = ?, match_status = ?
+      WHERE assignment_id = ?
+    `).run(ocrWaybill, ocrWeight, confidence, matchStatus, assignmentId);
 
-  db.prepare(`
-    INSERT OR REPLACE INTO variance_checks (assignment_id, stage, accepted_payload, po_target_qty, variance_pct, tolerance_pct, pass_bool)
-    VALUES (?, 'DEST', ?, ?, ?, ?, ?)
-  `).run(assignmentId, acceptedPayload, poInfo.target_qty, variancePct, poInfo.tolerance_pct, passBool);
+    db.prepare(`
+      INSERT OR REPLACE INTO variance_checks (assignment_id, stage, accepted_payload, po_target_qty, variance_pct, tolerance_pct, pass_bool)
+      VALUES (?, 'DEST', ?, ?, ?, ?, ?)
+    `).run(assignmentId, acceptedPayload, poInfo.target_qty || 34.0, variancePct, tolerancePct, passBool);
 
-  // Trigger review queue block
-  let flagReason = 'AWAITING_CA_VERIFY';
-  let isUnderReview = false;
+    // Every uploaded POD enters the Company Admin Verification Desk Queue
+    let flagReason = 'AWAITING_CA_VERIFY';
+    if (matchStatus === 'MISMATCH' || confidence < 70) {
+      flagReason = 'OCR_MISMATCH';
+    } else if (passBool === 0) {
+      flagReason = 'TOLERANCE_EXCEEDED';
+    }
 
-  if (matchStatus === 'MISMATCH' || confidence < 70) {
-    flagReason = 'OCR_MISMATCH';
-    isUnderReview = true;
-  } else if (passBool === 0) {
-    flagReason = 'TOLERANCE_EXCEEDED';
-    isUnderReview = true;
+    db.prepare(`
+      INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
+      VALUES (?, ?, 'OPEN', 1)
+    `).run(assignmentId, flagReason);
+
+    db.prepare("UPDATE transport_assignments SET status = 'UNDER_REVIEW' WHERE id = ?").run(assignmentId);
+
+    return res.json({
+      message: 'POD processed successfully, queued for CA verification',
+      ocr: {
+        ocr_waybill_extracted: ocrWaybill,
+        ocr_weight_extracted: ocrWeight,
+        ocr_confidence_pct: confidence,
+        match_status: matchStatus
+      },
+      variance: {
+        variance_pct: variancePct,
+        pass_bool: passBool === 1
+      },
+      under_review: isUnderReview
+    });
+  } catch (err: any) {
+    console.error('[POD Upload Handler Error]', err);
+    return res.status(500).json({ error: 'Failed to process POD upload', message: err.message });
   }
-
-  db.prepare(`
-    INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
-    VALUES (?, ?, 'OPEN', 1)
-  `).run(assignmentId, flagReason);
-
-  db.prepare("UPDATE transport_assignments SET status = 'UNDER_REVIEW' WHERE id = ?").run(assignmentId);
-
-  return res.json({
-    message: 'POD processed successfully, queued for CA verification',
-    ocr: {
-      ocr_waybill_extracted: ocrWaybill,
-      ocr_weight_extracted: ocrWeight,
-      ocr_confidence_pct: confidence,
-      match_status: matchStatus
-    },
-    variance: {
-      variance_pct: variancePct,
-      pass_bool: passBool === 1
-    },
-    under_review: isUnderReview
-  });
 });
 
 // ─── CUSTOMER (CR) ENDPOINTS ──────────────────────────────────

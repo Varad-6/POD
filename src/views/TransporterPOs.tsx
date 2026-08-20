@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
 import { useContractPo } from '../contexts/ContractPoContext';
-import { taApi, transportersApi, JobConfigV3, Driver, Vehicle } from '../lib/api_v3';
+import { taApi, transportersApi, assignmentsApi, JobConfigV3, Driver, Vehicle } from '../lib/api_v3';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { formatCurrency } from '../utils/format';
@@ -65,20 +65,25 @@ export const TransporterPOs: React.FC = () => {
 
   const transporterId = user?.entityId || 1;
 
+  const [assignmentsList, setAssignmentsList] = useState<any[]>([]);
+
   const loadData = async () => {
     setLoading(true);
     try {
-      const [pendingList, assignedList, drs, vhs] = await Promise.all([
+      const [pendingList, assignedList, drs, vhs, activeAssigns] = await Promise.all([
         taApi.getJobConfigs('PENDING'),
         taApi.getJobConfigs('ASSIGNED'),
         transportersApi.drivers(transporterId),
         transportersApi.vehicles(transporterId),
+        assignmentsApi.list().catch(() => [])
       ]);
       setJobConfigs([...pendingList, ...assignedList]);
       setDrivers(drs);
-      if (drs.length > 0) setSelectedDriverId(drs[0].id.toString());
       setVehicles(vhs);
-      if (vhs.length > 0) setSelectedVehicleId(vhs[0].id.toString());
+      setAssignmentsList(activeAssigns);
+      // Clear selections by default to force Truck-first selection flow
+      setSelectedVehicleId('');
+      setSelectedDriverId('');
     } catch (err) {
       console.error('Failed to load data:', err);
     } finally {
@@ -99,6 +104,8 @@ export const TransporterPOs: React.FC = () => {
 
   const handleOpenPO = (jc: JobConfigV3) => {
     setSelectedPO(jc);
+    setSelectedVehicleId('');
+    setSelectedDriverId('');
     setAssignmentStep(1);
     setSuccessPO(null);
   };
@@ -303,78 +310,162 @@ export const TransporterPOs: React.FC = () => {
                 {assignmentStep === 1 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-                    {/* Driver Selector */}
+                    {/* Step 1.1: Choose Truck First */}
                     <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-                        <User size={12} /> Choose Driver
-                      </label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {drivers.map(d => (
-                          <label
-                            key={d.id}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: '14px',
-                              padding: '14px 16px', borderRadius: '10px',
-                              border: selectedDriverId === d.id.toString() ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
-                              backgroundColor: selectedDriverId === d.id.toString() ? '#EFF6FF' : '#fff',
-                              cursor: 'pointer', transition: 'all 0.15s'
-                            }}
-                          >
-                            <input
-                              type="radio"
-                              name="driver"
-                              value={d.id}
-                              checked={selectedDriverId === d.id.toString()}
-                              onChange={e => setSelectedDriverId(e.target.value)}
-                              style={{ accentColor: 'var(--accent-blue)' }}
-                            />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 700, fontSize: '14px' }}>{d.name}</div>
-                              <div style={{ fontSize: '11px', color: 'var(--neutral-500)', marginTop: '2px' }}>
-                                License: {d.license_no} &nbsp;|&nbsp; PrDP valid till {d.prdp_expiry}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                          <Truck size={14} color="var(--accent-blue)" /> 1. Choose Truck & Specification
+                        </label>
+                        <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 600 }}>
+                          Cargo Required: <strong style={{ color: 'var(--neutral-800)' }}>{selectedPO.material || 'Bulk Cargo / Coal'}</strong> ({selectedPO.target_qty || 34} Tons)
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {vehicles.map((v, idx) => {
+                          // Standard Truck Specs & Types for Mining/Logistics logistics domain
+                          const specs = [
+                            { type: 'Side Tipper B-Double', body: 'Open Top Hydraulic Tipper', suitableFor: ['Washed Coal', 'Coal', 'Ore', 'Aggregate', 'Bulk Sand'], icon: '🚛', payload: 34 },
+                            { type: 'End Tipper Super-Cube', body: 'Reinforced Steel Dump Body', suitableFor: ['Washed Coal', 'Raw Coal', 'GRAVEL', 'SPARE_PARTS_BOX'], icon: '🚚', payload: 30 },
+                            { type: 'Flatbed Double Trailer', body: 'Enclosed Side Curtain / Flatbed', suitableFor: ['SPARE_PARTS_BOX', 'CONTAINER', 'Palletized Goods'], icon: '📦', payload: 28 },
+                            { type: 'Tanker Semi-Trailer', body: 'Closed Cylindrical Pressure Tank', suitableFor: ['Oil', 'Fuel', 'Chemicals', 'Liquid Bulk'], icon: '🛢️', payload: 32 }
+                          ];
+                          const spec = specs[idx % specs.length];
+                          const materialMatch = spec.suitableFor.some(m => (selectedPO.material || '').toLowerCase().includes(m.toLowerCase()));
+                          const isSelected = selectedVehicleId === v.id.toString();
+
+                          return (
+                            <label
+                              key={v.id}
+                              style={{
+                                display: 'flex', alignItems: 'flex-start', gap: '14px',
+                                padding: '16px', borderRadius: '12px',
+                                border: isSelected ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
+                                backgroundColor: isSelected ? '#F0F7FF' : '#fff',
+                                cursor: 'pointer', transition: 'all 0.15s ease',
+                                boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.1)' : 'none'
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                name="vehicle"
+                                value={v.id}
+                                checked={isSelected}
+                                onChange={e => setSelectedVehicleId(e.target.value)}
+                                style={{ accentColor: 'var(--accent-blue)', marginTop: '4px' }}
+                              />
+                              <div style={{ flex: 1 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontSize: '18px' }}>{spec.icon}</span>
+                                    <span className="mono" style={{ fontWeight: 800, fontSize: '15px', color: 'var(--neutral-900)' }}>{v.reg_no}</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-blue)', backgroundColor: '#DBEAFE', padding: '2px 8px', borderRadius: '6px' }}>
+                                      {spec.type}
+                                    </span>
+                                  </div>
+                                  <span style={{ fontSize: '12px', fontWeight: 800, color: v.capacity >= (selectedPO.target_qty || 30) ? '#059669' : '#D97706' }}>
+                                    Capacity: {v.capacity} Tons
+                                  </span>
+                                </div>
+
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px', fontSize: '11px', color: 'var(--neutral-600)' }}>
+                                  <span>🔒 Body Spec: <strong>{spec.body}</strong></span>
+                                  <span>📦 Suitable Materials: <strong>{spec.suitableFor.join(', ')}</strong></span>
+                                </div>
+
+                                {materialMatch && (
+                                  <div style={{ marginTop: '8px', fontSize: '11px', fontWeight: 700, color: '#047857', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <CheckCircle2 size={12} color="#047857" /> Recommended for {selectedPO.material || 'this cargo'}
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                            {selectedDriverId === d.id.toString() && <CheckCircle2 size={16} color="var(--accent-blue)" />}
-                          </label>
-                        ))}
+                              {isSelected && <CheckCircle2 size={18} color="var(--accent-blue)" style={{ marginTop: '2px' }} />}
+                            </label>
+                          );
+                        })}
                       </div>
                     </div>
 
-                    {/* Vehicle Selector */}
-                    <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
-                        <Truck size={12} /> Choose Truck
-                      </label>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {vehicles.map(v => (
-                          <label
-                            key={v.id}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: '14px',
-                              padding: '14px 16px', borderRadius: '10px',
-                              border: selectedVehicleId === v.id.toString() ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
-                              backgroundColor: selectedVehicleId === v.id.toString() ? '#EFF6FF' : '#fff',
-                              cursor: 'pointer', transition: 'all 0.15s'
-                            }}
-                          >
-                            <input
-                              type="radio"
-                              name="vehicle"
-                              value={v.id}
-                              checked={selectedVehicleId === v.id.toString()}
-                              onChange={e => setSelectedVehicleId(e.target.value)}
-                              style={{ accentColor: 'var(--accent-blue)' }}
-                            />
-                            <div style={{ flex: 1 }}>
-                              <div className="mono" style={{ fontWeight: 700, fontSize: '14px' }}>{v.reg_no}</div>
-                              <div style={{ fontSize: '11px', color: 'var(--neutral-500)', marginTop: '2px' }}>
-                                Capacity: {v.capacity} Tons
-                              </div>
-                            </div>
-                            {selectedVehicleId === v.id.toString() && <CheckCircle2 size={16} color="var(--accent-blue)" />}
-                          </label>
-                        ))}
+                    {/* Step 1.2: Choose Driver for the Selected Truck */}
+                    <div style={{
+                      position: 'relative',
+                      opacity: selectedVehicleId ? 1 : 0.65,
+                      pointerEvents: selectedVehicleId ? 'auto' : 'none',
+                      transition: 'all 0.2s ease',
+                      border: selectedVehicleId ? 'none' : '1px dashed var(--neutral-300)',
+                      borderRadius: '12px',
+                      padding: selectedVehicleId ? '0' : '16px',
+                      backgroundColor: selectedVehicleId ? 'transparent' : '#FAFAFA'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: selectedVehicleId ? 'var(--neutral-600)' : 'var(--neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                          <User size={14} color={selectedVehicleId ? 'var(--accent-blue)' : 'var(--neutral-400)'} /> 2. Assign Driver to Truck {selectedVehicle ? `(${selectedVehicle.reg_no})` : ''}
+                        </label>
+                        {!selectedVehicleId && (
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#C2410C', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', padding: '3px 10px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            🔒 Select a Truck First to Unlock Drivers
+                          </span>
+                        )}
                       </div>
+
+                      {!selectedVehicleId ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--neutral-500)', fontSize: '13px', fontWeight: 600 }}>
+                          👈 Please choose a truck above to view and assign compatible drivers.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {drivers.map(d => {
+                            const isDriverSelected = selectedDriverId === d.id.toString();
+                            // Check if driver is busy on an active assigned job
+                            const activeJob = assignmentsList.find((a: any) => a.driver_id === d.id && !['DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status));
+                            const isBusy = !!activeJob;
+
+                            return (
+                              <label
+                                key={d.id}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: '14px',
+                                  padding: '14px 16px', borderRadius: '10px',
+                                  border: isDriverSelected ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
+                                  backgroundColor: isBusy ? '#F8FAFC' : isDriverSelected ? '#EFF6FF' : '#fff',
+                                  cursor: isBusy ? 'not-allowed' : 'pointer',
+                                  opacity: isBusy ? 0.6 : 1,
+                                  transition: 'all 0.15s'
+                                }}
+                              >
+                                <input
+                                  type="radio"
+                                  name="driver"
+                                  value={d.id}
+                                  disabled={isBusy}
+                                  checked={isDriverSelected}
+                                  onChange={e => setSelectedDriverId(e.target.value)}
+                                  style={{ accentColor: 'var(--accent-blue)' }}
+                                />
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ fontWeight: 700, fontSize: '14px' }}>{d.name}</span>
+                                    {isBusy && (
+                                      <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#FEE2E2', color: '#991B1B', padding: '1px 7px', borderRadius: '4px' }}>
+                                        ⛔ Busy on Active Trip (PO #{activeJob.sap_po_no})
+                                      </span>
+                                    )}
+                                    {isDriverSelected && selectedVehicle && !isBusy && (
+                                      <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#FEF3C7', color: '#B45309', padding: '1px 7px', borderRadius: '4px' }}>
+                                        Assigned to {selectedVehicle.reg_no}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div style={{ fontSize: '11px', color: 'var(--neutral-500)', marginTop: '2px' }}>
+                                    License: {d.license_no} &nbsp;|&nbsp; PrDP valid till {d.prdp_expiry}
+                                  </div>
+                                </div>
+                                {isDriverSelected && <CheckCircle2 size={16} color="var(--accent-blue)" />}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     {/* Schedule */}

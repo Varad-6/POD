@@ -144,7 +144,9 @@ export const AdminDashboard: React.FC = () => {
                   </thead>
                   <tbody>
                     {contracts.map(c => {
-                      const pct = c.sap_contract_no === '4600000017' ? 72 : c.sap_contract_no === '4600000018' ? 45 : c.sap_contract_no === '4600000019' ? 60 : 30;
+                      const completedCount = (c as any).completed_count || 0;
+                      const totalPos = (c as any).total_pos || 5;
+                      const pct = Math.round((completedCount / totalPos) * 100);
                       return (
                         <tr key={c.id} onClick={() => navigate('/admin/contracts')} style={{ cursor: 'pointer' }}>
                           <td className="mono" style={{ fontWeight: 700, color: 'var(--brand-purple)' }}>{c.sap_contract_no}</td>
@@ -152,7 +154,7 @@ export const AdminDashboard: React.FC = () => {
                           <td style={{ minWidth: '180px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px', fontWeight: 600 }}>
                               <span>{pct}% Executed</span>
-                              <span style={{ color: 'var(--neutral-500)' }}>Target Active</span>
+                              <span style={{ color: 'var(--neutral-500)' }}>{completedCount > 0 ? 'Target Active' : '0 POs Completed'}</span>
                             </div>
                             <div style={{ height: '6px', width: '100%', backgroundColor: 'var(--neutral-200)', borderRadius: '3px', overflow: 'hidden' }}>
                               <div style={{ height: '100%', width: `${pct}%`, backgroundColor: pct > 70 ? '#10B981' : pct > 40 ? '#F59E0B' : '#6366F1', borderRadius: '3px' }} />

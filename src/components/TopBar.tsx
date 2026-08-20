@@ -49,12 +49,20 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
     setShowResetConfirm(false);
     setIsResetting(true);
     try {
-      await demoApi.resetData();
+      const res: any = await demoApi.resetData();
+      localStorage.removeItem('demo_pos');
+      localStorage.removeItem('demo_offloads');
+      localStorage.removeItem('demo_invoices');
       window.dispatchEvent(new Event('pod_data_refreshed'));
-      alert('✓ Demo data reset successfully! You can now repeat the end-to-end demo workflow.');
-      window.location.reload();
+
+      const summaryText = res.preserved
+        ? `✓ Demo Reset Complete!\n\n• Demo execution data: Cleared (${res.reset?.assignments || 0} assignments, ${res.reset?.pod_records || 0} PODs, ${res.reset?.invoices || 0} invoices)\n• Real S21 Contracts: Preserved (${res.preserved.s21_contracts} Contracts)\n• Real S21 POs: Preserved (${res.preserved.s21_purchase_orders} POs set to OPEN)\n\nYou can start the demonstration again.`
+        : '✓ Demo environment reset successfully! All POs are now open for Company Admin assignment.';
+
+      alert(summaryText);
+      window.location.href = '/admin/contracts';
     } catch (err: any) {
-      alert('Failed to reset demo data: ' + (err.message || 'Error occurred'));
+      alert('Demo reset failed. No data was changed: ' + (err.message || 'Error occurred'));
     } finally {
       setIsResetting(false);
     }
@@ -113,123 +121,12 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
           {title}
         </h2>
-        <ContractPoSelector />
-
-        {/* SAP Environment Indicator */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '3px 10px',
-            borderRadius: '12px',
-            fontSize: '11px',
-            fontWeight: 800,
-            backgroundColor: sapMode === 'LIVE' ? 'rgba(0, 138, 0, 0.1)' : 'var(--brand-purple-light)',
-            color: sapMode === 'LIVE' ? 'var(--success-600)' : 'var(--brand-purple)',
-            border: `1px solid ${sapMode === 'LIVE' ? 'rgba(0, 138, 0, 0.3)' : 'rgba(77, 20, 140, 0.3)'}`,
-            textTransform: 'uppercase',
-            letterSpacing: '0.04em',
-          }}
-          title={sapMode === 'LIVE' ? 'Connected to S21 OData Server' : 'Operating in Persistent Mock SAP Mode'}
-        >
-          <Server size={12} />
-          <span>{sapMode === 'LIVE' ? 'S21 SAP' : 'MOCK SAP'}</span>
-        </div>
+        <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
+          {title}
+        </h2>
       </div>
 
-      {/* Global Search Bar */}
-      <form onSubmit={handleSearch} style={{ position: 'relative', flex: 1, maxWidth: '380px', margin: '0 24px' }}>
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={16} color="var(--neutral-400)" style={{ position: 'absolute', left: '14px' }} />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search PO, Contract, Driver, Truck, POD..."
-            style={{
-              width: '100%',
-              padding: '8px 14px 8px 38px',
-              fontSize: '12.5px',
-              borderRadius: '9999px',
-              border: '1px solid var(--neutral-300)',
-              backgroundColor: 'var(--neutral-50)',
-              outline: 'none',
-              transition: 'all 0.15s ease',
-            }}
-          />
-        </div>
-
-        {/* Search Results Dropdown Card */}
-        {searchResults && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '44px',
-              left: 0,
-              right: 0,
-              backgroundColor: '#FFFFFF',
-              borderRadius: '12px',
-              border: '1px solid var(--neutral-200)',
-              boxShadow: 'var(--shadow-modal)',
-              zIndex: 200,
-              maxHeight: '360px',
-              overflowY: 'auto',
-              padding: '12px',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--neutral-100)' }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-500)', textTransform: 'uppercase' }}>
-                Search Results for "{searchResults.query}"
-              </span>
-              <button onClick={() => setSearchResults(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '11px', color: 'var(--brand-purple)', fontWeight: 700 }}>
-                Close
-              </button>
-            </div>
-
-            {searchResults.contracts.length > 0 && (
-              <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase' }}>Contracts ({searchResults.contracts.length})</span>
-                {searchResults.contracts.map((c: any) => (
-                  <div key={c.id} onClick={() => { setSearchResults(null); navigate('/admin/contracts'); }} style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', backgroundColor: 'var(--neutral-50)', marginTop: '4px', fontSize: '12px', fontWeight: 600 }}>
-                    📄 {c.sap_contract_no} — {c.customer_name}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.purchaseOrders.length > 0 && (
-              <div style={{ marginBottom: '10px' }}>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase' }}>Purchase Orders ({searchResults.purchaseOrders.length})</span>
-                {searchResults.purchaseOrders.map((po: any) => (
-                  <div key={po.id} onClick={() => { setSearchResults(null); navigate('/transporter/purchase-orders'); }} style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', backgroundColor: 'var(--neutral-50)', marginTop: '4px', fontSize: '12px', fontWeight: 600 }}>
-                    📋 {po.sap_po_no} — {po.material} ({po.target_qty} TON)
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.assignments.length > 0 && (
-              <div>
-                <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase' }}>Dispatches ({searchResults.assignments.length})</span>
-                {searchResults.assignments.map((a: any) => (
-                  <div key={a.id} onClick={() => { setSearchResults(null); navigate('/admin/dashboard'); }} style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', backgroundColor: 'var(--neutral-50)', marginTop: '4px', fontSize: '12px', fontWeight: 600 }}>
-                    🚚 Dispatch #{a.id} — {a.driver_name} ({a.vehicle_reg}) • {a.status}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {searchResults.contracts.length === 0 && searchResults.purchaseOrders.length === 0 && searchResults.assignments.length === 0 && (
-              <div style={{ padding: '16px', textAlign: 'center', color: 'var(--neutral-500)', fontSize: '12px' }}>
-                No records found matching "{searchResults.query}"
-              </div>
-            )}
-          </div>
-        )}
-      </form>
-
-      {/* Right User Controls & Refresh Button */}
+      {/* Right User Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         {/* Reset Demo Data Button */}
         <button
@@ -253,17 +150,6 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         >
           <RotateCcw size={13} className={isResetting ? 'spin' : ''} />
           <span>{isResetting ? 'Resetting...' : 'Reset Demo Data'}</span>
-        </button>
-
-        {/* Refresh Button with Timestamp */}
-        <button
-          onClick={handleManualRefresh}
-          className="btn btn-ghost btn-sm"
-          style={{ gap: '6px', fontSize: '11px', borderRadius: '9999px' }}
-          title={`Click to refresh data. Last refreshed at ${lastRefreshed}`}
-        >
-          <RefreshCw size={14} className={isRefreshing ? 'spin' : ''} />
-          <span>{isRefreshing ? 'Refreshing...' : `Refreshed ${lastRefreshed}`}</span>
         </button>
 
         {/* Notifications Button */}

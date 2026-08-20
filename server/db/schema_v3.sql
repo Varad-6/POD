@@ -229,7 +229,7 @@ CREATE TABLE IF NOT EXISTS variance_checks (
 CREATE TABLE IF NOT EXISTS review_queue (
   id                  INTEGER PRIMARY KEY AUTOINCREMENT,
   assignment_id       INTEGER NOT NULL REFERENCES transport_assignments(id),
-  flag_reason         TEXT NOT NULL CHECK(flag_reason IN ('OCR_MISMATCH', 'TOLERANCE_EXCEEDED')),
+  flag_reason         TEXT NOT NULL CHECK(flag_reason IN ('OCR_MISMATCH', 'TOLERANCE_EXCEEDED', 'AWAITING_CA_VERIFY')),
   status              TEXT NOT NULL CHECK(status IN ('OPEN', 'RESOLVED')) DEFAULT 'OPEN',
   resolved_by_role    TEXT CHECK(resolved_by_role IN ('CA', 'TA', 'SR')),
   resolved_by_user_id INTEGER REFERENCES users(id),
@@ -295,6 +295,51 @@ CREATE TABLE IF NOT EXISTS sap_sync_log (
   synced_at     TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- ── WEIGHT RECONCILIATION & TOLERANCE ────────────────────────
+CREATE TABLE IF NOT EXISTS weight_reconciliations (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id       INTEGER UNIQUE NOT NULL REFERENCES transport_assignments(id),
+  po_id               INTEGER NOT NULL REFERENCES purchase_orders(id),
+  dispatch_net_kg     REAL NOT NULL,
+  received_net_kg     REAL NOT NULL,
+  variance_kg         REAL NOT NULL,
+  variance_pct        REAL NOT NULL,
+  tolerance_pct       REAL NOT NULL,
+  status              TEXT NOT NULL CHECK(status IN ('WITHIN_TOLERANCE', 'OUTSIDE_TOLERANCE')),
+  created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ── DELIVERY & WEIGHT EXCEPTIONS ─────────────────────────────
+CREATE TABLE IF NOT EXISTS delivery_exceptions (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id       INTEGER NOT NULL REFERENCES transport_assignments(id),
+  exception_type      TEXT NOT NULL CHECK(exception_type IN ('WEIGHT_VARIANCE', 'MATERIAL_MISMATCH', 'DAMAGE', 'SHORTAGE')),
+  dispatch_qty_kg     REAL NOT NULL,
+  received_qty_kg     REAL NOT NULL,
+  difference_kg       REAL NOT NULL,
+  variance_pct        REAL NOT NULL,
+  tolerance_pct       REAL NOT NULL,
+  reason_category     TEXT NOT NULL,
+  comment             TEXT,
+  evidence_url        TEXT,
+  status              TEXT NOT NULL CHECK(status IN ('OPEN', 'UNDER_REVIEW', 'APPROVED', 'REJECTED')) DEFAULT 'OPEN',
+  logged_by           INTEGER NOT NULL REFERENCES users(id),
+  resolved_by         INTEGER REFERENCES users(id),
+  resolution_notes    TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  resolved_at         TEXT
+);
+
+-- ── DEMO RESET AUDIT LOG ─────────────────────────────────────
+CREATE TABLE IF NOT EXISTS demo_reset_audit (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id         INTEGER REFERENCES users(id),
+  user_role       TEXT NOT NULL,
+  reset_timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+  records_reset   INTEGER NOT NULL,
+  s21_preserved   INTEGER NOT NULL
+);
+
 -- ── INDEXES FOR PERFORMANCE & INTEGRITY ─────────────────────
 CREATE INDEX IF NOT EXISTS idx_assignments_job_config ON transport_assignments(job_config_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_status ON transport_assignments(status);
@@ -302,3 +347,5 @@ CREATE INDEX IF NOT EXISTS idx_otp_verifications_assignment ON otp_verifications
 CREATE INDEX IF NOT EXISTS idx_weight_logs_assignment ON weight_logs(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_review_queue_assignment ON review_queue(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_transit_events_assignment ON transit_events(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_weight_reconciliations_assignment ON weight_reconciliations(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_delivery_exceptions_assignment ON delivery_exceptions(assignment_id);

@@ -4,9 +4,9 @@
  */
 export function formatCurrency(value: number | string): string {
   const num = typeof value === 'string' ? parseFloat(value) : value;
-  if (isNaN(num)) return 'R0.00';
+  if (isNaN(num)) return '₹0.00';
   
-  return 'R' + num.toLocaleString('en-ZA', {
+  return '₹' + num.toLocaleString('en-IN', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   });

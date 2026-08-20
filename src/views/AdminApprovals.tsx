@@ -186,6 +186,19 @@ export const AdminApprovals: React.FC = () => {
                     </p>
                   </div>
 
+                  {/* Document & OCR Split Preview Card */}
+                  <div style={{ border: '1px solid var(--neutral-200)', borderRadius: '8px', padding: '14px', backgroundColor: '#FFFFFF' }}>
+                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em' }}>
+                      📄 Stamped Receipt Document & OCR Scan
+                    </h5>
+                    <div style={{ backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid var(--neutral-200)', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                      <div style={{ textAlign: 'center', color: 'var(--neutral-600)', fontSize: '12px' }}>
+                        <span style={{ fontWeight: 700, display: 'block' }}>📷 Stamped Delivery Receipt Attached</span>
+                        <span className="mono" style={{ fontSize: '11px', color: 'var(--neutral-400)' }}>/uploads/pods/receipt_stamped.png</span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* 4-Point Weighbridge Variance Visualizer */}
                   <div style={{ border: '1px solid var(--neutral-200)', borderRadius: '8px', padding: '14px', backgroundColor: '#F8FAFC' }}>
                     <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em' }}>
@@ -194,28 +207,28 @@ export const AdminApprovals: React.FC = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
                       <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--neutral-200)' }}>
                         <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>MINE TARE / GROSS</span>
-                        <strong style={{ color: 'var(--neutral-900)' }}>14.20 T / 48.20 T</strong>
+                        <strong style={{ color: 'var(--neutral-900)' }}>10.00 T / 44.00 T</strong>
                         <span style={{ fontSize: '11px', color: 'var(--neutral-600)', display: 'block' }}>Net: 34.00 Tons</span>
                       </div>
                       <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--neutral-200)' }}>
                         <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>YARD TARE / GROSS</span>
-                        <strong style={{ color: 'var(--neutral-900)' }}>14.80 T / 48.20 T</strong>
-                        <span style={{ fontSize: '11px', color: 'var(--error-600)', fontWeight: 700, display: 'block' }}>Net: 33.40 Tons</span>
+                        <strong style={{ color: 'var(--neutral-900)' }}>10.00 T / 42.00 T</strong>
+                        <span style={{ fontSize: '11px', color: 'var(--error-600)', fontWeight: 700, display: 'block' }}>Net: 32.00 Tons</span>
                       </div>
                     </div>
                     <div style={{ marginTop: '10px', padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderRadius: '6px', color: 'var(--error-600)', fontSize: '11px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>VARIANCE EXCEEDED: -600 KG (-1.76%)</span>
+                      <span>VARIANCE EXCEEDED: -2,000 KG (-5.88%)</span>
                       <span>MAX TOLERANCE: ±0.5%</span>
                     </div>
                   </div>
 
                   {activeTab === 'OPEN' ? (
                     <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>Manual Resolution Form</h4>
+                      <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>Company Admin Verification Decision</h4>
                       
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                          Override Reason Selection
+                          Reason / Reason Code Selection
                         </label>
                         <select
                           value={overrideReason}
@@ -230,23 +243,25 @@ export const AdminApprovals: React.FC = () => {
                             fontWeight: 600,
                           }}
                         >
-                          <option value="MOISTURE_EVAPORATION">Moisture Evaporation (Acceptable Loss)</option>
-                          <option value="SCALE_OFFSET_HOPPER_SPILLAGE">Weighbridge Scale Offset</option>
+                          <option value="MOISTURE_EVAPORATION">Moisture Evaporation (Acceptable Transit Loss)</option>
+                          <option value="SCALE_OFFSET_HOPPER_SPILLAGE">Weighbridge Scale Offset / Hopper Spillage</option>
+                          <option value="UNREADABLE_RECEIPT">Unreadable Receipt File / Missing Stamp</option>
+                          <option value="QUANTITY_MISMATCH">Quantity / Bilty Mismatch</option>
                           <option value="OTHER">Other Reason (Specify below)</option>
                         </select>
                       </div>
 
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                          Resolution Notes
+                          Verification Audit Notes
                         </label>
                         <textarea
                           value={resolutionNotes}
                           onChange={e => setResolutionNotes(e.target.value)}
-                          placeholder="Provide explanation or BAPI adjustment notes..."
+                          placeholder="Provide explanation or audit notes..."
                           style={{
                             width: '100%',
-                            height: '100px',
+                            height: '80px',
                             padding: '10px 12px',
                             border: '1px solid var(--neutral-300)',
                             borderRadius: '8px',
@@ -257,26 +272,43 @@ export const AdminApprovals: React.FC = () => {
 
                       <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                         <button 
-                          onClick={() => setSelectedReview(null)}
+                          onClick={async () => {
+                            if (!selectedReview || !resolutionNotes) {
+                              alert('Please provide resolution notes before rejecting.');
+                              return;
+                            }
+                            setIsSubmitting(true);
+                            try {
+                              await caApi.resolveReview(selectedReview.id, `REJECTED: ${overrideReason} - ${resolutionNotes}`);
+                              setSelectedReview(null);
+                              setResolutionNotes('');
+                              loadReviews();
+                            } catch (err) {
+                              console.error(err);
+                            } finally {
+                              setIsSubmitting(false);
+                            }
+                          }}
                           className="btn btn-ghost"
-                          disabled={isSubmitting}
+                          style={{ color: 'var(--error-600)', borderColor: 'var(--error-300)' }}
+                          disabled={isSubmitting || !resolutionNotes}
                         >
-                          Dismiss
+                          [ REJECT POD ]
                         </button>
                         <button 
                           onClick={handleResolve}
                           className="btn btn-dark"
-                          style={{ backgroundColor: 'var(--error-600)', color: '#FFFFFF' }}
+                          style={{ backgroundColor: '#10B981', color: '#FFFFFF' }}
                           disabled={isSubmitting || !resolutionNotes}
                         >
-                          Resolve & Unblock MIRO
+                          [ APPROVE POD ]
                         </button>
                       </div>
                     </div>
                   ) : (
                     <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '16px' }}>
                       <div style={{ backgroundColor: 'var(--neutral-50)', padding: '12px 16px', borderRadius: '8px' }}>
-                        <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px 0' }}>MANUAL OVERRIDE LOGGED</p>
+                        <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px 0' }}>VERIFICATION LOGGED</p>
                         <p style={{ fontSize: '13px', color: 'var(--neutral-800)', margin: 0 }}>
                           {selectedReview.resolution_notes || 'No resolution notes entered'}
                         </p>

@@ -85,17 +85,10 @@ export const DriverDashboard: React.FC = () => {
     try {
       const data = await drApi.getMineAssignments();
       setAssignments(data);
-      if (data.length > 0) {
-        if (selectedAssignment) {
-          const updated = data.find(a => a.id === selectedAssignment.id);
-          if (updated) setSelectedAssignment(updated);
-          else setSelectedAssignment(data[0]);
-        } else {
-          setSelectedAssignment(data[0]);
-        }
-      } else {
-        setSelectedAssignment(null);
-      }
+      // Logic: A driver takes 1 active trip at a time.
+      // Pick the latest non-completed trip as active, or the most recent trip.
+      const activeTrip = data.find(a => !['DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status)) || data[0] || null;
+      setSelectedAssignment(activeTrip);
     } catch (err) {
       console.error('Failed to load driver assignments:', err);
     } finally {
@@ -107,6 +100,13 @@ export const DriverDashboard: React.FC = () => {
     loadAssignments();
     return () => { if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current); };
   }, []);
+
+  // Filter trips into Active Current Trip vs Completed Trips History
+  const isCompletedStatus = (status: string) => ['DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(status);
+  const activeTrips = assignments.filter(a => !isCompletedStatus(a.status));
+  const completedTrips = assignments.filter(a => isCompletedStatus(a.status));
+
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'COMPLETED'>('ACTIVE');
 
   // Derive journey stage from status
   const getJourneyStage = (status: string) => {
@@ -185,8 +185,9 @@ export const DriverDashboard: React.FC = () => {
       const res = await drApi.uploadPod(s.id, { pod_file_url: selectedPodFile });
       setOcrResult(res);
       await loadAssignments();
-    } catch (err) {
-      alert('Upload failed. Please try again.');
+    } catch (err: any) {
+      console.error('[POD Upload Error]', err);
+      alert('Upload failed: ' + (err.message || 'Server error occurred. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -232,28 +233,69 @@ export const DriverDashboard: React.FC = () => {
         )}
       </div>
 
-      {/* ── Trip Selector (if multiple) ── */}
-      {assignments.length > 1 && (
-        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-          {assignments.map(a => (
-            <button
-              key={a.id}
-              onClick={() => { setSelectedAssignment(a); setOcrResult(null); setPickupOtp(''); setDeliveryOtp(''); }}
-              style={{
-                flexShrink: 0, padding: '12px 18px', borderRadius: '10px', cursor: 'pointer',
-                border: s?.id === a.id ? '2px solid var(--brand-purple)' : '1px solid #E2E8F0',
-                backgroundColor: s?.id === a.id ? 'rgba(109,40,217,0.07)' : '#fff',
-                textAlign: 'left', minWidth: '200px'
-              }}
-            >
-              <div className="mono" style={{ fontSize: '14px', fontWeight: 800, color: '#0F172A' }}>PO #{a.sap_po_no}</div>
-              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{a.material} · {a.vehicle_reg}</div>
-            </button>
-          ))}
-        </div>
-      )}
+      {/* ── Tab Switcher: Current Active Trip vs Completed History ── */}
+      <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #E2E8F0', paddingBottom: '8px' }}>
+        <button
+          onClick={() => {
+            setActiveTab('ACTIVE');
+            if (activeTrips.length > 0) setSelectedAssignment(activeTrips[0]);
+          }}
+          style={{
+            padding: '10px 20px', borderRadius: '8px', border: 'none',
+            backgroundColor: activeTab === 'ACTIVE' ? 'var(--brand-purple)' : '#F1F5F9',
+            color: activeTab === 'ACTIVE' ? '#fff' : '#64748B',
+            fontWeight: 800, fontSize: '13px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}
+        >
+          🚚 Active Trip
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('COMPLETED');
+            if (completedTrips.length > 0) setSelectedAssignment(completedTrips[0]);
+          }}
+          style={{
+            padding: '10px 20px', borderRadius: '8px', border: 'none',
+            backgroundColor: activeTab === 'COMPLETED' ? 'var(--brand-purple)' : '#F1F5F9',
+            color: activeTab === 'COMPLETED' ? '#fff' : '#64748B',
+            fontWeight: 800, fontSize: '13px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px'
+          }}
+        >
+          ✅ Completed Trips ({completedTrips.length})
+        </button>
+      </div>
 
-      {s && (
+      {activeTab === 'COMPLETED' ? (
+        <div style={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '20px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 14px' }}>Completed Trips Log</h3>
+          {completedTrips.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+              No completed trips in your history yet.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {completedTrips.map(ct => (
+                <div key={ct.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                  <div>
+                    <div className="mono" style={{ fontWeight: 800, fontSize: '14px', color: '#0F172A' }}>PO #{ct.sap_po_no}</div>
+                    <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>{ct.material} • Truck: {ct.vehicle_reg}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>{ct.scheduled_date}</span>
+                    <StatusBadge status={ct.status} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : activeTrips.length === 0 ? (
+        <EmptyState icon={<Truck size={48} />} title="No Active Assigned Trip" description="You currently have no active trip. New assignments from Transporter Admin will appear here." />
+      ) : null}
+
+      {activeTab === 'ACTIVE' && s && (
         <>
           {/* ── PO Info Banner ── */}
           <div style={{
@@ -451,22 +493,33 @@ export const DriverDashboard: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    Choose receipt file
+                    Choose Stamped Delivery Receipt (Photo or PDF)
                   </label>
-                  <select
-                    value={selectedPodFile}
-                    onChange={e => setSelectedPodFile(e.target.value)}
-                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: '#F8FAFC' }}
-                  >
-                    <option value="/uploads/pods/pod_sample.png">pod_sample.png — PO #4500001715 (34.62 Tons)</option>
-                    <option value="/uploads/pod/pod_10.jpg">WB-4500012350 — Exact Match Demo</option>
-                    <option value="/uploads/pod/pod_9.jpg">WB-887711 — Mismatch Demo</option>
-                  </select>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          setSelectedPodFile(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #CBD5E1', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: '#FFFFFF' }}
+                  />
+                  {selectedPodFile && (
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle2 size={14} /> Receipt Document Attached & Ready to Upload
+                    </div>
+                  )}
                 </div>
 
                 <button
                   onClick={handlePodSubmit}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !selectedPodFile}
                   style={{
                     padding: '14px 20px', backgroundColor: '#0EA5E9', color: '#fff',
                     border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700,
@@ -474,7 +527,7 @@ export const DriverDashboard: React.FC = () => {
                     display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center'
                   }}
                 >
-                  <Upload size={16} /> Upload Receipt File
+                  <Upload size={16} /> Upload Receipt & Submit for Verification
                 </button>
 
                 {ocrResult && (

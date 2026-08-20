@@ -101,7 +101,7 @@ export const PURCHASE_ORDERS = [
     "toLocation": "Siding Yard 1001",
     "paymentTerms": "30 days from invoice posting",
     "poDate": "2026-08-12",
-    "status": "PENDING_ASSIGNMENT"
+    "status": "OPEN"
   },
   {
     "purchaseOrderNo": "4500000018",
@@ -116,9 +116,7 @@ export const PURCHASE_ORDERS = [
     "toLocation": "Siding Yard 1001",
     "paymentTerms": "30 days from invoice posting",
     "poDate": "2026-08-12",
-    "status": "ACCEPTED_SIGNED",
-    "signedBy": "SANELE KHUMALO",
-    "signedDate": "2026-08-12"
+    "status": "OPEN"
   },
   {
     "purchaseOrderNo": "4500000022",
@@ -133,9 +131,7 @@ export const PURCHASE_ORDERS = [
     "toLocation": "Central Store",
     "paymentTerms": "30 days from invoice posting",
     "poDate": "2026-08-12",
-    "status": "ACCEPTED_SIGNED",
-    "signedBy": "MUZI VILAKAZI",
-    "signedDate": "2026-08-12"
+    "status": "OPEN"
   },
   {
     "purchaseOrderNo": "4500000027",
