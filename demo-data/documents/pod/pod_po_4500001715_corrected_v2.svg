@@ -1,0 +1,24 @@
+<svg width="800" height="1000" viewBox="0 0 800 1000" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="1000" fill="#FFFFFF"/>
+  <rect x="20" y="20" width="760" height="960" fill="none" stroke="#2563EB" stroke-width="4"/>
+  <rect x="30" y="30" width="740" height="90" fill="#1E40AF"/>
+  <text x="50" y="70" font-family="Arial" font-size="26" font-weight="bold" fill="#FFFFFF">PROOF OF DELIVERY (POD) — RESUBMITTED V2</text>
+  <text x="50" y="98" font-family="Arial" font-size="15" fill="#BFDBFE">CORRECTED DOCUMENT RESUBMISSION (MATCH DEMO)</text>
+  <g transform="translate(50, 150)">
+    <rect width="700" height="160" fill="#EFF6FF" stroke="#BFDBFE" rx="8"/>
+    <text x="20" y="35" font-family="Arial" font-size="14" font-weight="bold" fill="#1D4ED8">SAP PURCHASE ORDER NO:</text>
+    <text x="240" y="35" font-family="monospace" font-size="18" font-weight="bold" fill="#1E40AF">#4500001715</text>
+    <text x="20" y="75" font-family="Arial" font-size="14" font-weight="bold" fill="#1D4ED8">CORRECTED NET TONNAGE:</text>
+    <text x="240" y="75" font-family="monospace" font-size="22" font-weight="bold" fill="#2563EB">34.62 TONS</text>
+    <text x="20" y="115" font-family="Arial" font-size="14" font-weight="bold" fill="#1D4ED8">RESUBMISSION VERSION:</text>
+    <text x="240" y="115" font-family="Arial" font-size="16" font-weight="bold" fill="#1E40AF">Version 2.0 (CA Review Approved)</text>
+  </g>
+  <g transform="translate(480, 640)">
+    <rect width="250" height="150" fill="#EFF6FF" stroke="#2563EB" stroke-width="3" rx="10"/>
+    <text x="125" y="40" font-family="Arial" font-size="15" font-weight="bold" fill="#1E40AF" text-anchor="middle">COMPANY ADMIN</text>
+    <text x="125" y="65" font-family="Arial" font-size="13" font-weight="bold" fill="#1D4ED8" text-anchor="middle">CORRECTION VERIFIED</text>
+    <text x="125" y="95" font-family="monospace" font-size="16" font-weight="bold" fill="#2563EB" text-anchor="middle">✓ APPROVED V2</text>
+    <text x="125" y="125" font-family="Arial" font-size="12" fill="#1E40AF" text-anchor="middle">2026-08-20 • CA Desk</text>
+  </g>
+  <text x="400" y="960" font-family="Arial" font-size="12" fill="#94A3B8" text-anchor="middle">PODZO DEMO FIXTURE — CORRECTED RESUBMISSION SCENARIO</text>
+</svg>

@@ -28,6 +28,35 @@
       "expected_ocr_status": "MATCH",
       "confidence_pct": 92.5,
       "demo_only": true
+    },
+    {
+      "document_id": "DEMO-POD-002",
+      "document_type": "POD",
+      "file_name": "pod_po_4500001715_mismatch_v1.svg",
+      "file_path": "demo-data/documents/pod/pod_po_4500001715_mismatch_v1.svg",
+      "persona": "DRIVER",
+      "workflow_step": "POD_UPLOAD",
+      "po_reference": "4500001715",
+      "contract_reference": "4600000017",
+      "expected_ocr_status": "MISMATCH",
+      "extracted_tonnage": "32.50 Tons",
+      "target_tonnage": "34.62 Tons",
+      "confidence_pct": 65,
+      "demo_only": true
+    },
+    {
+      "document_id": "DEMO-POD-003",
+      "document_type": "POD",
+      "file_name": "pod_po_4500001715_corrected_v2.svg",
+      "file_path": "demo-data/documents/pod/pod_po_4500001715_corrected_v2.svg",
+      "persona": "DRIVER",
+      "workflow_step": "POD_RESUBMISSION",
+      "po_reference": "4500001715",
+      "contract_reference": "4600000017",
+      "expected_ocr_status": "MATCH",
+      "extracted_tonnage": "34.62 Tons",
+      "confidence_pct": 95,
+      "demo_only": true
     }
   ]
 }
