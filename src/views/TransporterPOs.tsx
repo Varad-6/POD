@@ -314,7 +314,7 @@ export const TransporterPOs: React.FC = () => {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                          <Truck size={14} color="var(--accent-blue)" /> 1. Choose Truck & Specification
+                          <Truck size={14} color="var(--accent-blue)" /> 1. Select a Truck
                         </label>
                         <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 600 }}>
                           Cargo Required: <strong style={{ color: 'var(--neutral-800)' }}>{selectedPO.material || 'Bulk Cargo / Coal'}</strong> ({selectedPO.target_qty || 34} Tons)
@@ -370,7 +370,7 @@ export const TransporterPOs: React.FC = () => {
 
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px', fontSize: '11px', color: 'var(--neutral-600)' }}>
                                   <span>🔒 Body Spec: <strong>{spec.body}</strong></span>
-                                  <span>📦 Suitable Materials: <strong>{spec.suitableFor.join(', ')}</strong></span>
+                                  <span>📦 Works best with: <strong>{spec.suitableFor.join(', ')}</strong></span>
                                 </div>
 
                                 {materialMatch && (
@@ -399,7 +399,7 @@ export const TransporterPOs: React.FC = () => {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: selectedVehicleId ? 'var(--neutral-600)' : 'var(--neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                          <User size={14} color={selectedVehicleId ? 'var(--accent-blue)' : 'var(--neutral-400)'} /> 2. Assign Driver to Truck {selectedVehicle ? `(${selectedVehicle.reg_no})` : ''}
+                          <User size={14} color={selectedVehicleId ? 'var(--accent-blue)' : 'var(--neutral-400)'} /> 2. Select a Driver
                         </label>
                         {!selectedVehicleId && (
                           <span style={{ fontSize: '11px', fontWeight: 700, color: '#C2410C', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', padding: '3px 10px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -447,7 +447,7 @@ export const TransporterPOs: React.FC = () => {
                                     <span style={{ fontWeight: 700, fontSize: '14px' }}>{d.name}</span>
                                     {isBusy && (
                                       <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#FEE2E2', color: '#991B1B', padding: '1px 7px', borderRadius: '4px' }}>
-                                        ⛔ Busy on Active Trip (PO #{activeJob.sap_po_no})
+                                        ⛔ Already on a delivery trip (PO #{activeJob.sap_po_no})
                                       </span>
                                     )}
                                     {isDriverSelected && selectedVehicle && !isBusy && (
@@ -472,7 +472,7 @@ export const TransporterPOs: React.FC = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                       <div>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                          <Calendar size={12} /> Trip Date
+                          <Calendar size={12} /> Scheduled Date
                         </label>
                         <input
                           type="date"
@@ -484,7 +484,7 @@ export const TransporterPOs: React.FC = () => {
                       </div>
                       <div>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                          <MapPin size={12} /> Pickup Siding
+                          <MapPin size={12} /> Loading Location
                         </label>
                         <input
                           type="text"
@@ -509,7 +509,7 @@ export const TransporterPOs: React.FC = () => {
                         transition: 'all 0.2s'
                       }}
                     >
-                      Review & Confirm <ChevronRight size={16} />
+                      Next: Review & Confirm <ChevronRight size={16} />
                     </button>
                   </div>
 
@@ -517,7 +517,7 @@ export const TransporterPOs: React.FC = () => {
                   // Step 2: Confirmation
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     <div style={{ backgroundColor: 'var(--neutral-50)', borderRadius: '12px', padding: '20px', border: '1px solid var(--neutral-150)' }}>
-                      <h4 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--neutral-400)', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.06em' }}>Confirm Assignment Details</h4>
+                      <h4 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--neutral-400)', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.06em' }}>Confirm Delivery Job Details</h4>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <InfoRow label="Purchase Order" value={`PO #${selectedPO.sap_po_no}`} mono highlight />
                         <InfoRow label="Material" value={selectedPO.material || 'Washed Coal'} />
@@ -526,7 +526,7 @@ export const TransporterPOs: React.FC = () => {
                         <InfoRow label="Truck Plate" value={selectedVehicle?.reg_no || '—'} mono />
                         <InfoRow label="Truck Capacity" value={`${selectedVehicle?.capacity || 0} Tons`} />
                         <InfoRow label="Trip Date" value={scheduledDate} />
-                        <InfoRow label="Pickup Siding" value={pickupLocation} />
+                        <InfoRow label="Loading Location" value={pickupLocation} />
                       </div>
                     </div>
 

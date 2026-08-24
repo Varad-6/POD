@@ -70,7 +70,6 @@ export const AdminApprovals: React.FC = () => {
       setSelectedReview(null);
       setResolutionNotes('');
       await loadReviews();
-      window.dispatchEvent(new Event('pod_data_refreshed'));
     } catch (err: any) {
       console.error('Failed to reject review:', err);
       alert('Error rejecting review item: ' + (err.message || 'Server error'));
@@ -78,6 +77,28 @@ export const AdminApprovals: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  const getReviewWeights = (r: ReviewQueueItemV3 | null) => {
+    if (!r) return { dispatchedTons: 0, receivedTons: 0, varianceKg: 0, variancePct: 0 };
+    const mineGross = (r as any).mine_gross_kg || 0;
+    const mineTare = (r as any).mine_tare_kg || 0;
+    const destGross = (r as any).dest_gross_kg || 0;
+    const destTare = (r as any).dest_tare_kg || 0;
+    const poTarget = (r as any).po_target_qty || 34.0;
+
+    const dispatchedNetKg = (mineGross > 0 && mineTare > 0) ? (mineGross - mineTare) : (poTarget * 1000);
+    const dispatchedTons = dispatchedNetKg / 1000;
+
+    const receivedNetKg = (destGross > 0 && destTare > 0) ? (destGross - destTare) : (poTarget * 1000);
+    const receivedTons = receivedNetKg / 1000;
+
+    const varianceKg = receivedNetKg - dispatchedNetKg;
+    const variancePct = dispatchedNetKg > 0 ? (varianceKg / dispatchedNetKg) * 100 : 0;
+
+    return { dispatchedTons, receivedTons, varianceKg, variancePct };
+  };
+
+  const { dispatchedTons, receivedTons, varianceKg, variancePct } = getReviewWeights(selectedReview);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -171,7 +192,7 @@ export const AdminApprovals: React.FC = () => {
                 <thead>
                   <tr>
                     <th>PO Ref</th>
-                    <th>Driver / Vehicle</th>
+                    <th>Transporter / Vehicle</th>
                     <th>Flag Reason</th>
                     <th>Blocker</th>
                     <th>Date Flagged</th>
@@ -193,7 +214,7 @@ export const AdminApprovals: React.FC = () => {
                           {r.sap_po_no || `#PO-${r.assignment_id}`}
                         </td>
                         <td>
-                          <div style={{ fontWeight: 600 }}>{r.driver_name || 'Z. Dlamini'}</div>
+                          <div style={{ fontWeight: 600 }}>{r.transporter_name || 'ABC Transport'}</div>
                           <div style={{ fontSize: '11px', color: 'var(--neutral-500)' }}>{r.vehicle_reg || 'KV44RCGP'}</div>
                         </td>
                         <td>
@@ -226,56 +247,102 @@ export const AdminApprovals: React.FC = () => {
           {/* Right Action panel */}
           <div>
             {selectedReview ? (
-              <Card title={`Review Detail: #${selectedReview.id}`} accentColor="var(--error-600)">
+              <Card title="POD VERIFICATION" accentColor="var(--error-600)">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   
-                  <div>
-                    <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 2px 0' }}>Flag Details</p>
-                    <p style={{ fontWeight: 600, color: 'var(--neutral-900)', margin: 0 }}>
-                      This assignment was flagged for <strong style={{ color: 'var(--error-600)' }}>{selectedReview.flag_reason}</strong>.
-                    </p>
-                  </div>
-
-                  <div>
-                    <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 2px 0' }}>Linked PO Ref</p>
-                    <p className="mono" style={{ fontWeight: 700, margin: 0 }}>
-                      {selectedReview.sap_po_no}
-                    </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', fontSize: '13px', backgroundColor: 'var(--neutral-50)', padding: '16px', borderRadius: '10px', border: '1px solid var(--neutral-200)' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>PO Number</span>
+                      <strong className="mono" style={{ color: 'var(--neutral-900)' }}>{selectedReview.sap_po_no}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Contract</span>
+                      <strong className="mono" style={{ color: 'var(--neutral-900)' }}>C-2026-001</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Transporter</span>
+                      <strong style={{ color: 'var(--neutral-900)' }}>{selectedReview.transporter_name || 'ABC Transport'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Transporter Admin</span>
+                      <strong style={{ color: 'var(--neutral-900)' }}>Sipho</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Vehicle</span>
+                      <strong className="mono" style={{ color: 'var(--neutral-900)' }}>{selectedReview.vehicle_reg || 'KV44RCGP'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Delivery Location</span>
+                      <strong style={{ color: 'var(--neutral-900)' }}>Duvha Power Station</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Dispatched Tonnage</span>
+                      <strong style={{ color: 'var(--neutral-900)' }}>{dispatchedTons.toFixed(2)} Tons</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Received Tonnage</span>
+                      <strong style={{ color: 'var(--neutral-900)' }}>{receivedTons.toFixed(2)} Tons</strong>
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Net Variance</span>
+                      <strong style={{ 
+                        color: varianceKg === 0 ? 'var(--neutral-900)' : varianceKg < 0 ? 'var(--error-600)' : '#059669', 
+                        fontSize: '14px' 
+                      }}>
+                        {varianceKg > 0 ? '+' : ''}{varianceKg.toLocaleString()} KG ({variancePct > 0 ? '+' : ''}{variancePct.toFixed(2)}%)
+                      </strong>
+                    </div>
                   </div>
 
                   {/* Document & OCR Split Preview Card */}
                   <div style={{ border: '1px solid var(--neutral-200)', borderRadius: '8px', padding: '14px', backgroundColor: '#FFFFFF' }}>
-                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em' }}>
-                      📄 Stamped Receipt Document & OCR Scan
+                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>📄 STAMPED DELIVERY RECEIPT (POD)</span>
+                      <a href="/uploads/sample_pod.pdf" target="_blank" rel="noreferrer" style={{ color: 'var(--primary-600)', textTransform: 'none', textDecoration: 'underline' }}>[View Document]</a>
                     </h5>
-                    <div style={{ backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid var(--neutral-200)', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                    <div style={{ backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid var(--neutral-200)', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <div style={{ textAlign: 'center', color: 'var(--neutral-600)', fontSize: '12px' }}>
-                        <span style={{ fontWeight: 700, display: 'block' }}>📷 Stamped Delivery Receipt Attached</span>
+                        <span style={{ fontWeight: 700, display: 'block' }}>📷 Stamped POD Slip Attached</span>
                         <span className="mono" style={{ fontSize: '11px', color: 'var(--neutral-400)' }}>/uploads/pods/receipt_stamped.png</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* 4-Point Weighbridge Variance Visualizer */}
-                  <div style={{ border: '1px solid var(--neutral-200)', borderRadius: '8px', padding: '14px', backgroundColor: '#F8FAFC' }}>
-                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em' }}>
-                      4-Point Weighbridge Variance Analysis
+                  {/* OCR Verification Results */}
+                  <div style={{ border: '1px solid var(--neutral-200)', borderRadius: '8px', padding: '14px', backgroundColor: '#FFFFFF' }}>
+                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🔍 AI OCR EXTRACTION RESULTS</span>
+                      <span style={{ color: 'var(--success-600)' }}>[View OCR Results]</span>
                     </h5>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
-                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--neutral-200)' }}>
-                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>MINE TARE / GROSS</span>
-                        <strong style={{ color: 'var(--neutral-900)' }}>10.00 T / 44.00 T</strong>
-                        <span style={{ fontSize: '11px', color: 'var(--neutral-600)', display: 'block' }}>Net: 34.00 Tons</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                      <div>
+                        <span style={{ color: 'var(--neutral-500)', display: 'block' }}>Extracted Waybill:</span>
+                        <strong>{(selectedReview as any).ocr_waybill_extracted || '—'}</strong>
                       </div>
-                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--neutral-200)' }}>
-                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>YARD TARE / GROSS</span>
-                        <strong style={{ color: 'var(--neutral-900)' }}>10.00 T / 42.00 T</strong>
-                        <span style={{ fontSize: '11px', color: 'var(--error-600)', fontWeight: 700, display: 'block' }}>Net: 32.00 Tons</span>
+                      <div>
+                        <span style={{ color: 'var(--neutral-500)', display: 'block' }}>Confidence:</span>
+                        <strong style={{ 
+                          color: ((selectedReview as any).ocr_confidence_pct || 0) < 50 ? 'var(--error-600)' : 'var(--success-600)' 
+                        }}>
+                          {(selectedReview as any).ocr_confidence_pct ? `${(selectedReview as any).ocr_confidence_pct}%` : '—'}
+                        </strong>
                       </div>
-                    </div>
-                    <div style={{ marginTop: '10px', padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderRadius: '6px', color: 'var(--error-600)', fontSize: '11px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
-                      <span>VARIANCE EXCEEDED: -2,000 KG (-5.88%)</span>
-                      <span>MAX TOLERANCE: ±0.5%</span>
+                      <div>
+                        <span style={{ color: 'var(--neutral-500)', display: 'block' }}>Extracted Weight:</span>
+                        <strong>{(selectedReview as any).ocr_weight_extracted ? `${(selectedReview as any).ocr_weight_extracted} Tons` : '—'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ color: 'var(--neutral-500)', display: 'block' }}>Match Status:</span>
+                        <strong style={{ 
+                          color: (selectedReview as any).ocr_match_status === 'MATCH' 
+                            ? 'var(--success-600)' 
+                            : (selectedReview as any).ocr_match_status === 'LOW_CONFIDENCE' 
+                              ? '#D97706' 
+                              : 'var(--error-600)' 
+                        }}>
+                          {(selectedReview as any).ocr_match_status || '—'}
+                        </strong>
+                      </div>
                     </div>
                   </div>
 
@@ -334,7 +401,7 @@ export const AdminApprovals: React.FC = () => {
                           style={{ color: 'var(--error-600)', borderColor: 'var(--error-300)', opacity: isSubmitting ? 0.6 : 1 }}
                           disabled={isSubmitting}
                         >
-                          {isSubmitting ? '[ REJECTING... ]' : '[ REJECT POD ]'}
+                          {isSubmitting ? '[ CANCELLING... ]' : '[ FLAG FOR CANCEL / REJECT ]'}
                         </button>
                         <button 
                           onClick={handleApprove}

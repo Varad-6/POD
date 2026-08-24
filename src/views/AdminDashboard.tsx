@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, FileClock, CheckCircle, XCircle, ArrowRight, Server, ShieldCheck, Activity } from 'lucide-react';
-import { caApi, ContractV3, ReviewQueueItemV3, DeliveryInvoiceV3 } from '../lib/api_v3';
+import { caApi, invoicesApi, ContractV3, ReviewQueueItemV3, DeliveryInvoiceV3, MiroInvoice } from '../lib/api_v3';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -10,6 +10,7 @@ export const AdminDashboard: React.FC = () => {
   const [contracts, setContracts] = useState<ContractV3[]>([]);
   const [reviews, setReviews] = useState<ReviewQueueItemV3[]>([]);
   const [invoices, setInvoices] = useState<DeliveryInvoiceV3[]>([]);
+  const [miroInvoices, setMiroInvoices] = useState<MiroInvoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadStats = async () => {
@@ -21,6 +22,8 @@ export const AdminDashboard: React.FC = () => {
       setReviews(r);
       const i = await caApi.getDeliveryInvoices('SENT_TO_CA');
       setInvoices(i);
+      const mi = await invoicesApi.listMiro();
+      setMiroInvoices(mi);
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
     } finally {
@@ -90,30 +93,23 @@ export const AdminDashboard: React.FC = () => {
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading telemetry...</div>
       ) : (
-        <>
-          {/* KPI Cards Grid — Card Encapsulated & Interactive Redirection */}
+        <>          {/* KPI Cards Grid — Card Encapsulated & Interactive Redirection */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-            <Card 
-              title="Outline Agreements" 
-              icon={<Server size={18} color="var(--brand-purple)" />}
-              onClick={() => navigate('/admin/contracts')}
-              style={{ cursor: 'pointer' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{contracts.length}</span>
-                <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Active Contracts</span>
-              </div>
-            </Card>
-
             <Card 
               title="Flagged Reviews" 
               icon={<ClipboardCheck size={18} color="var(--error-600)" />}
               onClick={() => navigate('/admin/approvals')}
               style={{ cursor: 'pointer' }}
             >
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{reviews.length}</span>
-                <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Open Audits</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{reviews.length}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 600 }}>Active Flags</span>
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--neutral-600)', borderTop: '1px solid var(--neutral-100)', paddingTop: '6px', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Mismatch: <strong>{reviews.filter(r => r.flag_reason === 'TOLERANCE_EXCEEDED').length}</strong></span>
+                  <span>POD Audits: <strong>{reviews.filter(r => r.flag_reason === 'AWAITING_CA_VERIFY' || r.flag_reason === 'OCR_MISMATCH').length}</strong></span>
+                </div>
               </div>
             </Card>
 
@@ -125,14 +121,28 @@ export const AdminDashboard: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
                 <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{invoices.length}</span>
-                <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>Ready to Park</span>
+                <span style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 600 }}>Invoices Ready to Park</span>
+              </div>
+            </Card>
+
+            <Card 
+              title="Pending MIRO" 
+              icon={<Server size={18} color="var(--brand-purple)" />}
+              onClick={() => navigate('/admin/invoices')}
+              style={{ cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
+                <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>
+                  {miroInvoices.filter(m => m.status === 'PARKED').length}
+                </span>
+                <span style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 600 }}>MIRO Parked Documents</span>
               </div>
             </Card>
 
             <Card title="BAPI Sync Status" icon={<ShieldCheck size={18} color="var(--success-600)" />}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
                 <span style={{ fontSize: '22px', fontWeight: 800, color: 'var(--success-600)' }}>ONLINE</span>
-                <span style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>SAP S21 Interface</span>
+                <span style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 600 }}>SAP S21 Interface</span>
               </div>
             </Card>
           </div>

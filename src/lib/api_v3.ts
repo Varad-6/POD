@@ -126,6 +126,8 @@ export const srApi = {
     request<{ status: string; message: string }>(`/assignments/${id}/gate-check`, { method: 'POST', body: JSON.stringify(data) }),
   biltyUpload: (id: number, data: { bilty_no: string; bilty_date: string; upload_url: string }) =>
     request<{ message: string }>(`/assignments/${id}/bilty-upload`, { method: 'POST', body: JSON.stringify(data) }),
+  authorizeJourney: (id: number) =>
+    request<{ message: string; queue_time_mins: number; penalty_amount: number }>(`/assignments/${id}/authorize-journey`, { method: 'POST' }),
   stampAssignment: (id: number, data: { gps_lat: number; gps_lng: number }) =>
     request<{ message: string }>(`/assignments/${id}/stamp`, { method: 'POST', body: JSON.stringify(data) }),
 };
@@ -143,7 +145,7 @@ export const drApi = {
     request<{ message: string }>(`/assignments/${id}/transit-event`, { method: 'POST', body: JSON.stringify(data) }),
   confirmArrival: (id: number, gps: { gps_lat: number; gps_lng: number }) =>
     request<{ message: string; ip_captured: string; outside_geofence: boolean }>(`/assignments/${id}/arrived`, { method: 'POST', body: JSON.stringify(gps) }),
-  uploadPod: (id: number, data: { pod_file_url: string }) =>
+  uploadPod: (id: number, data: { pod_file_url: string; mock_scenario?: 'MATCH' | 'MISMATCH' | 'BLURRY' }) =>
     request<{ message: string; ocr: any; variance: any; under_review: boolean }>(`/assignments/${id}/pod-upload`, { method: 'POST', body: JSON.stringify(data) }),
 };
 
@@ -251,12 +253,19 @@ export interface TransportAssignmentV3 {
   bilty_no?: string;
   bilty_date?: string;
   bilty_url?: string;
+  loading_status?: string;
+  requested_pickup_datetime?: string;
+  queue_entry_time?: string;
+  journey_authorized?: number;
+  po_target_qty?: number;
+  po_uom?: string;
+  tolerance_pct?: number;
 }
 
 export interface ReviewQueueItemV3 {
   id: number;
   assignment_id: number;
-  flag_reason: 'OCR_MISMATCH' | 'TOLERANCE_EXCEEDED';
+  flag_reason: 'OCR_MISMATCH' | 'TOLERANCE_EXCEEDED' | 'AWAITING_CA_VERIFY';
   status: 'OPEN' | 'RESOLVED';
   resolved_by_role?: string;
   resolution_notes?: string;
@@ -267,6 +276,12 @@ export interface ReviewQueueItemV3 {
   driver_name?: string;
   vehicle_reg?: string;
   scheduled_date?: string;
+  transporter_name?: string;
+  mine_tare_kg?: number;
+  mine_gross_kg?: number;
+  dest_gross_kg?: number;
+  dest_tare_kg?: number;
+  po_target_qty?: number;
 }
 
 export interface DeliveryInvoiceV3 {

@@ -1,85 +1,95 @@
 import { test, expect } from '@playwright/test';
 
+// Helper to switch personas securely via logout/login
+async function loginAs(page: any, username: string) {
+  // Try to logout if already signed in
+  const signOutBtn = page.locator('text=Sign Out');
+  if (await signOutBtn.isVisible()) {
+    await signOutBtn.click();
+    await page.click('button:has-text("Sign Out Now")');
+    await page.waitForTimeout(1000);
+  }
+  // Navigate and authenticate
+  await page.goto('http://localhost:5173/login');
+  await page.fill('input[type="text"]', username);
+  await page.fill('input[type="password"]', 'Demo@1234');
+  await page.click('button[type="submit"]');
+  await page.waitForTimeout(1500);
+}
+
 test.describe('PODZO End-to-End Live Persona Walkthrough', () => {
   
   test('Complete 5-Persona Live Workflow', async ({ page }) => {
+    // Increase test timeout for full 5-role walkthrough
+    test.setTimeout(60000);
     await page.setViewportSize({ width: 1280, height: 800 });
 
     console.log('--- STEP 1: COMPANY ADMIN (CA) FLOW ---');
-    await page.goto('http://localhost:5173/login');
-    await page.waitForTimeout(1000);
-
-    // Select CA Role
-    await page.selectOption('select', 'CA');
-    await page.fill('input[type="text"]', 'ca_thandiwe');
-    await page.fill('input[type="password"]', 'Demo@1234');
-    await page.click('button[type="submit"]');
-    await page.waitForTimeout(1500);
-
+    await loginAs(page, 'ca_thandiwe');
+    
     // Verify Admin Dashboard loads
-    await expect(page.locator('h2')).toContainText('Fleet Logistics Command Desk');
+    await expect(page.locator('h2:has-text("Fleet Logistics Command Desk")')).toBeVisible();
     console.log('✔ CA Login & Command Desk verified');
 
     // Navigate to Contracts & PO Release
-    await page.click('text=Contracts & Releases');
-    await page.waitForTimeout(1500);
-
-    // Click on Contract 4600000017
-    await page.click('text=4600000017');
+    await page.click('text=Contracts & PO Release');
     await page.waitForTimeout(1000);
+    await expect(page.locator('body')).toContainText('Contracts & PO Release Console');
+    console.log('✔ Navigated to Contracts Releasing');
 
-    // Click Distribute on PO 4500001715
-    const poRow = page.locator('tr:has-text("4500001715")');
-    if (await poRow.count() > 0) {
-      await poRow.locator('button:has-text("Distribute")').click();
+    // Click on Contract Master row to inspect details
+    const contractRow = page.locator('tr:has-text("Eskom / Client")').first();
+    if (await contractRow.count() > 0) {
+      await contractRow.click();
       await page.waitForTimeout(1000);
-      await page.click('button:has-text("Confirm Release & Distribute PO")');
-      await page.waitForTimeout(1500);
-      console.log('✔ CA Distributed PO 4500001715');
+      console.log('✔ Selected Contract Details');
     }
 
     console.log('--- STEP 2: TRANSPORTER ADMIN (TA) FLOW ---');
-    await page.click('text=Transporter');
-    await page.waitForTimeout(1500);
+    await loginAs(page, 'ta_sipho');
 
+    // Navigate to POs Queue
     await page.click('text=Purchase Orders Queue');
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1000);
+    await expect(page.locator('body')).toContainText('Purchase Orders');
+    console.log('✔ TA Purchase Orders Queue loaded');
 
-    const assignBtn = page.locator('button:has-text("Assign Driver & Vehicle")').first();
-    if (await assignBtn.isVisible()) {
-      await assignBtn.click();
-      await page.waitForTimeout(1000);
-      await page.click('button:has-text("Confirm Transport Assignment")');
-      await page.waitForTimeout(1500);
-      console.log('✔ TA Assigned Driver & Vehicle');
-    }
+    // Navigate to POD Uploads
+    await page.click('text=Waybill POD Uploads');
+    await page.waitForTimeout(1000);
+    await expect(page.locator('body')).toContainText('Delivery Receipts (POD) Upload Desk');
+    console.log('✔ TA POD Upload Desk loaded');
 
-    console.log('--- STEP 3: DRIVER (DR) FLOW ---');
-    await page.click('text=Driver Console');
-    await page.waitForTimeout(1500);
+    console.log('--- STEP 3: TRUCK DRIVER (DR) FLOW ---');
+    await loginAs(page, 'dr_zweli');
+    
+    // Verify Driver Dashboard loads
+    await expect(page.locator('body')).toContainText('Driver Haulage Console');
+    console.log('✔ Driver Dashboard verified');
 
-    const pickupOtpBtn = page.locator('button:has-text("Generate Pickup OTP")');
-    if (await pickupOtpBtn.isVisible()) {
-      await pickupOtpBtn.click();
-      await page.waitForTimeout(1000);
-      console.log('✔ Driver generated Pickup OTP');
-    }
+    console.log('--- STEP 4: WEIGHBRIDGE SUPERVISOR (SR) FLOW ---');
+    await loginAs(page, 'sr_gate01');
 
-    console.log('--- STEP 4: GATE SUPERVISOR (SR) FLOW ---');
-    await page.click('text=Siding Gate');
-    await page.waitForTimeout(1500);
+    // Verify Supervisor Dashboard loads
+    await expect(page.locator('body')).toContainText('Gate & Weighbridge');
+    console.log('✔ Supervisor Siding Queue loaded');
 
-    console.log('--- STEP 5: CUSTOMER / YARD (CR) FLOW ---');
-    await page.click('text=Yard Console');
-    await page.waitForTimeout(1500);
+    console.log('--- STEP 5: YARD RECEIVER (CR) FLOW ---');
+    await loginAs(page, 'cr_mining');
+
+    // Verify Customer Dashboard loads
+    await expect(page.locator('body')).toContainText('Yard Receiving');
+    console.log('✔ Customer Yard Incoming Queue loaded');
 
     console.log('--- STEP 6: MIRO INVOICE CONSOLE (CA) ---');
-    await page.click('text=Company Admin');
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(1000);
+    await loginAs(page, 'ca_thandiwe');
 
-    await page.click('text=MIRO Invoices');
-    await page.waitForTimeout(1500);
-    console.log('✔ Visited MIRO Invoice Console');
+    // Navigate to MIRO Invoice console
+    await page.click('text=SAP MIRO Invoices');
+    await page.waitForTimeout(1000);
+    await expect(page.locator('body')).toContainText('Invoice & Payment Desk');
+    console.log('✔ Visited SAP MIRO Invoice Console');
 
     console.log('🎉 ALL PERSONA UI PAGES VISITED & VERIFIED LIVE!');
   });

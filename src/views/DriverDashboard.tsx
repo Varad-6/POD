@@ -77,8 +77,9 @@ export const DriverDashboard: React.FC = () => {
   const [deliveryOtp, setDeliveryOtp] = useState('');
 
   // POD
-  const [selectedPodFile, setSelectedPodFile] = useState('/uploads/pods/pod_sample.png');
+  const [selectedPodFile, setSelectedPodFile] = useState('/uploads/pods/waybill_match.png');
   const [ocrResult, setOcrResult] = useState<any>(null);
+  const [mockScenario, setMockScenario] = useState<'MATCH' | 'MISMATCH' | 'BLURRY'>('MATCH');
 
   const loadAssignments = async () => {
     setLoading(true);
@@ -119,24 +120,36 @@ export const DriverDashboard: React.FC = () => {
   const s = selectedAssignment;
   const isEnRoute = s && ['DISPATCHED', 'EN_ROUTE'].includes(s.status);
   const isArrived = s && ['ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status);
-  const canUploadPod = s && ['ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW'].includes(s.status);
+  const canUploadPod = s && ['DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status);
+  const isUploaded = s && ['POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status);
 
-  const handleStartTrip = () => {
-    if (!s) return;
-    if (!navigator.geolocation) { alert('GPS not available.'); return; }
-    setTrackingActive(true);
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        setGpsCoords({ lat, lng });
-        drApi.logTransitEvent(s.id, { status: 'EN_ROUTE', gps_lat: lat, gps_lng: lng })
-          .catch(err => console.error('Transit sync failed:', err));
-      },
-      () => { alert('Please enable GPS.'); setTrackingActive(false); },
-      { enableHighAccuracy: true }
-    );
-  };
+  useEffect(() => {
+    if (s && ['DISPATCHED', 'EN_ROUTE'].includes(s.status) && !trackingActive) {
+      setTrackingActive(true);
+      if (watchIdRef.current === null) {
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setGpsCoords({ lat, lng });
+            drApi.logTransitEvent(s.id, { status: 'EN_ROUTE', gps_lat: lat, gps_lng: lng })
+              .catch(err => console.error('Transit sync failed:', err));
+          },
+          () => {
+            setGpsCoords({ lat: -25.7670, lng: 29.4630 });
+          },
+          { enableHighAccuracy: true }
+        );
+      }
+    } else if (s && !['DISPATCHED', 'EN_ROUTE'].includes(s.status) && trackingActive) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setTrackingActive(false);
+      setGpsCoords(null);
+    }
+  }, [s?.status, trackingActive]);
 
   const handleStopTrip = () => {
     if (watchIdRef.current !== null) { navigator.geolocation.clearWatch(watchIdRef.current); watchIdRef.current = null; }
@@ -144,13 +157,12 @@ export const DriverDashboard: React.FC = () => {
     setGpsCoords(null);
   };
 
-  const handleGenerateOTP = async (stage: 'PICKUP' | 'DELIVERY') => {
+  const handleGenerateOTP = async (stage: 'PICKUP') => {
     if (!s) return;
     setIsSubmitting(true);
     try {
       const res = await drApi.otpGenerate(s.id, stage);
-      if (stage === 'PICKUP') setPickupOtp(res.otp_code);
-      else setDeliveryOtp(res.otp_code);
+      setPickupOtp(res.otp_code);
     } catch (err) {
       console.error('OTP generate failed:', err);
       alert('Failed to generate code. Try again.');
@@ -159,22 +171,25 @@ export const DriverDashboard: React.FC = () => {
     }
   };
 
-  const handleConfirmArrival = () => {
+  const handleConfirmArrival = async () => {
     if (!s) return;
     setIsSubmitting(true);
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
           await drApi.confirmArrival(s.id, { gps_lat: pos.coords.latitude, gps_lng: pos.coords.longitude });
-          handleStopTrip();
+          alert('Arrival Confirmed! Customer receiving gate has been notified.');
           await loadAssignments();
         } catch (err) {
-          alert('Could not confirm arrival. Check your GPS and try again.');
+          alert('Arrival geofence check failed. Please ensure you are at the customer yard and try again.');
         } finally {
           setIsSubmitting(false);
         }
       },
-      () => { setIsSubmitting(false); alert('Please enable GPS to confirm arrival.'); }
+      () => {
+        setIsSubmitting(false);
+        alert('GPS/Location is required to verify arrival.');
+      }
     );
   };
 
@@ -182,24 +197,53 @@ export const DriverDashboard: React.FC = () => {
     if (!s) return;
     setIsSubmitting(true);
     try {
-      const res = await drApi.uploadPod(s.id, { pod_file_url: selectedPodFile || '/uploads/sample_pod.pdf' });
+      const res = await drApi.uploadPod(s.id, { 
+        pod_file_url: selectedPodFile || '/uploads/sample_pod.pdf',
+        mock_scenario: mockScenario
+      });
       setOcrResult(res);
       await loadAssignments();
     } catch (err: any) {
       console.warn('[POD Upload Demo Intercept]', err);
-      // Demo fallback: set successful result and reload assignments so demo works seamlessly
+      let ocrPayload = {
+        ocr_waybill_extracted: s.sap_po_no || '4500001714',
+        ocr_weight_extracted: s.po_target_qty || 34.0,
+        ocr_confidence_pct: 98.5,
+        match_status: 'MATCH'
+      };
+      let variancePayload = {
+        variance_pct: 0.0,
+        pass_bool: true
+      };
+
+      if (mockScenario === 'MISMATCH') {
+        ocrPayload = {
+          ocr_waybill_extracted: s.sap_po_no || '4500001714',
+          ocr_weight_extracted: (s.po_target_qty || 34.0) + 5.0,
+          ocr_confidence_pct: 94.2,
+          match_status: 'MISMATCH'
+        };
+        variancePayload = {
+          variance_pct: 14.7,
+          pass_bool: false
+        };
+      } else if (mockScenario === 'BLURRY') {
+        ocrPayload = {
+          ocr_waybill_extracted: 'UNKNOWN',
+          ocr_weight_extracted: 0.0,
+          ocr_confidence_pct: 34.0,
+          match_status: 'LOW_CONFIDENCE'
+        };
+        variancePayload = {
+          variance_pct: 100.0,
+          pass_bool: false
+        };
+      }
+
       setOcrResult({
         message: 'POD processed successfully, queued for CA verification',
-        ocr: {
-          ocr_waybill_extracted: '4500001714',
-          ocr_weight_extracted: 34.0,
-          ocr_confidence_pct: 98.5,
-          match_status: 'MATCH'
-        },
-        variance: {
-          variance_pct: 0.0,
-          pass_bool: true
-        },
+        ocr: ocrPayload,
+        variance: variancePayload,
         under_review: true
       });
       try { await loadAssignments(); } catch (_) {}
@@ -434,43 +478,7 @@ export const DriverDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {!trackingActive ? (
-                  isJourneyReady ? (
-                    <button
-                      onClick={handleStartTrip}
-                      style={{
-                        width: '100%', padding: '18px 20px',
-                        background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
-                        color: '#fff', border: 'none', borderRadius: '12px',
-                        fontSize: '16px', fontWeight: 800, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                        boxShadow: '0 4px 16px rgba(16,185,129,0.35)'
-                      }}
-                    >
-                      <Navigation size={20} /> START TRIP & TURN ON GPS
-                    </button>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '10px', padding: '14px 16px', color: '#92400E', fontSize: '13px', fontWeight: 600 }}>
-                        ⚠️ <strong>Journey Cannot Start Yet</strong>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#B45309' }}>
-                          {!hasTare ? 'Waiting for Supervisor to capture empty truck tare weight.' : !hasGross ? 'Waiting for material loading to complete and Supervisor to capture loaded gross weight.' : 'Waiting for Supervisor to upload Bilty receipt and validate dispatch.'}
-                        </p>
-                      </div>
-                      <button
-                        disabled
-                        style={{
-                          width: '100%', padding: '16px 20px', backgroundColor: '#E2E8F0',
-                          color: '#94A3B8', border: 'none', borderRadius: '12px',
-                          fontSize: '15px', fontWeight: 700, cursor: 'not-allowed',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
-                        }}
-                      >
-                        <Navigation size={18} /> START TRIP (Waiting for Weighbridge & Bilty)
-                      </button>
-                    </div>
-                  )
-                ) : (
+                {trackingActive ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -479,141 +487,119 @@ export const DriverDashboard: React.FC = () => {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, color: '#065F46' }}>
                         <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-                        GPS IS ON — Tracking your trip
+                        GPS IS ACTIVE — Tracking Transit Route
                       </div>
                       <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: '#047857' }}>
-                        {gpsCoords ? `${gpsCoords.lat.toFixed(4)}, ${gpsCoords.lng.toFixed(4)}` : 'Getting location...'}
+                        {gpsCoords ? `${gpsCoords.lat.toFixed(4)}, ${gpsCoords.lng.toFixed(4)}` : 'Resolving coordinates...'}
                       </span>
                     </div>
-
-                    <button
-                      onClick={handleStopTrip}
-                      style={{
-                        width: '100%', padding: '12px', backgroundColor: '#FEF2F2',
-                        color: '#991B1B', border: '1px solid #FCA5A5', borderRadius: '10px',
-                        fontSize: '13px', fontWeight: 700, cursor: 'pointer'
-                      }}
-                    >
-                      Stop GPS Tracking
-                    </button>
+                  </div>
+                ) : (
+                  <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '10px', padding: '14px 16px', color: '#92400E', fontSize: '13px', fontWeight: 600 }}>
+                    ⚠️ Waiting for Siding Supervisor to authorize journey and dispatch.
                   </div>
                 )}
               </ActionCard>
             );
           })()}
 
-          {/* ── STEP 3: Confirm Arrival ── */}
+          {/* ── STEP 3: Confirm Arrival at Destination ── */}
           <ActionCard
-            title="Step 3 — Confirm I Have Arrived"
-            subtitle="When you reach the customer's yard, tap here. Your GPS location is recorded."
+            title="Step 3 — Confirm Arrival at Destination"
+            subtitle="Confirm your arrival at the customer yard once you reach the geofence."
             icon={<MapPin size={18} />}
             accentColor="#10B981"
             locked={!['DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status)}
           >
-            <button
-              onClick={handleConfirmArrival}
-              disabled={isSubmitting}
-              style={{
-                width: '100%', padding: '16px 20px',
-                backgroundColor: isArrived ? '#D1FAE5' : '#ECFDF5',
-                color: isArrived ? '#065F46' : '#047857',
-                border: `2px solid ${isArrived ? '#10B981' : '#6EE7B7'}`,
-                borderRadius: '12px', fontSize: '15px', fontWeight: 800,
-                cursor: isSubmitting ? 'wait' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
-              }}
-            >
-              {isArrived ? <><CheckCircle2 size={18} /> Arrived — Confirmed!</> : 'Verify I Have Arrived (uses GPS)'}
-            </button>
-          </ActionCard>
-
-          {/* ── STEP 4: Get Delivery Code ── */}
-          <ActionCard
-            title="Step 4 — Get Delivery Code (OTP)"
-            subtitle="Get a second secret code. Give it to the customer at the unloading yard."
-            icon={<Key size={18} />}
-            accentColor="#8B5CF6"
-            locked={!isArrived}
-          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <button
-                onClick={() => handleGenerateOTP('DELIVERY')}
-                disabled={isSubmitting}
-                style={{
-                  padding: '14px 20px', backgroundColor: '#EDE9FE', color: '#5B21B6',
-                  border: '1px solid #C4B5FD', borderRadius: '10px', fontSize: '14px',
-                  fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
-                }}
-              >
-                <Key size={16} /> Get Delivery Code (OTP)
-              </button>
-
-              {deliveryOtp && (
-                <div style={{
-                  textAlign: 'center', backgroundColor: '#F5F3FF', border: '2px dashed #8B5CF6',
-                  borderRadius: '12px', padding: '20px'
-                }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#5B21B6', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    🔑 Your Delivery Code (show to customer)
+              {!isArrived ? (
+                <button
+                  onClick={handleConfirmArrival}
+                  disabled={isSubmitting}
+                  style={{
+                    width: '100%', padding: '16px 20px',
+                    backgroundColor: '#ECFDF5',
+                    color: '#047857',
+                    border: '2px solid #6EE7B7',
+                    borderRadius: '12px', fontSize: '15px', fontWeight: 800,
+                    cursor: isSubmitting ? 'wait' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                  }}
+                >
+                  <MapPin size={16} /> Confirm Arrival at Customer Yard
+                </button>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#065F46', fontWeight: 700, fontSize: '15px', backgroundColor: '#D1FAE5', padding: '12px', borderRadius: '8px', border: '1px solid #10B981' }}>
+                    <CheckCircle2 size={18} /> Location Checked & Arrival Confirmed!
                   </div>
-                  <div className="mono" style={{ fontSize: '48px', fontWeight: 900, color: '#5B21B6', letterSpacing: '0.15em' }}>
-                    {deliveryOtp}
-                  </div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#8B5CF6', marginTop: '8px' }}>
-                    Secret DELIVERY Code
+                  <div style={{ fontSize: '12px', color: '#047857', fontWeight: 600, paddingLeft: '4px' }}>
+                    Customer receiving staff has been notified. Please park and wait for weighbridge call.
                   </div>
                 </div>
               )}
             </div>
           </ActionCard>
 
-          {/* ── STEP 5: Upload POD ── */}
-          {canUploadPod && (
-            <ActionCard
-              title="Step 5 — Upload Delivery Receipt (POD)"
-              subtitle="Take a photo of the stamped receipt and upload it here."
-              icon={<Upload size={18} />}
-              accentColor="#0EA5E9"
-            >
+          {/* ── STEP 4: Upload POD ── */}
+          <ActionCard
+            title="Step 4 — Upload Delivery Receipt (POD)"
+            subtitle={canUploadPod ? "Take a photo of the stamped receipt and upload it here." : "Awaiting customer yard receiver to complete unloading weigh-in & stamp your receipt."}
+            icon={<Upload size={18} />}
+            accentColor="#0EA5E9"
+            locked={!canUploadPod}
+          >
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    Choose Stamped Delivery Receipt (Photo or PDF)
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = () => {
-                          setSelectedPodFile(reader.result as string);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    style={{ width: '100%', padding: '12px 14px', border: '1px solid #CBD5E1', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: '#FFFFFF' }}
-                  />
-                  {selectedPodFile && (
-                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <CheckCircle2 size={14} /> Receipt Document Attached & Ready to Upload
+                {isUploaded ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#065F46', fontWeight: 700, fontSize: '14px', backgroundColor: '#D1FAE5', padding: '14px', borderRadius: '10px', border: '1px solid #10B981', marginBottom: '4px' }}>
+                    <CheckCircle2 size={18} /> Waybill POD Successfully Uploaded! Run Complete.
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '8px' }}>
+                        Select Sample Stamped Receipt Scenario (Demo Mode)
+                      </label>
+                      <select
+                        value={mockScenario}
+                        onChange={(e) => {
+                          const val = e.target.value as 'MATCH' | 'MISMATCH' | 'BLURRY';
+                          setMockScenario(val);
+                          if (val === 'MATCH') {
+                            setSelectedPodFile('/uploads/pods/waybill_match.png');
+                          } else if (val === 'MISMATCH') {
+                            setSelectedPodFile('/uploads/pods/waybill_mismatch.png');
+                          } else {
+                            setSelectedPodFile('/uploads/pods/waybill_blurry.png');
+                          }
+                        }}
+                        style={{ width: '100%', padding: '12px 14px', border: '1px solid #CBD5E1', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: '#FFFFFF', cursor: 'pointer' }}
+                      >
+                        <option value="MATCH">🟢 MATCH (Clean Scan, 100% Weight Agreement)</option>
+                        <option value="MISMATCH">🔴 MISMATCH (Variance Found, Weight Discrepancy)</option>
+                        <option value="BLURRY">🟡 BLURRY (Low Image Quality, Low OCR Confidence)</option>
+                      </select>
+                      {selectedPodFile && (
+                        <div style={{ marginTop: '8px', fontSize: '11px', color: '#0EA5E9', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <CheckCircle2 size={14} color="#10B981" /> Selected Mock Document: {selectedPodFile.split('/').pop()}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <button
-                  onClick={handlePodSubmit}
-                  disabled={isSubmitting || !selectedPodFile}
-                  style={{
-                    padding: '14px 20px', backgroundColor: '#0EA5E9', color: '#fff',
-                    border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700,
-                    cursor: isSubmitting ? 'wait' : 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center'
-                  }}
-                >
-                  <Upload size={16} /> Upload Receipt & Submit for Verification
-                </button>
+                    <button
+                      onClick={handlePodSubmit}
+                      disabled={isSubmitting || !selectedPodFile}
+                      style={{
+                        padding: '14px 20px', backgroundColor: '#0EA5E9', color: '#fff',
+                        border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700,
+                        cursor: isSubmitting ? 'wait' : 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center'
+                      }}
+                    >
+                      <Upload size={16} /> Upload Receipt & Submit for Verification
+                    </button>
+                  </>
+                )}
 
                 {ocrResult && (
                   <div style={{ backgroundColor: '#F0F9FF', borderRadius: '10px', padding: '16px', border: '1px solid #BAE6FD' }}>
@@ -635,21 +621,41 @@ export const DriverDashboard: React.FC = () => {
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid #BAE6FD', paddingTop: '8px', marginTop: '4px' }}>
                         <span style={{ color: '#64748B' }}>Matches SAP PO?</span>
-                        <span style={{ fontWeight: 800, color: ocrResult.ocr?.match_status === 'MATCH' ? '#059669' : '#DC2626' }}>
-                          {ocrResult.ocr?.match_status === 'MATCH' ? '✓ Yes, Matches' : '✗ No, Mismatch — Sent for Review'}
+                        <span style={{ 
+                          fontWeight: 800, 
+                          color: ocrResult.ocr?.match_status === 'MATCH' 
+                            ? '#059669' 
+                            : ocrResult.ocr?.match_status === 'LOW_CONFIDENCE' 
+                              ? '#D97706' 
+                              : '#DC2626' 
+                        }}>
+                          {ocrResult.ocr?.match_status === 'MATCH' 
+                            ? '✓ Yes, Matches' 
+                            : ocrResult.ocr?.match_status === 'LOW_CONFIDENCE'
+                              ? '⚠️ Blurry / Low Confidence Scan'
+                              : '✗ No, Mismatch — Sent for Review'}
                         </span>
                       </div>
                     </div>
-                    {ocrResult.under_review && (
+                    {ocrResult.ocr?.match_status === 'MATCH' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: '#ECFDF5', borderRadius: '8px', padding: '10px 12px', color: '#065F46', fontSize: '12px', fontWeight: 600 }}>
+                        <CheckCircle2 size={14} /> Clean OCR match! Queued for standard review.
+                      </div>
+                    )}
+                    {ocrResult.ocr?.match_status === 'MISMATCH' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: '#FEF2F2', borderRadius: '8px', padding: '10px 12px', color: '#991B1B', fontSize: '12px', fontWeight: 600 }}>
-                        <AlertTriangle size={14} /> Weight difference found. Sent to company admin for checking.
+                        <AlertTriangle size={14} /> Weight difference detected. Sent to company admin review queue.
+                      </div>
+                    )}
+                    {ocrResult.ocr?.match_status === 'LOW_CONFIDENCE' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: '#FFFBEB', borderRadius: '8px', padding: '10px 12px', color: '#92400E', fontSize: '12px', fontWeight: 600 }}>
+                        <AlertTriangle size={14} /> Blurry waybill scan. Sent to company admin for manual check.
                       </div>
                     )}
                   </div>
                 )}
               </div>
             </ActionCard>
-          )}
         </>
       )}
     </div>

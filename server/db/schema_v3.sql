@@ -57,6 +57,8 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   rate            REAL NOT NULL,
   tolerance_pct   REAL NOT NULL,
   cost_center     TEXT,
+  allowed_queue_time_mins INTEGER DEFAULT 60,
+  detention_rate_per_hour REAL DEFAULT 150.00,
   status          TEXT NOT NULL CHECK(status IN ('OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')) DEFAULT 'OPEN'
 );
 
@@ -103,6 +105,12 @@ CREATE TABLE IF NOT EXISTS transport_assignments (
   license_no    TEXT NOT NULL,
   gstin         TEXT NOT NULL,
   scheduled_date TEXT NOT NULL,
+  queue_entry_time TEXT,
+  actual_arrival_time TEXT,
+  loading_status TEXT DEFAULT 'PENDING',
+  journey_authorized INTEGER DEFAULT 0,
+  queue_time_mins INTEGER,
+  penalty_amount REAL,
   status        TEXT NOT NULL CHECK(status IN (
     'ASSIGNED', 'GATE_DENIED', 'MINE_TARE_LOGGED', 'MINE_GROSS_LOGGED', 
     'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 

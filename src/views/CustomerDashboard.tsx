@@ -27,14 +27,11 @@ export const CustomerDashboard: React.FC = () => {
   const [destTare, setDestTare] = useState('15120');
   const [issues, setIssues] = useState('No damages detected');
   const [unitCalc, setUnitCalc] = useState('Convert 34730 kg to 34.73 TON');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpVerified, setOtpVerified] = useState(false);
   const [weighSaved, setWeighSaved] = useState(false);
   const [successDone, setSuccessDone] = useState(false);
 
   const loadIncoming = async () => {
     setLoading(true);
-    setOtpVerified(false);
     setWeighSaved(false);
     setSuccessDone(false);
     try {
@@ -49,10 +46,19 @@ export const CustomerDashboard: React.FC = () => {
 
   useEffect(() => { loadIncoming(); }, []);
 
+  useEffect(() => {
+    if (selectedAssignment) {
+      const tare = selectedAssignment.mine_tare_kg || 10000;
+      const targetQtyTons = selectedAssignment.po_target_qty || 34.0;
+      const targetQtyKg = targetQtyTons * 1000;
+      setDestTare(String(tare));
+      setDestGross(String(tare + targetQtyKg));
+      setUnitCalc(`Convert ${targetQtyKg} kg to ${targetQtyTons} ${selectedAssignment.po_uom === 'TO' ? 'Tons' : (selectedAssignment.po_uom || 'Tons')}`);
+    }
+  }, [selectedAssignment]);
+
   const handleBack = () => {
     setSelectedAssignment(null);
-    setOtpCode('');
-    setOtpVerified(false);
     setWeighSaved(false);
     setSuccessDone(false);
     loadIncoming();
@@ -78,18 +84,7 @@ export const CustomerDashboard: React.FC = () => {
     }
   };
 
-  const handleVerifyOTP = async () => {
-    if (!selectedAssignment || !otpCode) return;
-    setIsSubmitting(true);
-    try {
-      await drApi.otpVerify(selectedAssignment.id, 'DELIVERY', otpCode);
-      setOtpVerified(true);
-    } catch (err) {
-      alert('Wrong code. Ask the driver for the correct code on their phone.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+
 
   const handleStampConfirm = async () => {
     if (!selectedAssignment) return;
@@ -107,10 +102,11 @@ export const CustomerDashboard: React.FC = () => {
 
   const netWeight = parseFloat(destGross) - parseFloat(destTare);
   const netTons = (netWeight / 1000).toFixed(2);
-
   // ─── DETAIL VIEW ─────────────────────────────────────────────────────────
   if (selectedAssignment) {
     const a = selectedAssignment;
+    const dispatchNet = a.mine_gross_kg && a.mine_tare_kg ? (a.mine_gross_kg - a.mine_tare_kg) : ((a.po_target_qty || 34.0) * 1000);
+    const tolerancePct = a.tolerance_pct ?? 0.5;
 
     if (successDone) {
       return (
@@ -273,16 +269,16 @@ export const CustomerDashboard: React.FC = () => {
                     <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>⚖️ WEIGHT RECONCILIATION & VARIANCE</span>
                     <span style={{
                       fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '12px',
-                      backgroundColor: Math.abs((((parseFloat(destGross) - parseFloat(destTare)) - 34000) / 34000) * 100) > 0.5 ? '#FEE2E2' : '#D1FAE5',
-                      color: Math.abs((((parseFloat(destGross) - parseFloat(destTare)) - 34000) / 34000) * 100) > 0.5 ? '#991B1B' : '#065F46'
+                      backgroundColor: Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct ? '#FEE2E2' : '#D1FAE5',
+                      color: Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct ? '#991B1B' : '#065F46'
                     }}>
-                      {Math.abs((((parseFloat(destGross) - parseFloat(destTare)) - 34000) / 34000) * 100) > 0.5 ? '🔴 OUTSIDE TOLERANCE (±0.5%)' : '✓ WITHIN TOLERANCE'}
+                      {Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct ? `🔴 OUTSIDE TOLERANCE (±${tolerancePct}%)` : '✓ WITHIN TOLERANCE'}
                     </span>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', fontSize: '12px' }}>
                     <div>
                       <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Dispatch Net</span>
-                      <strong>34,000 kg</strong>
+                      <strong>{dispatchNet.toLocaleString()} kg</strong>
                     </div>
                     <div>
                       <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Received Net</span>
@@ -290,14 +286,14 @@ export const CustomerDashboard: React.FC = () => {
                     </div>
                     <div>
                       <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Variance Difference</span>
-                      <strong style={{ color: (netWeight - 34000) < 0 ? '#DC2626' : '#059669' }}>
-                        {isNaN(netWeight) ? '0' : (netWeight - 34000).toLocaleString()} kg
+                      <strong style={{ color: (netWeight - dispatchNet) < 0 ? '#DC2626' : '#059669' }}>
+                        {isNaN(netWeight) ? '0' : (netWeight - dispatchNet).toLocaleString()} kg
                       </strong>
                     </div>
                     <div>
                       <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Variance %</span>
-                      <strong style={{ color: Math.abs((((netWeight) - 34000) / 34000) * 100) > 0.5 ? '#DC2626' : '#059669' }}>
-                        {isNaN(netWeight) ? '0%' : `${(((netWeight - 34000) / 34000) * 100).toFixed(2)}%`}
+                      <strong style={{ color: Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct ? '#DC2626' : '#059669' }}>
+                        {isNaN(netWeight) ? '0%' : `${(((netWeight - dispatchNet) / dispatchNet) * 100).toFixed(2)}%`}
                       </strong>
                     </div>
                   </div>
@@ -328,98 +324,29 @@ export const CustomerDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* ── Step 2: Verify Driver Delivery Code ── */}
+        {/* ── Step 2: Confirm Unloading & Close ── */}
         <div style={{
           backgroundColor: '#fff', borderRadius: '14px',
-          border: otpVerified ? '1px solid #D1FAE5' : weighSaved ? '2px solid #8B5CF6' : '1px solid #E2E8F0',
-          overflow: 'hidden', opacity: !weighSaved ? 0.5 : 1,
+          border: '1px solid #E2E8F0', overflow: 'hidden',
+          opacity: !weighSaved ? 0.5 : 1,
           pointerEvents: !weighSaved ? 'none' : 'auto',
           transition: 'all 0.3s'
         }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid #F1F5F9',
-            backgroundColor: otpVerified ? '#F0FDF4' : weighSaved ? '#F5F3FF' : '#F8FAFC'
+            backgroundColor: weighSaved ? '#ECFDF5' : '#F8FAFC'
           }}>
             <div style={{
               width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: otpVerified ? '#10B981' : weighSaved ? '#8B5CF6' : '#E2E8F0',
-              color: otpVerified || weighSaved ? '#fff' : '#94A3B8', fontWeight: 800
-            }}>
-              {otpVerified ? <CheckCircle2 size={18} /> : '🔑'}
-            </div>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: otpVerified ? '#065F46' : weighSaved ? '#5B21B6' : '#94A3B8' }}>
-                Step 2: Check Driver's Secret Delivery Code
-              </div>
-              <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
-                Ask the driver for the 4-digit code on their phone
-              </div>
-            </div>
-            {otpVerified && <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 700, color: '#059669', backgroundColor: '#D1FAE5', padding: '3px 10px', borderRadius: '20px' }}>Verified ✓</span>}
-            {!weighSaved && <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 700, color: '#CBD5E1' }}>Complete Step 1 first</span>}
-          </div>
-
-          <div style={{ padding: '22px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <input
-                type="text"
-                value={otpCode}
-                onChange={e => setOtpCode(e.target.value)}
-                placeholder="Enter 4-digit code"
-                className="mono"
-                style={{
-                  flex: 1, padding: '14px 16px', border: '1px solid #E2E8F0',
-                  borderRadius: '10px', fontSize: '24px', fontWeight: 800, letterSpacing: '0.15em', textAlign: 'center',
-                  backgroundColor: otpVerified ? '#D1FAE5' : '#F8FAFC'
-                }}
-                disabled={otpVerified}
-              />
-              {!otpVerified && (
-                <button
-                  onClick={handleVerifyOTP}
-                  disabled={isSubmitting || !otpCode || !weighSaved}
-                  style={{
-                    padding: '14px 20px', backgroundColor: '#8B5CF6', color: '#fff', border: 'none',
-                    borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  Check Secret Code
-                </button>
-              )}
-            </div>
-            {otpVerified && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#059669', fontSize: '13px', fontWeight: 600 }}>
-                <CheckCircle2 size={16} /> Code verified! Driver is confirmed.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Step 3: Confirm & Close ── */}
-        <div style={{
-          backgroundColor: '#fff', borderRadius: '14px',
-          border: '1px solid #E2E8F0', overflow: 'hidden',
-          opacity: !otpVerified ? 0.5 : 1,
-          pointerEvents: !otpVerified ? 'none' : 'auto',
-          transition: 'all 0.3s'
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid #F1F5F9',
-            backgroundColor: otpVerified ? '#ECFDF5' : '#F8FAFC'
-          }}>
-            <div style={{
-              width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: otpVerified ? '#059669' : '#E2E8F0',
-              color: otpVerified ? '#fff' : '#94A3B8', fontWeight: 800
+              backgroundColor: weighSaved ? '#059669' : '#E2E8F0',
+              color: weighSaved ? '#fff' : '#94A3B8', fontWeight: 800
             }}>
               <ShieldCheck size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: otpVerified ? '#065F46' : '#94A3B8' }}>
-                Step 3: Confirm Unloading & Close
+              <div style={{ fontSize: '13px', fontWeight: 700, color: weighSaved ? '#065F46' : '#94A3B8' }}>
+                Step 2: Confirm Unloading & Close
               </div>
               <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
                 Stamp the delivery. Net weight: <strong>{netTons} Tons</strong>
@@ -430,15 +357,15 @@ export const CustomerDashboard: React.FC = () => {
           <div style={{ padding: '22px' }}>
             <button
               onClick={handleStampConfirm}
-              disabled={isSubmitting || !otpVerified}
+              disabled={isSubmitting || !weighSaved}
               style={{
                 width: '100%', padding: '16px', fontSize: '16px', fontWeight: 800,
-                backgroundColor: otpVerified ? '#059669' : '#E2E8F0',
-                color: otpVerified ? '#fff' : '#94A3B8',
+                backgroundColor: weighSaved ? '#059669' : '#E2E8F0',
+                color: weighSaved ? '#fff' : '#94A3B8',
                 border: 'none', borderRadius: '10px',
                 cursor: isSubmitting ? 'wait' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                boxShadow: otpVerified ? '0 4px 16px rgba(5,150,105,0.3)' : 'none',
+                boxShadow: weighSaved ? '0 4px 16px rgba(5,150,105,0.3)' : 'none',
                 transition: 'all 0.2s'
               }}
             >

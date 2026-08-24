@@ -11,7 +11,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner';
 import { formatDate } from '../utils/format';
 import { OCR_RESULTS } from '../data/mockData';
 import { useNavigate } from 'react-router-dom';
-import { assignmentsApi, drApi } from '../lib/api_v3';
+import { assignmentsApi, drApi, taApi } from '../lib/api_v3';
 
 export const TransporterPODs: React.FC = () => {
   const navigate = useNavigate();
@@ -128,6 +128,21 @@ export const TransporterPODs: React.FC = () => {
     }
   };
 
+  const handleCreateInvoice = async (assignmentId: number) => {
+    try {
+      await taApi.createDeliveryInvoice({
+        assignment_id: assignmentId,
+        invoice_no: `INV-${assignmentId}-${Date.now().toString().slice(-4)}`,
+        file_url: '/uploads/invoices/auto.pdf'
+      });
+      alert('Invoice created successfully!');
+      await loadAssignments();
+    } catch (err: any) {
+      console.error('Failed to create invoice:', err);
+      alert('Error creating invoice: ' + (err.message || 'Server error'));
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
@@ -161,44 +176,38 @@ export const TransporterPODs: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
           {filteredAssignments.map((rec) => (
-            <Card key={rec.id} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '12px' }}>
-                <div>
-                  <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)', marginBottom: '2px' }}>
-                    #{rec.waybillNo}
-                  </h3>
-                  <p style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 500 }}>
-                    Offload Date: {formatDate(rec.offloadDate)}
-                  </p>
-                </div>
+            <Card key={rec.id} style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px', border: '1px solid var(--neutral-200)', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--neutral-100)', paddingBottom: '10px' }}>
+                <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)', margin: 0 }}>
+                  PO #{rec.poRef}
+                </h3>
                 <StatusBadge status={rec.podStatus} />
               </div>
 
-              <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                <div>
-                  <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>Material</p>
-                  <p style={{ fontWeight: 600, color: 'var(--neutral-900)' }}>{rec.productDescription}</p>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Contract:</span>
+                  <strong className="mono">{rec.contract_id ? `C-2026-00${rec.contract_id}` : 'C-2026-001'}</strong>
                 </div>
-                <div>
-                  <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>Net Weight</p>
-                  <p className="mono" style={{ fontWeight: 700, color: 'var(--neutral-900)' }}>{((rec.netWeightKg || 34000) / 1000.0).toFixed(2)} Tons</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Customer:</span>
+                  <strong>{rec.customer_name || 'Eskom Holdings'}</strong>
                 </div>
-                <div>
-                  <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>Truck Reg</p>
-                  <p className="mono" style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Truck size={14} style={{ color: 'var(--neutral-500)' }} />
-                    {rec.horseRegNo}
-                  </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Delivery:</span>
+                  <strong>{rec.to_location || 'Duvha Power Station'}</strong>
                 </div>
-                <div>
-                  <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase' }}>PO Ref</p>
-                  <p 
-                    onClick={() => navigate('/transporter/purchase-orders')}
-                    className="mono"
-                    style={{ fontWeight: 700, color: 'var(--accent-blue)', cursor: 'pointer' }}
-                  >
-                    #{rec.poRef}
-                  </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Vehicle:</span>
+                  <strong className="mono">{rec.horseRegNo}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Driver:</span>
+                  <strong>{rec.driver_name || 'Zweli Dlamini'}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--neutral-200)', paddingTop: '8px', marginTop: '4px' }}>
+                  <span style={{ color: 'var(--neutral-500)', fontWeight: 700 }}>Delivered:</span>
+                  <strong style={{ color: 'var(--neutral-900)', fontSize: '14px' }}>{((rec.netWeightKg || 34000) / 1000.0).toFixed(2)} Tons</strong>
                 </div>
               </div>
 
@@ -254,7 +263,7 @@ export const TransporterPODs: React.FC = () => {
 
               {rec.podStatus === 'APPROVED_INVOICE_PENDING' && (
                 <button 
-                  onClick={() => navigate('/transporter/invoices')}
+                  onClick={() => handleCreateInvoice(rec.id)}
                   className="btn btn-primary"
                   style={{ width: '100%', marginTop: 'auto' }}
                 >

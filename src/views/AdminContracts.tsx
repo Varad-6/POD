@@ -211,13 +211,13 @@ export const AdminContracts: React.FC = () => {
           {/* Right Column: Contract Detail Inspector or Distribute PO Box */}
           <div>
             {selectedPOToAssign ? (
-              <Card title="Distribute & Tender Freight Target" accentColor="var(--brand-purple)">
+              <Card title="Assign Job & Send to Transporter" accentColor="var(--brand-purple)">
                 
                 {/* 1. Header Summary Badge: Material, Rate & Available Tonnage */}
                 <div style={{ backgroundColor: 'var(--brand-purple-light)', border: '1px solid rgba(114, 9, 183, 0.2)', borderRadius: '10px', padding: '14px 16px', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                     <div>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>SAP RELEASE PO TARGET</span>
+                      <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--brand-purple)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Purchase Order (PO)</span>
                       <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)', margin: '2px 0 0 0' }}>#{selectedPOToAssign.sap_po_no}</h3>
                     </div>
                     <span style={{ backgroundColor: '#FFFFFF', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--brand-purple)', border: '1px solid rgba(114, 9, 183, 0.3)' }}>
@@ -238,15 +238,15 @@ export const AdminContracts: React.FC = () => {
                   {/* 2. Section: Route Telemetry */}
                   <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '14px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-700)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
-                      Route Telemetry & Site Geofences
+                      Route & Siding Locations
                     </span>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', backgroundColor: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--neutral-200)' }}>
                       <div>
-                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>LOADING PLANT (ORIGIN)</span>
+                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>WHERE TO LOAD (START)</span>
                         <strong style={{ color: 'var(--neutral-900)' }}>MON1 Plant / Siding</strong>
                       </div>
                       <div>
-                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>UNLOADING YARD (DESTINATION)</span>
+                        <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block' }}>WHERE TO DELIVER (END)</span>
                         <strong style={{ color: 'var(--neutral-900)' }}>{selectedContract?.customer_name || 'Siding Yard 1001'}</strong>
                       </div>
                     </div>
@@ -255,13 +255,13 @@ export const AdminContracts: React.FC = () => {
                   {/* 3. Section: Carrier & Quantity Allocation */}
                   <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '14px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-700)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
-                      Carrier Allocation & Tonnage Target
+                      Choose Transporter & Cargo Quantity
                     </span>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Transporter Admin Assignee
+                          Select Transporter Company
                         </label>
                         <select
                           value={targetTransporterId}
@@ -284,7 +284,7 @@ export const AdminContracts: React.FC = () => {
 
                       <div>
                         <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Allocated Release Volume ({selectedPOToAssign.uom})
+                          Cargo Quantity ({selectedPOToAssign.uom})
                         </label>
                         <input 
                           type="number"
@@ -298,14 +298,14 @@ export const AdminContracts: React.FC = () => {
                   {/* 4. Section: SAP SLA Schedule & Timestamps */}
                   <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '14px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-700)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
-                      SAP SLA Schedule & Gate Operating Windows
+                      Scheduled Times
                     </span>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {/* Plant Operating Window */}
                       <div>
                         <label style={{ display: 'block', fontSize: '10px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Plant Weighbridge Gate Operating Hours
+                          Gate Open Hours
                         </label>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                           <input 
@@ -326,7 +326,7 @@ export const AdminContracts: React.FC = () => {
                       {/* Requested Pickup Date & Time */}
                       <div>
                         <label style={{ display: 'block', fontSize: '10px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Exact Requested Loading Pickup Date & Time
+                          Requested Loading Date & Time
                         </label>
                         <input 
                           type="datetime-local" 
@@ -351,7 +351,7 @@ export const AdminContracts: React.FC = () => {
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '10px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-                            Final Due Cutoff (SLA)
+                            Final Due Cutoff
                           </label>
                           <input 
                             type="datetime-local" 
@@ -367,7 +367,7 @@ export const AdminContracts: React.FC = () => {
                   {/* 5. Section: Acceptance Countdown Tender Limit */}
                   <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '14px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--neutral-700)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '6px' }}>
-                      Carrier Acceptance Tender Limit
+                      Transporter Response Time Limit
                     </span>
                     <select
                       value={acceptanceHours}
@@ -411,18 +411,40 @@ export const AdminContracts: React.FC = () => {
                 </div>
               </Card>
             ) : selectedContract ? (
-              <Card title={`Contract: ${selectedContract.sap_contract_no}`}>
+              <Card title={`Contract Master: ${selectedContract.sap_contract_no}`}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div>
-                    <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 2px 0' }}>YARD / CUSTOMER SITE</p>
-                    <p style={{ fontWeight: 700, color: 'var(--neutral-900)', margin: 0, fontSize: '14px' }}>{selectedContract.customer_name}</p>
-                  </div>
-
-                  <div>
-                    <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 2px 0' }}>VALIDITY RANGE</p>
-                    <p style={{ fontWeight: 600, color: 'var(--neutral-800)', margin: 0 }}>
-                      {selectedContract.start_date} to {selectedContract.end_date}
-                    </p>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 14px', fontSize: '13px', backgroundColor: 'var(--neutral-50)', padding: '16px', borderRadius: '10px', border: '1px solid var(--neutral-200)' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Contract Number</span>
+                      <strong className="mono">{selectedContract.sap_contract_no}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Customer</span>
+                      <strong>{selectedContract.customer_name}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Delivery Location</span>
+                      <strong>Duvha Power Station Siding</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Delivery Address</span>
+                      <strong style={{ fontSize: '12px' }}>Delhi Road Plant, Witbank, SA</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Material / Product</span>
+                      <strong>Coal Grade A (Bituminous)</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Validity Range</span>
+                      <strong>{selectedContract.start_date} to {selectedContract.end_date}</strong>
+                    </div>
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Delivery Terms & SLA</span>
+                      <strong style={{ color: 'var(--accent-blue)', fontSize: '12px' }}>
+                        Tolerance: ±0.5% | Allowed Queue Time: 60 mins | Penalty Rate: ZAR 150.00 / hour
+                      </strong>
+                    </div>
                   </div>
 
                   {selectedContract.pdf_url && (
@@ -432,7 +454,7 @@ export const AdminContracts: React.FC = () => {
                         target="_blank" 
                         rel="noreferrer"
                         className="btn btn-ghost btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'underline' }}
                       >
                         <Download size={14} />
                         View PDF Outline Agreement

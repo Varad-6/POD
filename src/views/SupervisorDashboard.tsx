@@ -86,6 +86,18 @@ export const SupervisorDashboard: React.FC = () => {
 
   useEffect(() => { loadData(); }, []);
 
+  useEffect(() => {
+    if (selectedAssignment) {
+      const targetQtyTons = selectedAssignment.po_target_qty || 34.0;
+      const targetQtyKg = targetQtyTons * 1000;
+      if (selectedAssignment.mine_tare_kg) {
+        setWeightKg(String(selectedAssignment.mine_tare_kg + targetQtyKg));
+      } else {
+        setWeightKg('10000');
+      }
+    }
+  }, [selectedAssignment]);
+
   const activePoObject = selectedPoId === 'ALL' ? null : purchaseOrders.find(p => p.id === Number(selectedPoId));
 
   const filteredAssignments = assignments.filter(a => {
@@ -98,11 +110,14 @@ export const SupervisorDashboard: React.FC = () => {
   const handleVerifyOtpAndPrecheck = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAssignment || !otpCode) { alert('Please enter the OTP code from the driver.'); return; }
+    if (!licenseValid || !prdpValid || !biltyValid || !materialMatch) {
+      alert('Safety check failed. All safety checklist items must be verified to proceed.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await drApi.otpVerify(selectedAssignment.id, 'PICKUP', otpCode);
       await srApi.gateCheck(selectedAssignment.id, { license_valid: licenseValid, prdp_valid: prdpValid, bilty_valid: biltyValid, material_match: materialMatch });
-      setSuccessMsg('Gate check done. Now proceed to weigh the empty truck.');
       setOtpCode('');
       await loadData();
       // Re-select to get updated status
@@ -131,10 +146,9 @@ export const SupervisorDashboard: React.FC = () => {
       if (updated) setSelectedAssignment(updated);
       setAssignments(updatedList);
       if (currentStage === 'MINE_TARE') {
-        setWeightKg('44870');
-        setSuccessMsg('✓ Empty truck weight (MINE_TARE) captured! Truck is cleared and sent for cargo loading.');
-      } else {
-        setSuccessMsg('✓ Loaded truck weight (MINE_GROSS) captured! Net payload calculated. Proceed to Bilty dispatch.');
+        const targetQtyTons = selectedAssignment.po_target_qty || 34.0;
+        const targetQtyKg = targetQtyTons * 1000;
+        setWeightKg(String(parseFloat(weightKg) + targetQtyKg));
       }
     } catch (err: any) {
       alert('Weight log error: ' + (err.message || 'Please try again'));
@@ -152,9 +166,25 @@ export const SupervisorDashboard: React.FC = () => {
       const updated = updatedList.find(a => a.id === selectedAssignment.id);
       if (updated) setSelectedAssignment(updated);
       setAssignments(updatedList);
-      setSuccessMsg('Bilty uploaded! Truck is now dispatched on its journey.');
     } catch (err: any) {
       alert('Bilty upload error: ' + (err.message || 'Please try again'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAuthorizeJourney = async () => {
+    if (!selectedAssignment) return;
+    setIsSubmitting(true);
+    try {
+      const res = await srApi.authorizeJourney(selectedAssignment.id);
+      alert(`Journey Authorized!\nAllowed Queue Time: 60 mins\nActual Queue Time: ${res.queue_time_mins} mins\nPenalty Applicable: ${res.penalty_amount > 0 ? `Yes (ZAR ${res.penalty_amount})` : 'No'}`);
+      const updatedList = await assignmentsApi.list();
+      const updated = updatedList.find(a => a.id === selectedAssignment.id);
+      if (updated) setSelectedAssignment(updated);
+      setAssignments(updatedList);
+    } catch (err: any) {
+      alert('Authorization error: ' + (err.message || 'Please try again'));
     } finally {
       setIsSubmitting(false);
     }
@@ -180,18 +210,19 @@ export const SupervisorDashboard: React.FC = () => {
   // ─── Status → Which steps are done/active ─────────────────────────────────
   const getStepStatus = (a: TransportAssignmentV3) => {
     const hasTare = !!a.mine_tare_kg;
+    const hasBilty = !!a.bilty_no;
     const hasGross = !!a.mine_gross_kg;
     const isDispatched = ['DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status);
     return {
       step1Done: !['ASSIGNED'].includes(a.status),
       step1Active: a.status === 'ASSIGNED',
-      step2Done: hasTare && hasGross,
-      step2Active: !hasTare || (hasTare && !hasGross),
-      step3Done: isDispatched,
-      step3Active: hasTare && hasGross && !isDispatched,
-      step4Done: (a.supervisor_stamped_count || 0) > 0,
-      step4Active: ['DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(a.status) && !(a.supervisor_stamped_count || 0),
-      isComplete: ['DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status),
+      step2Done: hasTare,
+      step2Active: !['ASSIGNED'].includes(a.status) && !hasTare,
+      step3Done: hasBilty,
+      step3Active: hasTare && !hasBilty,
+      step4Done: isDispatched,
+      step4Active: hasTare && hasBilty && !isDispatched,
+      isComplete: isDispatched,
     };
   };
 
@@ -243,16 +274,7 @@ export const SupervisorDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Success banner */}
-        {successMsg && (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '10px',
-            backgroundColor: '#F0FDF4', border: '1px solid #10B981',
-            borderRadius: '10px', padding: '14px 18px', color: '#065F46', fontSize: '13px', fontWeight: 600
-          }}>
-            <CheckCircle2 size={16} color="#10B981" /> {successMsg}
-          </div>
-        )}
+
 
         {/* ── Step 1: Gate Verification ── */}
         <StepCard
@@ -319,128 +341,52 @@ export const SupervisorDashboard: React.FC = () => {
           )}
         </StepCard>
 
-        {/* ── Step 2: Weigh Truck (Two-Stage Origin Workflow) ── */}
+        {/* ── Step 2: Weigh Empty Truck (MINE_TARE) ── */}
         <StepCard
           step={2}
-          title={!a.mine_tare_kg ? "Step 1 — Empty Truck Weighbridge (MINE_TARE)" : !a.mine_gross_kg ? "Step 2 — Loaded Truck Weighbridge (MINE_GROSS)" : "Origin Weighbridge Complete"}
-          subtitle={!a.mine_tare_kg ? "Weigh empty truck on scale before entering cargo loading area" : !a.mine_gross_kg ? "Weigh loaded truck returning from loading bay" : "Tare, Gross, and Net payload recorded"}
+          title="Empty Truck Weighbridge (MINE_TARE)"
+          subtitle="Weigh empty truck on scale before entering cargo loading area"
           done={steps.step2Done}
           active={steps.step2Active}
           icon={<Scale size={16} />}
         >
           {steps.step2Active && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {!a.mine_tare_kg ? (
-                /* STAGE 1: EMPTY TRUCK WEIGHBRIDGE */
-                <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '16px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E40AF', marginBottom: '4px' }}>
-                    🚛 STEP 1: EMPTY TRUCK WEIGHBRIDGE (MINE_TARE)
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#1E3A8A', margin: '0 0 12px' }}>
-                    Truck is on scale. Capture empty tare weight before sending truck for loading.
-                  </p>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                      Tare Weight (kg)
-                    </label>
-                    <input
-                      type="number"
-                      value={weightKg}
-                      onChange={e => setWeightKg(e.target.value)}
-                      placeholder="10250"
-                      style={{ width: '100%', padding: '14px 16px', border: '1px solid #CBD5E1', borderRadius: '10px', fontSize: '20px', fontWeight: 800, textAlign: 'right', backgroundColor: '#fff' }}
-                    />
-                  </div>
-                  <button
-                    onClick={handleLogWeight}
-                    disabled={isSubmitting || !weightKg}
-                    style={{
-                      width: '100%', marginTop: '14px', padding: '14px', backgroundColor: '#2563EB', color: '#fff', border: 'none',
-                      borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer'
-                    }}
-                  >
-                    {isSubmitting ? 'Capturing...' : 'Capture Empty Weight (MINE_TARE) & Send for Loading'}
-                  </button>
-                </div>
-              ) : (
-                /* STAGE 2: LOADED TRUCK WEIGHBRIDGE */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {/* Loading Stage Status Banner */}
-                  <div style={{ backgroundColor: '#FFFBEB', border: '1px solid #FCD34D', borderRadius: '10px', padding: '16px', color: '#92400E' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 800, color: '#B45309' }}>✓ STEP 1 TARE CAPTURED: {a.mine_tare_kg.toLocaleString()} kg</span>
-                      <span style={{ fontSize: '11px', fontWeight: 800, backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '4px', color: '#78350F' }}>
-                        STATUS: WAITING FOR LOADING
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#92400E' }}>
-                      Truck loaded cargo at bay and has returned to weighbridge for Stage 2 gross measurement.
-                    </div>
-                  </div>
-
-                  <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '16px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#065F46', marginBottom: '4px' }}>
-                      🚛📦 STEP 2: LOADED TRUCK WEIGHBRIDGE (MINE_GROSS)
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#047857', marginBottom: '12px' }}>
-                      Previously captured Tare Weight: <strong>{a.mine_tare_kg.toLocaleString()} kg</strong>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#065F46', textTransform: 'uppercase', marginBottom: '6px' }}>
-                        Loaded Gross Weight (kg)
-                      </label>
-                      <input
-                        type="number"
-                        value={weightKg}
-                        onChange={e => setWeightKg(e.target.value)}
-                        placeholder="44870"
-                        style={{ width: '100%', padding: '14px 16px', border: '1px solid #A7F3D0', borderRadius: '10px', fontSize: '20px', fontWeight: 800, textAlign: 'right', backgroundColor: '#fff' }}
-                      />
-                    </div>
-
-                    {parseFloat(weightKg) > (a.mine_tare_kg || 0) && (
-                      <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#ECFDF5', borderRadius: '8px', border: '1px border #6EE7B7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#065F46' }}>Calculated Net Payload:</span>
-                        <span className="mono" style={{ fontSize: '16px', fontWeight: 900, color: '#047857' }}>
-                          {(parseFloat(weightKg) - a.mine_tare_kg).toLocaleString()} kg ({((parseFloat(weightKg) - a.mine_tare_kg)/1000).toFixed(2)} Tons)
-                        </span>
-                      </div>
-                    )}
-
-                    <button
-                      onClick={handleLogWeight}
-                      disabled={isSubmitting || !weightKg}
-                      style={{
-                        width: '100%', marginTop: '14px', padding: '14px', backgroundColor: '#059669', color: '#fff', border: 'none',
-                        borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer'
-                      }}
-                    >
-                      {isSubmitting ? 'Capturing...' : 'Capture Loaded Weight (MINE_GROSS) & Finalize Origin Net'}
-                    </button>
-                  </div>
-                </div>
-              )}
+            <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '16px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#1E40AF', marginBottom: '4px' }}>
+                🚛 STEP 2: EMPTY TRUCK WEIGHBRIDGE (MINE_TARE)
+              </div>
+              <p style={{ fontSize: '12px', color: '#1E3A8A', margin: '0 0 12px' }}>
+                Truck is on scale. Capture empty tare weight before sending truck for loading.
+              </p>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Tare Weight (kg)
+                </label>
+                <input
+                  type="number"
+                  value={weightKg}
+                  onChange={e => setWeightKg(e.target.value)}
+                  placeholder="10000"
+                  style={{ width: '100%', padding: '14px 16px', border: '1px solid #CBD5E1', borderRadius: '10px', fontSize: '20px', fontWeight: 800, textAlign: 'right', backgroundColor: '#fff' }}
+                />
+              </div>
+              <button
+                onClick={handleLogWeight}
+                disabled={isSubmitting || !weightKg}
+                style={{
+                  width: '100%', marginTop: '14px', padding: '14px', backgroundColor: '#2563EB', color: '#fff', border: 'none',
+                  borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer'
+                }}
+              >
+                {isSubmitting ? 'Capturing...' : 'Capture Empty Weight (MINE_TARE) & Send for Loading'}
+              </button>
             </div>
           )}
 
-          {steps.step2Done && a.mine_tare_kg && a.mine_gross_kg && (
+          {steps.step2Done && a.mine_tare_kg && (
             <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #10B981', borderRadius: '10px', padding: '16px', color: '#065F46' }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#059669', marginBottom: '8px' }}>✓ ORIGIN WEIGHBRIDGE COMPLETE</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', textAlign: 'center' }}>
-                <div style={{ backgroundColor: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
-                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>EMPTY / TARE</div>
-                  <div className="mono" style={{ fontSize: '15px', fontWeight: 800 }}>{a.mine_tare_kg.toLocaleString()} kg</div>
-                </div>
-                <div style={{ backgroundColor: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
-                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>LOADED / GROSS</div>
-                  <div className="mono" style={{ fontSize: '15px', fontWeight: 800 }}>{a.mine_gross_kg.toLocaleString()} kg</div>
-                </div>
-                <div style={{ backgroundColor: '#ECFDF5', padding: '10px', borderRadius: '8px', border: '2px solid #10B981' }}>
-                  <div style={{ fontSize: '10px', color: '#047857', fontWeight: 800 }}>NET PAYLOAD</div>
-                  <div className="mono" style={{ fontSize: '15px', fontWeight: 900, color: '#065F46' }}>{(a.mine_gross_kg - a.mine_tare_kg).toLocaleString()} kg</div>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#059669' }}>{((a.mine_gross_kg - a.mine_tare_kg)/1000).toFixed(2)} Tons</div>
-                </div>
+              <div style={{ fontSize: '12px', fontWeight: 800 }}>
+                ✓ STEP 2 TARE CAPTURED: {a.mine_tare_kg.toLocaleString()} kg
               </div>
             </div>
           )}
@@ -449,8 +395,8 @@ export const SupervisorDashboard: React.FC = () => {
         {/* ── Step 3: Upload Bilty ── */}
         <StepCard
           step={3}
-          title="Upload Bilty & Dispatch Truck"
-          subtitle="Record the bilty number and upload the receipt to send the truck on its way"
+          title="Upload Bilty Document"
+          subtitle="Record the bilty number and upload the receipt to verify cargo credentials"
           done={steps.step3Done}
           active={steps.step3Active}
           icon={<FileText size={16} />}
@@ -485,7 +431,7 @@ export const SupervisorDashboard: React.FC = () => {
                   onChange={e => setUploadUrl(e.target.value)}
                   style={{ width: '100%', padding: '12px 14px', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: '#F8FAFC' }}
                 >
-                  <option value="/uploads/biltys/bilty_sample.png">bilty_sample.png — PO #4500001715 (34.62 Tons)</option>
+                  <option value="/uploads/biltys/bilty_sample.png">{`bilty_sample.png — PO #${a.sap_po_no} (${a.po_target_qty || 34.0} ${a.po_uom === 'TO' ? 'Tons' : (a.po_uom || 'Tons')})`}</option>
                   <option value="/uploads/bilty/blt_778899.pdf">BLT-778899 — Standard Demo</option>
                 </select>
               </div>
@@ -498,8 +444,116 @@ export const SupervisorDashboard: React.FC = () => {
                   borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer'
                 }}
               >
-                {isSubmitting ? 'Uploading...' : 'Upload Bilty & Send Truck on Journey'}
+                {isSubmitting ? 'Uploading...' : 'Upload Bilty & Lock Cargo Details'}
               </button>
+            </div>
+          )}
+
+          {steps.step3Done && a.bilty_no && (
+            <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #10B981', borderRadius: '10px', padding: '16px', color: '#065F46' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800 }}>
+                ✓ STEP 3 BILTY LOCKED: {a.bilty_no} ({a.bilty_date})
+              </div>
+            </div>
+          )}
+        </StepCard>
+
+        {/* ── Step 4: Weigh Loaded Truck & Dispatch (MINE_GROSS) ── */}
+        <StepCard
+          step={4}
+          title="Weigh Loaded Truck & Dispatch"
+          subtitle="Weigh loaded truck returning from loading bay and authorize final dispatch"
+          done={steps.step4Done}
+          active={steps.step4Active}
+          icon={<Scale size={16} />}
+        >
+          {steps.step4Active && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {!a.mine_gross_kg ? (
+                /* Capture Gross weight */
+                <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: '10px', padding: '16px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#065F46', marginBottom: '4px' }}>
+                    🚛📦 STEP 4: LOADED TRUCK WEIGHBRIDGE (MINE_GROSS)
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#047857', marginBottom: '12px' }}>
+                    Previously captured Empty Tare Weight: <strong>{a.mine_tare_kg?.toLocaleString()} kg</strong>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#065F46', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      Loaded Gross Weight (kg)
+                    </label>
+                    <input
+                      type="number"
+                      value={weightKg}
+                      onChange={e => setWeightKg(e.target.value)}
+                      placeholder="40000"
+                      style={{ width: '100%', padding: '14px 16px', border: '1px solid #A7F3D0', borderRadius: '10px', fontSize: '20px', fontWeight: 800, textAlign: 'right', backgroundColor: '#fff' }}
+                    />
+                  </div>
+
+                  {parseFloat(weightKg) > (a.mine_tare_kg || 0) && (
+                    <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#ECFDF5', borderRadius: '8px', border: '1px border #6EE7B7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#065F46' }}>Calculated Net Payload:</span>
+                      <span className="mono" style={{ fontSize: '16px', fontWeight: 900, color: '#047857' }}>
+                        {(parseFloat(weightKg) - (a.mine_tare_kg || 0)).toLocaleString()} kg ({((parseFloat(weightKg) - (a.mine_tare_kg || 0))/1000).toFixed(2)} Tons)
+                      </span>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleLogWeight}
+                    disabled={isSubmitting || !weightKg}
+                    style={{
+                      width: '100%', marginTop: '14px', padding: '14px', backgroundColor: '#059669', color: '#fff', border: 'none',
+                      borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer'
+                    }}
+                  >
+                    {isSubmitting ? 'Capturing...' : 'Capture Loaded Weight (MINE_GROSS) & Finalize Origin Net'}
+                  </button>
+                </div>
+              ) : (
+                /* Weights logged, awaiting Journey Authorization */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #10B981', borderRadius: '10px', padding: '16px', color: '#065F46' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: '#059669', marginBottom: '8px' }}>✓ ORIGIN WEIGHBRIDGE COMPLETE</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', textAlign: 'center' }}>
+                      <div style={{ backgroundColor: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>EMPTY / TARE</div>
+                        <div className="mono" style={{ fontSize: '15px', fontWeight: 800 }}>{a.mine_tare_kg?.toLocaleString()} kg</div>
+                      </div>
+                      <div style={{ backgroundColor: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
+                        <div style={{ fontSize: '10px', color: '#64748B', fontWeight: 700 }}>LOADED / GROSS</div>
+                        <div className="mono" style={{ fontSize: '15px', fontWeight: 800 }}>{a.mine_gross_kg?.toLocaleString()} kg</div>
+                      </div>
+                      <div style={{ backgroundColor: '#ECFDF5', padding: '10px', borderRadius: '8px', border: '2px solid #10B981' }}>
+                        <div style={{ fontSize: '10px', color: '#047857', fontWeight: 800 }}>NET PAYLOAD</div>
+                        <div className="mono" style={{ fontSize: '15px', fontWeight: 900, color: '#065F46' }}>{((a.mine_gross_kg || 0) - (a.mine_tare_kg || 0)).toLocaleString()} kg</div>
+                        <div style={{ fontSize: '11px', fontWeight: 700, color: '#059669' }}>{(((a.mine_gross_kg || 0) - (a.mine_tare_kg || 0))/1000).toFixed(2)} Tons</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ backgroundColor: '#ECFDF5', border: '1px solid #10B981', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#065F46' }}>
+                      ✓ WEIGHBRIDGE RECORDS LOCKED & READY FOR DISPATCH
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#047857' }}>
+                      The loaded net payload is finalized. Click below to authorize dispatch and release the driver.
+                    </div>
+                    <button
+                      onClick={handleAuthorizeJourney}
+                      disabled={isSubmitting}
+                      style={{
+                        padding: '14px', backgroundColor: '#10B981', color: '#fff', border: 'none',
+                        borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer',
+                        marginTop: '6px'
+                      }}
+                    >
+                      {isSubmitting ? 'Authorizing...' : 'Authorize Start Journey & Dispatch Vehicle'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </StepCard>
@@ -563,11 +617,8 @@ export const SupervisorDashboard: React.FC = () => {
       ) : assignments.length === 0 ? (
         <EmptyState icon={<Truck size={48} />} title="No Trucks at Gate" description="No trucks are currently assigned or in transit." />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {filteredAssignments.map(a => {
-            const steps = getStepStatus(a);
-            const progress = [steps.step1Done, steps.step2Done, steps.step3Done].filter(Boolean).length;
-
             return (
               <div
                 key={a.id}
@@ -576,45 +627,54 @@ export const SupervisorDashboard: React.FC = () => {
                   backgroundColor: '#fff', borderRadius: '12px',
                   border: '1px solid #E2E8F0',
                   padding: '18px 22px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '18px',
+                  display: 'flex', flexDirection: 'column', gap: '14px',
                   boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
                   transition: 'all 0.15s'
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
               >
-                {/* PO Number */}
-                <div style={{ flexShrink: 0 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO Number</div>
-                  <div className="mono" style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A' }}>#{a.sap_po_no}</div>
-                </div>
-
-                <div style={{ width: '1px', height: '40px', backgroundColor: '#F1F5F9' }} />
-
-                {/* Driver */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Driver</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{a.driver_name || '—'}</div>
-                  <div className="mono" style={{ fontSize: '11px', color: '#64748B' }}>{a.vehicle_reg}</div>
-                </div>
-
-                {/* Progress */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '6px' }}>Progress</div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    {[0, 1, 2].map(i => (
-                      <div key={i} style={{
-                        height: '6px', flex: 1, borderRadius: '3px',
-                        backgroundColor: i < progress ? '#10B981' : '#E2E8F0',
-                        transition: 'background-color 0.2s'
-                      }} />
-                    ))}
+                {/* Upper row: PO / Contract / Status */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    <span className="mono" style={{ fontSize: '15px', fontWeight: 900, color: '#0F172A' }}>PO #{a.sap_po_no}</span>
+                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#CBD5E1' }}></span>
+                    <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: '#64748B' }}>Contract: C-2026-001</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '4px' }}>{progress}/3 steps done</div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, backgroundColor: a.loading_status === 'LOADED' ? '#D1FAE5' : '#FEF3C7', padding: '2px 8px', borderRadius: '4px', color: a.loading_status === 'LOADED' ? '#065F46' : '#92400E', textTransform: 'uppercase' }}>
+                      Queue: {a.loading_status || 'PENDING'}
+                    </span>
+                    <StatusBadge status={a.status} />
+                  </div>
                 </div>
 
-                <StatusBadge status={a.status} />
-                <ChevronRight size={18} color="#CBD5E1" />
+                {/* Details row: Driver, Vehicle, Timing */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 2fr 1.2fr', gap: '16px', fontSize: '12px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
+                  <div>
+                    <span style={{ color: '#94A3B8', fontWeight: 700, display: 'block', textTransform: 'uppercase', fontSize: '9px' }}>Driver / Vehicle</span>
+                    <strong style={{ color: '#334155' }}>{a.driver_name || '—'}</strong>
+                    <span style={{ color: '#64748B', display: 'block' }}>Reg: {a.vehicle_reg}</span>
+                  </div>
+                  <div>
+                    <span style={{ color: '#94A3B8', fontWeight: 700, display: 'block', textTransform: 'uppercase', fontSize: '9px' }}>Weighbridge</span>
+                    <strong style={{ color: '#334155' }}>
+                      {a.mine_gross_kg ? 'Step 2 (Gross) Complete' : a.mine_tare_kg ? 'Step 1 (Tare) Complete' : 'Pending Weigh'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#94A3B8', fontWeight: 700, display: 'block', textTransform: 'uppercase', fontSize: '9px' }}>Arrival Timings</span>
+                    <span style={{ display: 'block' }}>Expected: <strong style={{ color: '#334155' }}>{a.requested_pickup_datetime ? new Date(a.requested_pickup_datetime).toLocaleString() : '—'}</strong></span>
+                    {a.queue_entry_time && (
+                      <span style={{ display: 'block' }}>Actual: <strong style={{ color: '#059669' }}>{new Date(a.queue_entry_time).toLocaleString()}</strong></span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 700, color: 'var(--primary-600)' }}>
+                      Manage Run <ChevronRight size={14} />
+                    </span>
+                  </div>
+                </div>
               </div>
             );
           })}
