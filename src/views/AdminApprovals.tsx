@@ -39,18 +39,41 @@ export const AdminApprovals: React.FC = () => {
     };
   }, [activeTab]);
 
-  const handleResolve = async () => {
+  const handleApprove = async () => {
     if (!selectedReview) return;
     setIsSubmitting(true);
     try {
-      const finalNotes = `Reason: ${overrideReason}. Details: ${resolutionNotes}`;
-      await caApi.resolveReview(selectedReview.id, finalNotes);
+      const finalNotes = `APPROVED: Reason: ${overrideReason}${resolutionNotes ? `. Details: ${resolutionNotes}` : ''}`;
+      await caApi.resolveReview(selectedReview.id, finalNotes, 'APPROVE');
       setSelectedReview(null);
       setResolutionNotes('');
-      loadReviews();
-    } catch (err) {
-      console.error('Failed to resolve review:', err);
-      alert('Error resolving review item');
+      await loadReviews();
+      window.dispatchEvent(new Event('pod_data_refreshed'));
+    } catch (err: any) {
+      console.error('Failed to approve review:', err);
+      alert('Error approving review item: ' + (err.message || 'Server error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedReview) return;
+    if (!resolutionNotes.trim()) {
+      alert('Please provide verification audit notes explaining the rejection before clicking Reject POD.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const finalNotes = `REJECTED: Reason: ${overrideReason}. Details: ${resolutionNotes.trim()}`;
+      await caApi.resolveReview(selectedReview.id, finalNotes, 'REJECT');
+      setSelectedReview(null);
+      setResolutionNotes('');
+      await loadReviews();
+      window.dispatchEvent(new Event('pod_data_refreshed'));
+    } catch (err: any) {
+      console.error('Failed to reject review:', err);
+      alert('Error rejecting review item: ' + (err.message || 'Server error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -306,36 +329,20 @@ export const AdminApprovals: React.FC = () => {
 
                       <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                         <button 
-                          onClick={async () => {
-                            if (!selectedReview || !resolutionNotes) {
-                              alert('Please provide resolution notes before rejecting.');
-                              return;
-                            }
-                            setIsSubmitting(true);
-                            try {
-                              await caApi.resolveReview(selectedReview.id, `REJECTED: ${overrideReason} - ${resolutionNotes}`);
-                              setSelectedReview(null);
-                              setResolutionNotes('');
-                              loadReviews();
-                            } catch (err) {
-                              console.error(err);
-                            } finally {
-                              setIsSubmitting(false);
-                            }
-                          }}
+                          onClick={handleReject}
                           className="btn btn-ghost"
-                          style={{ color: 'var(--error-600)', borderColor: 'var(--error-300)' }}
-                          disabled={isSubmitting || !resolutionNotes}
+                          style={{ color: 'var(--error-600)', borderColor: 'var(--error-300)', opacity: isSubmitting ? 0.6 : 1 }}
+                          disabled={isSubmitting}
                         >
-                          [ REJECT POD ]
+                          {isSubmitting ? '[ REJECTING... ]' : '[ REJECT POD ]'}
                         </button>
                         <button 
-                          onClick={handleResolve}
+                          onClick={handleApprove}
                           className="btn btn-dark"
-                          style={{ backgroundColor: '#10B981', color: '#FFFFFF' }}
-                          disabled={isSubmitting || !resolutionNotes}
+                          style={{ backgroundColor: '#10B981', color: '#FFFFFF', opacity: isSubmitting ? 0.6 : 1 }}
+                          disabled={isSubmitting}
                         >
-                          [ APPROVE POD ]
+                          {isSubmitting ? '[ APPROVING... ]' : '[ APPROVE POD ]'}
                         </button>
                       </div>
                     </div>

@@ -96,8 +96,8 @@ export const caApi = {
     request<ReviewQueueItemV3[]>(`/review-queue?status=${status}`),
   clearReviewQueue: () =>
     request<{ success: boolean; cleared: number; remaining: number; message: string }>('/review-queue', { method: 'DELETE' }),
-  resolveReview: (id: number, notes: string) =>
-    request<{ message: string }>(`/review-queue/${id}/resolve`, { method: 'PATCH', body: JSON.stringify({ resolution_notes: notes }) }),
+  resolveReview: (id: number, notes: string, action: 'APPROVE' | 'REJECT' = 'APPROVE') =>
+    request<{ success?: boolean; message: string }>(`/review-queue/${id}/resolve`, { method: 'PATCH', body: JSON.stringify({ resolution_notes: notes, action }) }),
   verifyCA: (assignmentId: number, verified_bool: boolean, notes?: string) =>
     request<{ message: string }>(`/ca-verification/${assignmentId}`, { method: 'POST', body: JSON.stringify({ verified_bool, notes }) }),
   getDeliveryInvoices: (status: 'DRAFT' | 'SENT_TO_CA' = 'SENT_TO_CA') =>
@@ -244,6 +244,13 @@ export interface TransportAssignmentV3 {
   driver_name?: string;
   vehicle_reg?: string;
   supervisor_stamped_count?: number;
+  mine_tare_kg?: number;
+  mine_gross_kg?: number;
+  dest_gross_kg?: number;
+  dest_tare_kg?: number;
+  bilty_no?: string;
+  bilty_date?: string;
+  bilty_url?: string;
 }
 
 export interface ReviewQueueItemV3 {

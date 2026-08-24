@@ -382,55 +382,125 @@ export const DriverDashboard: React.FC = () => {
           </ActionCard>
 
           {/* ── STEP 2: Start Trip & GPS ── */}
-          <ActionCard
-            title="Step 2 — Start Your Journey"
-            subtitle="Tap Start Trip to turn on GPS tracking. The siding can see where your truck is."
-            icon={<Navigation size={18} />}
-            accentColor="#6366F1"
-          >
-            {!trackingActive ? (
-              <button
-                onClick={handleStartTrip}
-                style={{
-                  width: '100%', padding: '18px 20px',
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)',
-                  color: '#fff', border: 'none', borderRadius: '12px',
-                  fontSize: '16px', fontWeight: 800, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                  boxShadow: '0 4px 16px rgba(99,102,241,0.35)'
-                }}
+          {(() => {
+            const hasTare = !!s.mine_tare_kg;
+            const hasGross = !!s.mine_gross_kg;
+            const hasBilty = !!s.bilty_no;
+            const isJourneyReady = hasTare && hasGross && hasBilty;
+
+            return (
+              <ActionCard
+                title="Step 2 — Dispatch Validation & Start Journey"
+                subtitle="View origin weighbridge progress. Start journey when loaded weighment and Bilty are complete."
+                icon={<Navigation size={18} />}
+                accentColor="#6366F1"
               >
-                <Navigation size={20} /> START TRIP & TURN ON GPS
-              </button>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  backgroundColor: '#F0FDF4', border: '1px solid #10B981',
-                  borderRadius: '10px', padding: '14px 18px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, color: '#065F46' }}>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
-                    GPS IS ON — Tracking your trip
+                {/* Real-time Dispatch Progress Checklist */}
+                <div style={{ backgroundColor: '#F8FAFC', borderRadius: '10px', padding: '16px', border: '1px solid #E2E8F0', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>
+                    DISPATCH PROGRESS CHECKLIST
                   </div>
-                  <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: '#047857' }}>
-                    {gpsCoords ? `${gpsCoords.lat.toFixed(4)}, ${gpsCoords.lng.toFixed(4)}` : 'Getting location...'}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#059669', fontWeight: 600 }}>
+                      <span>✓ Driver & Vehicle Verified</span>
+                      <span style={{ fontSize: '11px', backgroundColor: '#D1FAE5', padding: '2px 8px', borderRadius: '4px' }}>Passed</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: hasTare ? '#059669' : '#94A3B8', fontWeight: 600 }}>
+                      <span>{hasTare ? '✓' : '○'} Empty Weight Captured (MINE_TARE)</span>
+                      <span className="mono" style={{ fontSize: '11px', backgroundColor: hasTare ? '#D1FAE5' : '#F1F5F9', padding: '2px 8px', borderRadius: '4px', color: hasTare ? '#059669' : '#64748B' }}>
+                        {hasTare ? `${s.mine_tare_kg!.toLocaleString()} kg` : 'Pending'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: hasGross ? '#059669' : hasTare ? '#D97706' : '#94A3B8', fontWeight: 600 }}>
+                      <span>{hasGross ? '✓ Loaded Weight Captured (MINE_GROSS)' : hasTare ? '● Loading Cargo / Waiting for Gross Scale' : '○ Loaded Weight Captured (MINE_GROSS)'}</span>
+                      <span className="mono" style={{ fontSize: '11px', backgroundColor: hasGross ? '#D1FAE5' : hasTare ? '#FEF3C7' : '#F1F5F9', padding: '2px 8px', borderRadius: '4px', color: hasGross ? '#059669' : hasTare ? '#B45309' : '#64748B' }}>
+                        {hasGross ? `${s.mine_gross_kg!.toLocaleString()} kg` : hasTare ? 'Loading...' : 'Pending'}
+                      </span>
+                    </div>
+                    {hasTare && hasGross && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: '#059669', fontWeight: 700 }}>
+                        <span>✓ Calculated Net Payload</span>
+                        <span className="mono" style={{ fontSize: '11px', backgroundColor: '#ECFDF5', border: '1px solid #6EE7B7', padding: '2px 8px', borderRadius: '4px', color: '#047857' }}>
+                          {(s.mine_gross_kg! - s.mine_tare_kg!).toLocaleString()} kg ({((s.mine_gross_kg! - s.mine_tare_kg!)/1000).toFixed(2)} Tons)
+                        </span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: hasBilty ? '#059669' : '#94A3B8', fontWeight: 600 }}>
+                      <span>{hasBilty ? '✓' : '○'} Bilty Generated & Dispatch Validated</span>
+                      <span className="mono" style={{ fontSize: '11px', backgroundColor: hasBilty ? '#D1FAE5' : '#F1F5F9', padding: '2px 8px', borderRadius: '4px', color: hasBilty ? '#059669' : '#64748B' }}>
+                        {hasBilty ? `${s.bilty_no}` : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
-                <button
-                  onClick={handleStopTrip}
-                  style={{
-                    width: '100%', padding: '12px', backgroundColor: '#FEF2F2',
-                    color: '#991B1B', border: '1px solid #FCA5A5', borderRadius: '10px',
-                    fontSize: '13px', fontWeight: 700, cursor: 'pointer'
-                  }}
-                >
-                  Stop GPS Tracking
-                </button>
-              </div>
-            )}
-          </ActionCard>
+                {!trackingActive ? (
+                  isJourneyReady ? (
+                    <button
+                      onClick={handleStartTrip}
+                      style={{
+                        width: '100%', padding: '18px 20px',
+                        background: 'linear-gradient(135deg, #059669 0%, #10B981 100%)',
+                        color: '#fff', border: 'none', borderRadius: '12px',
+                        fontSize: '16px', fontWeight: 800, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        boxShadow: '0 4px 16px rgba(16,185,129,0.35)'
+                      }}
+                    >
+                      <Navigation size={20} /> START TRIP & TURN ON GPS
+                    </button>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: '10px', padding: '14px 16px', color: '#92400E', fontSize: '13px', fontWeight: 600 }}>
+                        ⚠️ <strong>Journey Cannot Start Yet</strong>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#B45309' }}>
+                          {!hasTare ? 'Waiting for Supervisor to capture empty truck tare weight.' : !hasGross ? 'Waiting for material loading to complete and Supervisor to capture loaded gross weight.' : 'Waiting for Supervisor to upload Bilty receipt and validate dispatch.'}
+                        </p>
+                      </div>
+                      <button
+                        disabled
+                        style={{
+                          width: '100%', padding: '16px 20px', backgroundColor: '#E2E8F0',
+                          color: '#94A3B8', border: 'none', borderRadius: '12px',
+                          fontSize: '15px', fontWeight: 700, cursor: 'not-allowed',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                        }}
+                      >
+                        <Navigation size={18} /> START TRIP (Waiting for Weighbridge & Bilty)
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      backgroundColor: '#F0FDF4', border: '1px solid #10B981',
+                      borderRadius: '10px', padding: '14px 18px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, color: '#065F46' }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+                        GPS IS ON — Tracking your trip
+                      </div>
+                      <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: '#047857' }}>
+                        {gpsCoords ? `${gpsCoords.lat.toFixed(4)}, ${gpsCoords.lng.toFixed(4)}` : 'Getting location...'}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={handleStopTrip}
+                      style={{
+                        width: '100%', padding: '12px', backgroundColor: '#FEF2F2',
+                        color: '#991B1B', border: '1px solid #FCA5A5', borderRadius: '10px',
+                        fontSize: '13px', fontWeight: 700, cursor: 'pointer'
+                      }}
+                    >
+                      Stop GPS Tracking
+                    </button>
+                  </div>
+                )}
+              </ActionCard>
+            );
+          })()}
 
           {/* ── STEP 3: Confirm Arrival ── */}
           <ActionCard

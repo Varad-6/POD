@@ -372,62 +372,92 @@ router.delete('/review-queue', requireAuth, requireRole('CA', 'SR'), (req: Reque
 // PATCH /api/v3/review-queue/:id/resolve
 router.patch('/review-queue/:id/resolve', requireAuth, requireRole('CA', 'SR'), (req: Request, res: Response) => {
   const db = getDb();
-  const { resolution_notes } = req.body;
+  const { resolution_notes, action } = req.body;
+  const isApproval = action !== 'REJECT';
 
   const review = db.prepare('SELECT * FROM review_queue WHERE id = ?').get(req.params.id) as any;
   if (!review) return res.status(404).json({ error: 'Review item not found' });
 
-  db.prepare(`
-    UPDATE review_queue
-    SET status = 'RESOLVED', resolved_by_role = ?, resolved_by_user_id = ?, resolution_notes = ?, blocks_miro_bool = 0
-    WHERE id = ?
-  `).run(req.user!.role, req.user!.userId, resolution_notes ?? 'Resolved manually', req.params.id);
-
-  // Check if there are other open review blocks for this assignment
-  const remainingBlock = db.prepare(`
-    SELECT COUNT(*) as count FROM review_queue WHERE assignment_id = ? AND status = 'OPEN' AND blocks_miro_bool = 1
-  `).get(review.assignment_id) as any;
-
-  if (remainingBlock.count === 0) {
-    // Record CA verification
-    db.prepare(`
-      INSERT OR REPLACE INTO ca_verification (assignment_id, verified_bool, verified_by, notes)
-      VALUES (?, 1, ?, ?)
-    `).run(review.assignment_id, req.user!.userId, resolution_notes ?? 'Verified manually');
-
-    // Fetch weights & PO target info
-    const assignment = db.prepare(`
-      SELECT ta.*, po.rate, po.id as po_id
-      FROM transport_assignments ta
-      JOIN job_configs jc ON jc.id = ta.job_config_id
-      JOIN purchase_orders po ON po.id = jc.po_id
-      WHERE ta.id = ?
-    `).get(review.assignment_id) as any;
-
-    if (assignment) {
-      // Compute accepted payload from destination weighbridge logs (DEST_GROSS - DEST_TARE)
-      const weights = db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(review.assignment_id) as any[];
-      const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg || 0;
-      const destTare = weights.find(w => w.stage === 'DEST_TARE')?.weight_kg || 0;
-      const acceptedPayload = (destGross - destTare) || 34000.0;
-
-      const totalValue = (acceptedPayload / 1000) * assignment.rate;
-
-      // Fetch waybill from pod_documents
-      const podDoc = db.prepare('SELECT ocr_waybill_extracted FROM pod_documents WHERE assignment_id = ?').get(review.assignment_id) as any;
-      const waybillNo = podDoc?.ocr_waybill_extracted || `WB-${review.assignment_id}`;
-
-      // Create S/4 Mirror Row
-      db.prepare(`
-        INSERT OR REPLACE INTO sap_s4_mirror (assignment_id, waybill_no, delivered_qty, rate, total_value, verified_at, synced_at)
-        VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-      `).run(review.assignment_id, waybillNo, acceptedPayload / 1000, assignment.rate, totalValue);
-    }
-
-    db.prepare("UPDATE transport_assignments SET status = 'APPROVED' WHERE id = ?").run(review.assignment_id);
+  if (review.status === 'RESOLVED') {
+    return res.status(400).json({ error: 'Review item has already been resolved.' });
   }
 
-  return res.json({ message: 'Review resolved and MIRO unblocked' });
+  if (isApproval) {
+    // ── APPROVAL WORKFLOW ──
+    db.prepare(`
+      UPDATE review_queue
+      SET status = 'RESOLVED', resolved_by_role = ?, resolved_by_user_id = ?, resolution_notes = ?, blocks_miro_bool = 0
+      WHERE id = ?
+    `).run(req.user!.role, req.user!.userId, resolution_notes ?? 'Approved by CA', req.params.id);
+
+    // Check if there are other open review blocks for this assignment
+    const remainingBlock = db.prepare(`
+      SELECT COUNT(*) as count FROM review_queue WHERE assignment_id = ? AND status = 'OPEN' AND blocks_miro_bool = 1
+    `).get(review.assignment_id) as any;
+
+    if (!remainingBlock || remainingBlock.count === 0) {
+      // Record CA verification in audit trail
+      db.prepare(`
+        INSERT OR REPLACE INTO ca_verification (assignment_id, verified_bool, verified_by, notes)
+        VALUES (?, 1, ?, ?)
+      `).run(review.assignment_id, req.user!.userId, resolution_notes ?? 'Verified & Approved by CA');
+
+      // Fetch weights & PO target info
+      const assignment = db.prepare(`
+        SELECT ta.*, po.rate, po.id as po_id
+        FROM transport_assignments ta
+        JOIN job_configs jc ON jc.id = ta.job_config_id
+        JOIN purchase_orders po ON po.id = jc.po_id
+        WHERE ta.id = ?
+      `).get(review.assignment_id) as any;
+
+      if (assignment) {
+        const weights = db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(review.assignment_id) as any[];
+        const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg || 0;
+        const destTare = weights.find(w => w.stage === 'DEST_TARE')?.weight_kg || 0;
+        const mineGross = weights.find(w => w.stage === 'MINE_GROSS')?.weight_kg || 0;
+        const mineTare = weights.find(w => w.stage === 'MINE_TARE')?.weight_kg || 0;
+        
+        const acceptedPayload = (destGross > 0 && destTare > 0) 
+          ? (destGross - destTare) 
+          : (mineGross > 0 && mineTare > 0) 
+            ? (mineGross - mineTare) 
+            : 34000.0;
+
+        const totalValue = (acceptedPayload / 1000) * assignment.rate;
+
+        const podDoc = db.prepare('SELECT ocr_waybill_extracted FROM pod_documents WHERE assignment_id = ?').get(review.assignment_id) as any;
+        const waybillNo = podDoc?.ocr_waybill_extracted || `WB-${review.assignment_id}`;
+
+        db.prepare(`
+          INSERT OR REPLACE INTO sap_s4_mirror (assignment_id, waybill_no, delivered_qty, rate, total_value, verified_at, synced_at)
+          VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        `).run(review.assignment_id, waybillNo, acceptedPayload / 1000, assignment.rate, totalValue);
+      }
+
+      db.prepare("UPDATE transport_assignments SET status = 'APPROVED' WHERE id = ?").run(review.assignment_id);
+    }
+
+    return res.json({ success: true, message: 'Review approved successfully. POD cleared and MIRO unblocked.' });
+  } else {
+    // ── REJECTION WORKFLOW ──
+    db.prepare(`
+      UPDATE review_queue
+      SET status = 'RESOLVED', resolved_by_role = ?, resolved_by_user_id = ?, resolution_notes = ?, blocks_miro_bool = 1
+      WHERE id = ?
+    `).run(req.user!.role, req.user!.userId, resolution_notes ?? 'Rejected by CA', req.params.id);
+
+    // Record CA rejection in audit trail
+    db.prepare(`
+      INSERT OR REPLACE INTO ca_verification (assignment_id, verified_bool, verified_by, notes)
+      VALUES (?, 0, ?, ?)
+    `).run(review.assignment_id, req.user!.userId, resolution_notes ?? 'Rejected by CA');
+
+    // Update assignment status to UNDER_REVIEW (keeping MIRO blocked)
+    db.prepare("UPDATE transport_assignments SET status = 'UNDER_REVIEW' WHERE id = ?").run(review.assignment_id);
+
+    return res.json({ success: true, message: 'Review rejected. Assignment remains blocked from MIRO.' });
+  }
 });
 
 // POST /api/v3/ca-verification/:assignmentId
@@ -486,6 +516,39 @@ router.post('/ca-verification/:assignmentId', requireAuth, requireRole('CA'), (r
 router.get('/delivery-invoices', requireAuth, requireRole('CA', 'TA'), (req: Request, res: Response) => {
   const db = getDb();
   const status = req.query.status || 'SENT_TO_CA';
+
+  // Auto-bridge approved deliveries from sap_s4_mirror into delivery_invoices if not already submitted
+  try {
+    const unlinkedMirrors = db.prepare(`
+      SELECT ssm.* FROM sap_s4_mirror ssm
+      WHERE NOT EXISTS (SELECT 1 FROM delivery_invoices di WHERE di.assignment_id = ssm.assignment_id)
+    `).all() as any[];
+
+    for (const m of unlinkedMirrors) {
+      const assign = db.prepare(`
+        SELECT ta.*, po.id as po_id FROM transport_assignments ta
+        JOIN job_configs jc ON jc.id = ta.job_config_id
+        JOIN purchase_orders po ON po.id = jc.po_id
+        WHERE ta.id = ?
+      `).get(m.assignment_id) as any;
+
+      if (assign) {
+        const dRes = db.prepare(`
+          INSERT INTO delivery_invoices (assignment_id, accepted_payload, rate, total_value, invoice_no, file_url, status)
+          VALUES (?, ?, ?, ?, ?, '/uploads/invoices/auto.pdf', 'SENT_TO_CA')
+        `).run(m.assignment_id, m.delivered_qty * 1000, m.rate, m.total_value, `INV-${m.assignment_id}`);
+
+        if (dRes.lastInsertRowid) {
+          db.prepare(`
+            INSERT INTO main_invoices (delivery_invoice_id, po_id, status)
+            VALUES (?, ?, 'PO_DONE')
+          `).run(dRes.lastInsertRowid, assign.po_id);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[Auto-Bridge Mirror Delivery Invoices Error]', err);
+  }
 
   if (status === 'AWAITING_INVOICE_SUBMISSION') {
     const list = db.prepare(`
@@ -915,7 +978,8 @@ router.post('/assignments/:id/otp/verify', requireAuth, (req: Request, res: Resp
 
   // Advance status based on stage
   if (stage === 'PICKUP') {
-    db.prepare("UPDATE transport_assignments SET status = 'DISPATCHED' WHERE id = ?").run(assignmentId);
+    // Verified pickup OTP at gate. Do NOT jump to DISPATCHED, as weighbridge tare/gross and bilty are pending.
+    db.prepare("UPDATE transport_assignments SET status = 'ASSIGNED' WHERE id = ? AND status = 'ASSIGNED'").run(assignmentId);
   } else {
     db.prepare("UPDATE transport_assignments SET status = 'DELIVERED' WHERE id = ?").run(assignmentId);
   }
@@ -950,6 +1014,17 @@ router.post('/assignments/:id/weight-log', requireAuth, (req: Request, res: Resp
     const existing = db.prepare('SELECT id FROM weight_logs WHERE assignment_id = ? AND stage = ?').get(assignmentId, stage);
     if (existing) {
       return res.status(403).json({ error: 'Origin Weighbridge measurements are immutable and cannot be overwritten.' });
+    }
+  }
+
+  // Sequence check: MINE_GROSS requires MINE_TARE to exist first
+  if (stage === 'MINE_GROSS') {
+    const mineTare = db.prepare("SELECT weight_kg FROM weight_logs WHERE assignment_id = ? AND stage = 'MINE_TARE'").get(assignmentId) as any;
+    if (!mineTare) {
+      return res.status(400).json({ error: 'Empty truck weight (MINE_TARE) must be captured before loaded truck weight.' });
+    }
+    if (Number(weight_kg) < Number(mineTare.weight_kg)) {
+      return res.status(400).json({ error: `Loaded vehicle weight (${weight_kg} kg) cannot be less than empty vehicle weight (${mineTare.weight_kg} kg).` });
     }
   }
 
@@ -1028,12 +1103,30 @@ router.post('/assignments/:id/transit-event', requireAuth, requireRole('DR'), (r
     return res.status(400).json({ error: 'GPS coordinates required' });
   }
 
+  // Validate journey start conditions
+  const tareLog = db.prepare("SELECT id FROM weight_logs WHERE assignment_id = ? AND stage = 'MINE_TARE'").get(assignmentId);
+  if (!tareLog) {
+    return res.status(403).json({ error: 'Journey cannot start. Empty truck weighbridge measurement (MINE_TARE) is pending.' });
+  }
+
+  const grossLog = db.prepare("SELECT id FROM weight_logs WHERE assignment_id = ? AND stage = 'MINE_GROSS'").get(assignmentId);
+  if (!grossLog) {
+    return res.status(403).json({ error: 'Journey cannot start. Loaded truck weighbridge measurement (MINE_GROSS) is pending.' });
+  }
+
+  const biltyUpload = db.prepare("SELECT id FROM bilty_uploads WHERE assignment_id = ?").get(assignmentId);
+  if (!biltyUpload) {
+    return res.status(403).json({ error: 'Journey cannot start. Bilty / dispatch validation is pending.' });
+  }
+
   db.prepare(`
     INSERT INTO transit_events (assignment_id, status, gps_lat, gps_lng)
     VALUES (?, ?, ?, ?)
   `).run(assignmentId, status ?? 'EN_ROUTE', gps_lat, gps_lng);
 
-  return res.json({ message: 'Transit event recorded' });
+  db.prepare("UPDATE transport_assignments SET status = 'EN_ROUTE' WHERE id = ? AND status = 'DISPATCHED'").run(assignmentId);
+
+  return res.json({ message: 'Transit event recorded. Journey started.' });
 });
 
 // POST /api/v3/assignments/:id/arrived

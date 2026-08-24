@@ -54,6 +54,16 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
       style.backgroundColor = 'var(--warning-bg)';
       text = 'Driver Arrived';
       break;
+    case 'MINE_TARE_LOGGED':
+      style.color = '#B45309';
+      style.backgroundColor = '#FEF3C7';
+      text = 'Tare Captured (Loading)';
+      break;
+    case 'MINE_GROSS_LOGGED':
+      style.color = '#047857';
+      style.backgroundColor = '#D1FAE5';
+      text = 'Gross Captured (Ready for Bilty)';
+      break;
     case 'SUPERVISOR_APPROVED':
       style.color = 'var(--success-text)';
       style.backgroundColor = 'var(--success-bg)';
