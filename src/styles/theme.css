@@ -9,65 +9,68 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  /* ── Brand Palette (FedEx-Inspired) ────────────────────────── */
-  --brand-purple:       #4D148C;   /* FedEx Purple — Primary Header & Nav */
-  --brand-purple-dark:  #380C68;   /* Hover / Dark Active States */
-  --brand-purple-light: #F2ECFB;   /* Subtly tinted background fills */
+  /* ── Brand Palette (SAP Fiori Horizon) ─────────────────────── */
+  --brand-purple:       #0A6ED1;   /* SAP Blue (sapButton_Emphasized_Background) */
+  --brand-purple-dark:  #0854A0;   /* SAP Dark Blue Hover State */
+  --brand-purple-light: #EFF6FC;   /* SAP Light Blue Background Fill */
 
-  --brand-orange:       #FF6200;   /* FedEx Orange — Primary Actions & Badges */
-  --brand-orange-hover: #E05600;   /* Button Hover Darken */
-  --brand-orange-light: #FFF2EB;   /* Accent Highlights */
+  --brand-orange:       #0A6ED1;   /* Mapped to SAP Fiori Blue */
+  --brand-orange-hover: #0854A0;   /* Mapped to SAP Fiori Dark Blue */
+  --brand-orange-light: #EFF6FC;   /* Mapped to SAP Fiori Light Blue */
 
-  --brand-navy:         #4D148C;   /* Replaced navy references with Primary Purple */
-  --brand-navy-mid:     #380C68;
-  --brand-navy-light:   #2B0852;
+  --brand-navy:         #354A5F;   /* Fiori Shell Blue-Gray (sapShell_Background) */
+  --brand-navy-mid:     #23303D;   /* Darker Fiori Shell background */
+  --brand-navy-light:   #1C2D3F;   /* Deepest Fiori header accent */
 
-  --accent-blue:        #4D148C;   /* Primary accent mapped to Purple */
-  --accent-blue-hover:  #380C68;
-  --accent-blue-light:  #F2ECFB;
-  --accent-blue-muted:  #9D72DA;
+  --accent-blue:        #0A6ED1;   /* Standard SAP Blue Accent */
+  --accent-blue-hover:  #0854A0;
+  --accent-blue-light:  #EFF6FC;
+  --accent-blue-muted:  #7FB2E8;
 
-  --accent-cyan:        #0080A3;   
-  --accent-emerald:     #008A00;   /* Verified Status */
-  --accent-emerald-light:#E6F4E6;
+  --accent-cyan:        #0A6ED1;   /* Mapped to SAP Fiori Blue */
+  --accent-emerald:     #107E3E;   /* Fiori Green (Success) */
+  --accent-emerald-light:#F1FDF5;
 
-  /* ── Neutrals (Clean Crisp Scale) ─────────────────────────── */
-  --neutral-950: #111111;
-  --neutral-900: #222222;
-  --neutral-800: #333333;
-  --neutral-700: #444444;
-  --neutral-600: #666666;
-  --neutral-500: #767676;
-  --neutral-400: #999999;
-  --neutral-300: #CCCCCC;
-  --neutral-200: #E3E3E3;
-  --neutral-100: #F5F5F5;   /* FedEx Light Gray Dividers */
-  --neutral-50:  #FAFAFA;
-  --neutral-0:   #FFFFFF;
+  /* ── Neutrals (Fiori Horizon Canvas & Shell Scale) ────────── */
+  --neutral-950: #1B2A32;
+  --neutral-900: #2C3E50;
+  --neutral-800: #324553;
+  --neutral-700: #4B6375;
+  --neutral-600: #556B7C;
+  --neutral-500: #6A7B8C;
+  --neutral-400: #A6B4C2;
+  --neutral-300: #CAD1D9;
+  --neutral-200: #D1D5DB;
+  --neutral-100: #E5E7EB;   /* Divider color */
+  --neutral-50:  #F4F5F6;   /* Fiori Canvas Background */
+  --neutral-0:   #FFFFFF;   /* Clean Card / Tile Background */
 
-  /* ── Semantic Colors ──────────────────────────────────────── */
-  --success-600: #008A00;
-  --success-500: #00A800;
-  --success-100: #E6F4E6;
-  --success-50:  #F2F9F2;
+  /* ── Semantic Colors (Fiori Standard UI5) ─────────────────── */
+  --success-600: #107E3E;   /* Fiori Positive text */
+  --success-500: #1C9F4E;   
+  --success-100: #EAF4EC;   /* Fiori Positive bg */
+  --success-5:   #EAF4EC;
+  --success-50:  #F1FDF5;
 
-  --warning-600: #D96B00;
-  --warning-500: #FF6200;
-  --warning-100: #FFF2EB;
-  --warning-50:  #FFF9F5;
+  --warning-600: #B75C00;   /* Fiori Critical text */
+  --warning-500: #E37C00;
+  --warning-100: #FFF2E6;   /* Fiori Critical bg */
+  --warning-50:  #FFFDF0;
 
-  --error-700:   #B91C1C;
-  --error-600:   #D32F2F;
-  --error-100:   #FFEBEE;
-  --error-50:    #FFFAFA;
+  /* ── Reference Error Fills ───────────────────────── */
+  --error-700:   #BB0000;   /* Fiori Negative text */
+  --error-600:   #E30000;
+  --error-100:   #FFE6E6;   /* Fiori Negative bg */
+  --error-50:    #FFF0F0;
 
-  --info-600:    #4D148C;
-  --info-500:    #6722BD;
-  --info-100:    #F2ECFB;
-  --info-50:     #FAF7FE;
+  /* ── Informational / Neutral Highlighting ─────────── */
+  --info-600:    #0A6ED1;   /* Fiori Informative text */
+  --info-500:    #0070D2;
+  --info-100:    #EFF6FC;   /* Fiori Informative bg */
+  --info-50:     #F4F9FD;
 
-  /* ── Typography (FedEx Clean Sans-Serif) ──────────────────── */
-  --font-family:      'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  /* ── Typography (SAP 72 Font Stack) ─────────────────────── */
+  --font-family:      "72", "72-Web", 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   --font-mono:        'JetBrains Mono', monospace;
 
   --text-xs:    11px;
@@ -102,9 +105,9 @@
   /* ── Card & Pill Radii ────────────────────────────────────── */
   --radius-sm:  4px;
   --radius-md:  6px;
-  --radius-lg:  8px;
-  --radius-xl:  12px;
-  --radius-full:9999px; /* Pill Shape buttons & tracking bars */
+  --radius-lg:  6px;
+  --radius-xl:  8px;
+  --radius-full:6px; /* Normalized standard buttons (Fiori buttons are not pill-shaped) */
 
   /* ── Enterprise Elevation & Shadows ──────────────────────── */
   --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);

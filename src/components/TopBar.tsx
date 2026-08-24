@@ -123,9 +123,6 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
           {title}
         </h2>
-        <h2 style={{ fontSize: '17px', fontWeight: '800', color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
-          {title}
-        </h2>
       </div>
 
       {/* Right User Controls */}

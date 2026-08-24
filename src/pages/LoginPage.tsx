@@ -177,7 +177,7 @@ export default function LoginPage() {
           box-shadow: 0 24px 64px rgba(0,0,0,0.35);
         }
         .login-hero {
-          background: linear-gradient(145deg, #4D148C 0%, #380C68 60%, #2B0852 100%);
+          background: linear-gradient(145deg, var(--brand-navy) 0%, var(--brand-navy-mid) 60%, var(--brand-navy-light) 100%);
           padding: 3rem;
           display: flex;
           align-items: center;
@@ -186,11 +186,11 @@ export default function LoginPage() {
         .login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 3rem; }
         .logo-icon {
           width: 48px; height: 48px;
-          background: #FF6200;
+          background: var(--brand-purple);
           border-radius: 12px;
           display: flex; align-items: center; justify-content: center;
           color: white;
-          box-shadow: 0 4px 12px rgba(255, 98, 0, 0.4);
+          box-shadow: 0 4px 12px rgba(10, 110, 209, 0.4);
         }
         .logo-name { font-size: 1.25rem; font-weight: 800; color: white; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.02em; }
         .logo-sub { font-size: 0.75rem; color: rgba(255,255,255,0.7); font-weight: 600; }
@@ -201,7 +201,7 @@ export default function LoginPage() {
         .login-hero-desc { color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 2rem; font-size: 0.9rem; }
         .login-stats { display: flex; gap: 2rem; }
         .login-stat { text-align: center; }
-        .stat-num { display: block; font-size: 1.5rem; font-weight: 800; color: #FF6200; }
+        .stat-num { display: block; font-size: 1.5rem; font-weight: 800; color: var(--brand-purple); }
         .stat-lbl { font-size: 0.7rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
 
         .login-form-panel {
@@ -235,7 +235,7 @@ export default function LoginPage() {
           transition: border-color 0.15s;
           width: 100%;
         }
-        .form-group input:focus { outline: none; border-color: #4D148C; }
+        .form-group input:focus { outline: none; border-color: var(--brand-purple); }
         .password-input-wrap { position: relative; }
         .password-input-wrap input { padding-right: 2.5rem; }
         .pwd-toggle {
@@ -244,14 +244,14 @@ export default function LoginPage() {
           cursor: pointer; display: flex; align-items: center; padding: 2px;
         }
         .btn-login {
-          background: #FF6200;
-          color: white; border: none; border-radius: 9999px;
-          padding: 0.75rem; font-weight: 800; font-size: 0.9rem;
-          text-transform: uppercase; letter-spacing: 0.04em;
+          background: var(--brand-purple);
+          color: white; border: none; border-radius: var(--radius-full);
+          padding: 0.75rem; font-weight: 600; font-size: 0.9rem;
+          text-transform: none; letter-spacing: 0.04em;
           cursor: pointer; transition: background 0.15s;
           display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .btn-login:hover:not(:disabled) { background: #E05600; box-shadow: 0 4px 14px rgba(255, 98, 0, 0.35); }
+        .btn-login:hover:not(:disabled) { background: var(--brand-purple-dark); }
         .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -272,8 +272,8 @@ export default function LoginPage() {
           width: 100%;
         }
         .demo-user-btn:hover:not(:disabled) {
-          border-color: #4D148C;
-          background: #F2ECFB;
+          border-color: var(--brand-purple);
+          background: var(--brand-purple-light);
         }
         .demo-user-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .demo-user-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
