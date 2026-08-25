@@ -26,19 +26,6 @@ export default function LandingPage() {
             <h1 className="lp-hero-title">Let's make delivery&nbsp;simple.</h1>
           </div>
 
-          {/* Stat Pills */}
-          <div className="lp-stats">
-            <span className="lp-stat-pill">
-              <strong>5</strong>&nbsp;Role Levels
-            </span>
-            <span className="lp-stat-pill">
-              <strong>18+</strong>&nbsp;Pipeline Steps
-            </span>
-            <span className="lp-stat-pill">
-              <strong>SAP</strong>&nbsp;S/4HANA Ready
-            </span>
-          </div>
-
           {/* Get Started Button */}
           <div className="lp-cta-wrap">
             <button 
@@ -128,7 +115,7 @@ export default function LandingPage() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          font-size: 26rem;
+          font-size: 36rem;
           font-weight: 800;
           color: rgba(255, 255, 255, 0.055);
           z-index: 0;
@@ -226,7 +213,7 @@ export default function LandingPage() {
           }
 
           .lp-ghost-watermark {
-            font-size: 16rem;
+            font-size: 22rem;
           }
         }
       `}</style>
