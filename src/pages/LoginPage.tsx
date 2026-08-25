@@ -62,9 +62,7 @@ export default function LoginPage() {
       <div className="lp-selection-container">
         {/* Logo box */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
-          <div className="lp-selection-logo-box">
-            <PodzoLogo variant="full" height={38} />
-          </div>
+          <PodzoLogo variant="compact" height={36} />
         </div>
 
         <div className="lp-form-inner">

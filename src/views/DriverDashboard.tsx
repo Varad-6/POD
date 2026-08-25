@@ -179,51 +179,15 @@ export const DriverDashboard: React.FC = () => {
     if (!s || !selectedPodFile) return;
     setIsSubmitting(true);
     try {
-      let ocrPayload: any = {};
-      let variancePayload: any = {};
-
-      if (mockScenario === 'MATCH') {
-        ocrPayload = {
-          ocr_waybill_extracted: 'WAYBILL-900882',
-          ocr_weight_extracted: s.po_target_qty || 34.0,
-          ocr_confidence_pct: 98.6,
-          match_status: 'MATCH'
-        };
-        variancePayload = {
-          variance_pct: 0.0,
-          pass_bool: true
-        };
-      } else if (mockScenario === 'MISMATCH') {
-        ocrPayload = {
-          ocr_waybill_extracted: 'WAYBILL-900882',
-          ocr_weight_extracted: (s.po_target_qty || 34.0) - 4.5,
-          ocr_confidence_pct: 92.4,
-          match_status: 'MISMATCH'
-        };
-        variancePayload = {
-          variance_pct: 13.2,
-          pass_bool: false
-        };
-      } else if (mockScenario === 'BLURRY') {
-        ocrPayload = {
-          ocr_waybill_extracted: 'UNKNOWN',
-          ocr_weight_extracted: 0.0,
-          ocr_confidence_pct: 34.0,
-          match_status: 'LOW_CONFIDENCE'
-        };
-        variancePayload = {
-          variance_pct: 100.0,
-          pass_bool: false
-        };
-      }
-
-      setOcrResult({
-        message: 'POD processed successfully, queued for CA verification',
-        ocr: ocrPayload,
-        variance: variancePayload,
-        under_review: true
+      const res = await drApi.uploadPod(s.id, {
+        pod_file_url: selectedPodFile,
+        mock_scenario: mockScenario
       });
-      try { await loadAssignments(); } catch (_) {}
+      setOcrResult(res);
+      await loadAssignments();
+    } catch (err: any) {
+      console.error('Failed to upload POD:', err);
+      alert('Error uploading POD: ' + (err.message || 'Server error'));
     } finally {
       setIsSubmitting(false);
     }
