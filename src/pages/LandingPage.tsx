@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PodzoLogo } from '../components/branding/PodzoLogo';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -9,16 +8,14 @@ export default function LandingPage() {
     <div className="lp-hero-only">
       <div className="lp-hero-grid" />
       
+      {/* Giant ghost watermark PODZO behind the title, taking full screen width */}
+      <div className="lp-ghost-watermark">PODZO</div>
+      
+      {/* Centered Content Wrap taking 40% of screen height */}
       <div className="lp-hero-container">
-        {/* Center content */}
         <main className="lp-main">
+          <h1 className="lp-hero-title">Let's make delivery&nbsp;simple.</h1>
           
-          {/* Title with PODZO centered exactly behind it */}
-          <div className="lp-title-wrapper">
-            <div className="lp-ghost-watermark">PODZO</div>
-            <h1 className="lp-hero-title">Let's make delivery&nbsp;simple.</h1>
-          </div>
-
           {/* Get Started Button */}
           <div className="lp-cta-wrap">
             <button 
@@ -34,13 +31,15 @@ export default function LandingPage() {
       <style>{`
         .lp-hero-only {
           min-height: 100vh;
-          position: relative;
+          width: 100vw;
           background: linear-gradient(135deg, var(--color-brand-blue-600, #2F5FE0) 0%, var(--color-brand-blue-700, #2648B8) 100%);
           color: #FFFFFF;
-          font-family: 'Inter', sans-serif;
           display: flex;
-          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           overflow: hidden;
+          position: relative;
+          font-family: 'Inter', sans-serif;
         }
 
         .lp-hero-grid {
@@ -51,64 +50,13 @@ export default function LandingPage() {
           pointer-events: none;
         }
 
-        .lp-hero-container {
-          position: relative;
-          z-index: 1;
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          max-width: 1200px;
-          width: 100%;
-          margin: 0 auto;
-          padding: 2.5rem;
-        }
-
-        /* Logo placed in top right corner */
-        .lp-header {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          margin-bottom: auto;
-          width: 100%;
-        }
-
-        .lp-logo-box {
-          display: inline-block;
-          background: transparent;
-          padding: 0;
-          border-radius: 0;
-          box-shadow: none;
-        }
-
-        .lp-main {
-          margin-top: auto;
-          margin-bottom: auto;
-          text-align: center;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 2rem;
-          width: 100%;
-          padding: 2rem 0;
-        }
-
-        .lp-title-wrapper {
-          position: relative;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 100%;
-          padding: 2rem 0;
-        }
-
-        /* Ghost watermark centered precisely behind the title text */
+        /* Watermark text scaling dynamically and cutting off left/right edges, height 40% vh */
         .lp-ghost-watermark {
           position: absolute;
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          font-size: 13.5rem;
+          font-size: 22vw;
           font-weight: 900;
           letter-spacing: -0.05em;
           color: rgba(255, 255, 255, 0.055);
@@ -117,6 +65,31 @@ export default function LandingPage() {
           user-select: none;
           font-family: 'Inter', sans-serif;
           line-height: 1;
+          white-space: nowrap;
+        }
+
+        /* Centered layout container takes 40% height of screen */
+        .lp-hero-container {
+          position: relative;
+          z-index: 1;
+          width: 100%;
+          height: 40vh;
+          min-height: 320px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .lp-main {
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 2rem;
+          width: 100%;
+          max-width: 1200px;
+          padding: 0 2rem;
         }
 
         .lp-hero-title {
@@ -124,43 +97,14 @@ export default function LandingPage() {
           font-weight: 850;
           line-height: 1.15;
           letter-spacing: -0.04em;
+          color: #FFFFFF;
           margin: 0;
-          position: relative;
-          z-index: 1;
-        }
-
-        .lp-stats {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 12px;
-          position: relative;
-          z-index: 1;
-        }
-
-        .lp-stat-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          background: rgba(255, 255, 255, 0.12);
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          color: #FFFFFF;
-          border-radius: 9999px;
-          padding: 6px 18px;
-          font-size: 0.85rem;
-          font-weight: 600;
-        }
-
-        .lp-stat-pill strong {
-          color: #FFFFFF;
-          font-weight: 800;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         .lp-cta-wrap {
-          position: relative;
-          z-index: 1;
+          margin-top: 0.5rem;
           width: 100%;
-          margin-top: 1rem;
         }
 
         .lp-start-btn {
@@ -168,17 +112,17 @@ export default function LandingPage() {
           color: var(--color-brand-blue-600, #2F5FE0);
           border: none;
           border-radius: 10px;
-          height: 50px;
+          height: 48px;
           padding: 0 36px;
           font-weight: 700;
-          font-size: 1.05rem;
+          font-size: 1rem;
           font-family: inherit;
           cursor: pointer;
           transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
         }
 
         .lp-start-btn:hover {
@@ -194,20 +138,21 @@ export default function LandingPage() {
 
         @media (max-width: 640px) {
           .lp-hero-container {
-            padding: 1.5rem;
+            height: 45vh;
+            min-height: 280px;
           }
-          
+
           .lp-hero-title {
             font-size: 2.8rem;
           }
           
           .lp-start-btn {
             width: 100%;
-            max-width: 320px;
+            max-width: 280px;
           }
 
           .lp-ghost-watermark {
-            font-size: 22rem;
+            font-size: 22vw;
           }
         }
       `}</style>
