@@ -10,19 +10,12 @@ export default function LandingPage() {
       <div className="lp-hero-grid" />
       
       <div className="lp-hero-container">
-        {/* Header Row - logo moved to top right corner as requested */}
-        <header className="lp-header">
-          <div className="lp-logo-box">
-            <PodzoLogo variant="full" height={36} />
-          </div>
-        </header>
-
         {/* Center content */}
         <main className="lp-main">
           
-          {/* Title with P centered exactly behind it */}
+          {/* Title with PODZO centered exactly behind it */}
           <div className="lp-title-wrapper">
-            <div className="lp-ghost-watermark">P</div>
+            <div className="lp-ghost-watermark">PODZO</div>
             <h1 className="lp-hero-title">Let's make delivery&nbsp;simple.</h1>
           </div>
 
@@ -81,10 +74,10 @@ export default function LandingPage() {
 
         .lp-logo-box {
           display: inline-block;
-          background: #FFFFFF;
-          padding: 8px 16px;
-          border-radius: 12px;
-          box-shadow: 0 4px 16px rgba(47, 95, 224, 0.15);
+          background: transparent;
+          padding: 0;
+          border-radius: 0;
+          box-shadow: none;
         }
 
         .lp-main {
@@ -115,8 +108,9 @@ export default function LandingPage() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          font-size: 36rem;
-          font-weight: 800;
+          font-size: 13.5rem;
+          font-weight: 900;
+          letter-spacing: -0.05em;
           color: rgba(255, 255, 255, 0.055);
           z-index: 0;
           pointer-events: none;
