@@ -42,7 +42,8 @@ INSERT OR IGNORE INTO contracts (id, sap_contract_no, customer_id, start_date, e
   (2, '4600000018', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000018.pdf', 'ACTIVE'),
   (3, '4600000019', 2, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000019.pdf', 'ACTIVE'),
   (4, '4600000020', 2, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000020.pdf', 'ACTIVE'),
-  (5, '4600000021', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000021.pdf', 'ACTIVE');
+  (5, '4600000021', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000021.pdf', 'ACTIVE'),
+  (6, '4600000026', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000026.pdf', 'ACTIVE');
 
 -- PURCHASE ORDERS (Exact SAP PO Numbers from Contract Data.xlsx sheet - ALL OPEN INITIAL STATE)
 INSERT OR IGNORE INTO purchase_orders (id, contract_id, sap_po_no, material, uom, target_qty, rate, tolerance_pct, cost_center, status) VALUES
@@ -52,6 +53,7 @@ INSERT OR IGNORE INTO purchase_orders (id, contract_id, sap_po_no, material, uom
   (3,  1, '4500001716', 'SL BIT 20%ASH (40006653)', 'TO', 30.0, 151.50, 0.5, 'CC-MINING-01', 'OPEN'),
   (4,  1, '4500001717', 'SL BIT 20%ASH (40006653)', 'TO', 32.0, 151.50, 0.5, 'CC-MINING-01', 'OPEN'),
   (5,  1, '4500001718', 'SL BIT 20%ASH (40006653)', 'TO', 34.0, 151.50, 0.5, 'CC-MINING-01', 'OPEN'),
+  (26, 1, '4500001804', 'SL BIT 20%ASH (40006653)', 'TO', 34.0, 151.50, 0.5, 'CC-MINING-01', 'OPEN'),
 
   -- Contract 4600000018 (Supplier: ABC Enterprises 1402 | Material: 40006654 FERT_50KG_BAG | Rate: 45000.00)
   (6,  2, '4500001719', 'FERT_50KG_BAG (40006654)', 'BAG', 15.0, 45000.00, 0.5, 'CC-MINING-02', 'OPEN'),

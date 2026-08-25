@@ -19,6 +19,8 @@ const S21_BASE_URL = import.meta.env.VITE_SAP_S21_BASE_URL || '';
 const S21_CLIENT = import.meta.env.VITE_SAP_S21_CLIENT || '100';
 const S21_SYSTEM_ID = import.meta.env.VITE_SAP_S21_SYSTEM_ID || 'S21';
 const PROXY_URL = import.meta.env.VITE_SAP_S21_PROXY_URL || '';
+const S21_USERNAME = import.meta.env.VITE_SAP_S21_USERNAME || '';
+const S21_PASSWORD = import.meta.env.VITE_SAP_S21_PASSWORD || '';
 
 const CONTRACTS_ENDPOINT = import.meta.env.VITE_SAP_S21_CONTRACTS_ENDPOINT || '/ZPOD_CONTRACTS_SRV/ContractSet';
 const POS_ENDPOINT = import.meta.env.VITE_SAP_S21_POS_ENDPOINT || '/ZPOD_PURCHASE_ORDERS_SRV/PurchaseOrderSet';
@@ -51,6 +53,10 @@ async function sapFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     'sap-client': S21_CLIENT,
     ...(options.headers as Record<string, string> || {}),
   };
+
+  if (S21_USERNAME && S21_PASSWORD) {
+    headers['Authorization'] = `Basic ${btoa(S21_USERNAME + ':' + S21_PASSWORD)}`;
+  }
 
   const response = await fetch(targetUrl, {
     ...options,

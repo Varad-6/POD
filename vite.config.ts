@@ -12,6 +12,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      '/sap': {
+        target: 'http://192.168.1.55:8000',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 });
