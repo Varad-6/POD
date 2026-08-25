@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthV3 } from '../contexts/AuthContextV3';
-import { AlertCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Loader2, ArrowLeft } from 'lucide-react';
 import { PodzoLogo } from '../components/branding/PodzoLogo';
 
 const DEMO_USERS = [
-  { username: 'ca_thandiwe', role: 'Company Admin', color: '#3b82f6' },
-  { username: 'ta_sipho',    role: 'Transporter Admin', color: '#8b5cf6' },
-  { username: 'dr_zweli',    role: 'Driver', color: '#10b981' },
-  { username: 'cr_mining',   role: 'Customer', color: '#f59e0b' },
-  { username: 'sr_gate01',   role: 'Supervisor', color: '#ef4444' },
+  { username: 'ca_thandiwe', role: 'Company Admin',     color: '#2F5FE0' },
+  { username: 'ta_sipho',    role: 'Transporter Admin', color: '#475569' },
+  { username: 'dr_zweli',    role: 'Driver',            color: '#12B76A' },
+  { username: 'cr_mining',   role: 'Customer',          color: '#F79009' },
+  { username: 'sr_gate01',   role: 'Supervisor',        color: '#F04438' },
 ];
 
 export default function LoginPage() {
   const { login } = useAuthV3();
+  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -32,11 +34,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillQuickUser = (user: string) => {
-    setUsername(user);
-    setPassword('Demo@1234');
-  };
-
   const quickLogin = async (u: string) => {
     setError('');
     setLoading(true);
@@ -50,242 +47,412 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        {/* Left Panel — Branding */}
-        <div className="login-hero">
-          <div className="login-hero-content">
-            <div className="login-logo" style={{ marginBottom: '2.5rem' }}>
-              <div style={{ backgroundColor: '#FFFFFF', padding: '12px 20px', borderRadius: '12px', display: 'inline-block', boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}>
-                <PodzoLogo variant="full" height={52} />
-              </div>
-            </div>
-            <h1 className="login-hero-title">Automate POD-to-Payment</h1>
-            <p className="login-hero-desc">
-              End-to-end dispatch management connected to SAP S/4HANA. From gate-check to MIRO clearance.
-            </p>
-            <div className="login-stats">
-              <div className="login-stat">
-                <span className="stat-num">5</span>
-                <span className="stat-lbl">Role Levels</span>
-              </div>
-              <div className="login-stat">
-                <span className="stat-num">18+</span>
-                <span className="stat-lbl">Pipeline Steps</span>
-              </div>
-              <div className="login-stat">
-                <span className="stat-num">SAP</span>
-                <span className="stat-lbl">S/4HANA Ready</span>
-              </div>
-            </div>
+    <div className="lp-page-selection">
+      
+      {/* Back button link */}
+      <div className="lp-back-nav">
+        <button 
+          onClick={() => navigate('/')} 
+          className="lp-back-btn"
+        >
+          <ArrowLeft size={16} /> Back to Podzo
+        </button>
+      </div>
+
+      <div className="lp-selection-container">
+        {/* Logo box */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+          <div className="lp-selection-logo-box">
+            <PodzoLogo variant="full" height={38} />
           </div>
         </div>
 
-        {/* Right Panel — Login Form */}
-        <div className="login-form-panel">
-          <div className="login-form-inner">
-            <div className="login-form-header">
-              <h2>Sign In</h2>
-              <p>Access your role-based portal</p>
-            </div>
-
-            {error && (
-              <div className="login-error">
-                <AlertCircle size={16} />
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="login-form">
-              <div className="form-group">
-                <label>Username</label>
-                <input
-                  type="text"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  required
-                  autoComplete="username"
-                  autoFocus
-                />
-              </div>
-              <div className="form-group">
-                <label>Password</label>
-                <div className="password-input-wrap">
-                  <input
-                    type={showPwd ? 'text' : 'password'}
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Enter password"
-                    required
-                    autoComplete="current-password"
-                  />
-                  <button type="button" className="pwd-toggle" onClick={() => setShowPwd(v => !v)}>
-                    {showPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </div>
-              <button type="submit" className="btn-login" disabled={loading}>
-                {loading ? <Loader2 size={18} className="spin" /> : 'Sign In'}
-              </button>
-            </form>
-
-            <div className="demo-divider">
-              <span>Quick demo access</span>
-            </div>
-
-            <div className="demo-users">
-              {DEMO_USERS.map(u => (
-                <button
-                  key={u.username}
-                  className="demo-user-btn"
-                  onClick={() => quickLogin(u.username)}
-                  disabled={loading}
-                  style={{ '--accent': u.color } as React.CSSProperties}
-                >
-                  <span className="demo-user-dot" style={{ background: u.color }} />
-                  <div className="demo-user-info">
-                    <span className="demo-user-role">{u.role}</span>
-                    <span className="demo-user-name">{u.username}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <p className="demo-pwd-hint">All demo accounts: <code>Demo@1234</code></p>
+        <div className="lp-form-inner">
+          <div className="lp-form-header">
+            <h2>Sign In</h2>
+            <p>Access your role-based Podzo portal</p>
           </div>
+
+          {error && (
+            <div className="lp-error">
+              <AlertCircle size={15} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="lp-form">
+            <div className="lp-field">
+              <label>Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder="Enter username"
+                required
+                autoComplete="username"
+                autoFocus
+              />
+            </div>
+
+            <div className="lp-field">
+              <label>Password</label>
+              <div className="lp-pwd-wrap">
+                <input
+                  type={showPwd ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  required
+                  autoComplete="current-password"
+                />
+                <button type="button" className="lp-pwd-toggle" onClick={() => setShowPwd(v => !v)}>
+                  {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" className="lp-submit-btn" disabled={loading}>
+              {loading ? <Loader2 size={18} className="spin" /> : 'Sign In to Podzo'}
+            </button>
+          </form>
+
+          <div className="lp-divider">
+            <span>Quick demo access</span>
+          </div>
+
+          <div className="lp-demo-users">
+            {DEMO_USERS.map(u => (
+              <button
+                key={u.username}
+                className="lp-demo-btn"
+                onClick={() => quickLogin(u.username)}
+                disabled={loading}
+                style={{ '--lp-dot': u.color } as React.CSSProperties}
+              >
+                <span className="lp-demo-dot" style={{ background: u.color }} />
+                <div className="lp-demo-info">
+                  <span className="lp-demo-role">{u.role}</span>
+                  <span className="lp-demo-user">{u.username}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <p className="lp-hint">All demo accounts: <code>Demo@1234</code></p>
         </div>
       </div>
 
       <style>{`
-        .login-page {
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { animation: spin 0.9s linear infinite; }
+
+        .lp-page-selection {
           min-height: 100vh;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: var(--color-bg-page, #F6F7FB);
+          padding: 2.5rem 1.5rem;
+          font-family: 'Inter', sans-serif;
+          position: relative;
+        }
+
+        .lp-back-nav {
+          position: absolute;
+          top: 2rem;
+          left: 2rem;
+        }
+
+        .lp-back-btn {
+          background: none;
+          border: none;
+          color: var(--color-text-muted, #667085);
+          font-size: 0.9rem;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: color 0.15s;
+          padding: 8px 12px;
+          border-radius: 8px;
+        }
+
+        .lp-back-btn:hover {
+          color: var(--color-brand-blue-600, #2F5FE0);
+          background: var(--color-brand-blue-50, #EEF2FE);
+        }
+
+        .lp-selection-container {
+          background: #FFFFFF;
+          border-radius: 20px;
+          border: 1.5px solid var(--color-border, #E4E7EC);
+          box-shadow: 0 12px 32px rgba(47, 95, 224, 0.05);
+          padding: 3rem 2.5rem;
+          width: 100%;
+          max-width: 440px;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .lp-selection-logo-box {
+          display: inline-block;
+          background: var(--color-brand-blue-50, #EEF2FE);
+          padding: 8px 14px;
+          border-radius: 10px;
+          border: 1px solid var(--color-border, #E4E7EC);
+        }
+
+        .lp-form-inner {
+          width: 100%;
+        }
+
+        .lp-form-header {
+          margin-bottom: 2rem;
+          text-align: center;
+        }
+
+        .lp-form-header h2 {
+          font-size: 1.65rem;
+          font-weight: 800;
+          color: var(--color-text-heading, #101828);
+          margin: 0 0 0.3rem 0;
+          letter-spacing: -0.03em;
+        }
+
+        .lp-form-header p {
+          font-size: 0.875rem;
+          color: var(--color-text-muted, #667085);
+          margin: 0;
+        }
+
+        /* Error */
+        .lp-error {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: #FEF3F2;
+          color: #B42318;
+          border: 1px solid rgba(180, 35, 24, 0.2);
+          border-radius: 10px;
+          padding: 0.625rem 0.875rem;
+          font-size: 0.85rem;
+          margin-bottom: 1.25rem;
+          font-weight: 500;
+        }
+
+        /* Form */
+        .lp-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.1rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .lp-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .lp-field label {
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: var(--color-text-muted, #667085);
+          text-transform: uppercase;
+          letter-spacing: 0.055em;
+        }
+
+        .lp-field input {
+          background: #FFFFFF;
+          border: 1.5px solid var(--color-border, #E4E7EC);
+          border-radius: 10px;
+          padding: 0 14px;
+          height: 48px;
+          color: var(--color-text-heading, #101828);
+          font-size: 0.9rem;
+          font-family: inherit;
+          width: 100%;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .lp-field input:focus {
+          outline: none;
+          border-color: var(--color-brand-blue-600, #2F5FE0);
+          box-shadow: 0 0 0 3px rgba(47, 95, 224, 0.12);
+        }
+
+        .lp-field input::placeholder {
+          color: var(--color-text-muted, #667085);
+          opacity: 0.6;
+        }
+
+        .lp-pwd-wrap {
+          position: relative;
+        }
+
+        .lp-pwd-wrap input {
+          padding-right: 2.8rem;
+        }
+
+        .lp-pwd-toggle {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: var(--color-text-muted, #667085);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          padding: 3px;
+          transition: color 0.15s;
+        }
+
+        .lp-pwd-toggle:hover {
+          color: var(--color-brand-blue-600, #2F5FE0);
+        }
+
+        /* Submit */
+        .lp-submit-btn {
+          background: var(--color-brand-blue-600, #2F5FE0);
+          color: #FFFFFF;
+          border: none;
+          border-radius: 10px;
+          height: 48px;
+          width: 100%;
+          font-weight: 700;
+          font-size: 0.95rem;
+          font-family: inherit;
+          cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: var(--color-bg);
-          padding: 1rem;
+          gap: 8px;
+          transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+          letter-spacing: -0.01em;
         }
-        .login-container {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          max-width: 960px;
-          width: 100%;
-          min-height: 600px;
-          border-radius: 20px;
-          overflow: hidden;
-          box-shadow: 0 24px 64px rgba(0,0,0,0.35);
+
+        .lp-submit-btn:hover:not(:disabled) {
+          background: var(--color-brand-blue-700, #2648B8);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 18px rgba(47, 95, 224, 0.25);
         }
-        .login-hero {
-          background: linear-gradient(145deg, var(--brand-navy) 0%, var(--brand-navy-mid) 60%, var(--brand-navy-light) 100%);
-          padding: 3rem;
+
+        .lp-submit-btn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        /* Divider */
+        .lp-divider {
           display: flex;
           align-items: center;
+          gap: 1rem;
+          margin: 1.25rem 0;
+          color: var(--color-text-muted, #667085);
+          font-size: 0.72rem;
+          text-transform: uppercase;
+          font-weight: 700;
+          letter-spacing: 0.05em;
         }
-        .login-hero-content { color: white; }
-        .login-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 3rem; }
-        .logo-icon {
-          width: 48px; height: 48px;
-          background: var(--brand-purple);
+
+        .lp-divider::before,
+        .lp-divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: var(--color-border, #E4E7EC);
+        }
+
+        /* Demo Users */
+        .lp-demo-users {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          margin-bottom: 1rem;
+        }
+
+        .lp-demo-btn {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: var(--color-bg-page, #F6F7FB);
+          border: 1.5px solid var(--color-border, #E4E7EC);
           border-radius: 12px;
-          display: flex; align-items: center; justify-content: center;
-          color: white;
-          box-shadow: 0 4px 12px rgba(10, 110, 209, 0.4);
-        }
-        .logo-name { font-size: 1.25rem; font-weight: 800; color: white; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.02em; }
-        .logo-sub { font-size: 0.75rem; color: rgba(255,255,255,0.7); font-weight: 600; }
-        .login-hero-title {
-          font-size: 1.875rem; font-weight: 800; line-height: 1.2;
-          margin-bottom: 1rem; color: white; text-transform: uppercase; letter-spacing: -0.02em;
-        }
-        .login-hero-desc { color: rgba(255,255,255,0.8); line-height: 1.6; margin-bottom: 2rem; font-size: 0.9rem; }
-        .login-stats { display: flex; gap: 2rem; }
-        .login-stat { text-align: center; }
-        .stat-num { display: block; font-size: 1.5rem; font-weight: 800; color: var(--brand-purple); }
-        .stat-lbl { font-size: 0.7rem; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
-
-        .login-form-panel {
-          background: #FFFFFF;
-          display: flex; align-items: center; justify-content: center;
-          padding: 2.5rem;
-        }
-        .login-form-inner { width: 100%; max-width: 360px; }
-        .login-form-header { margin-bottom: 2rem; }
-        .login-form-header h2 { font-size: 1.5rem; font-weight: 800; color: #333333; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.02em; }
-        .login-form-header p { font-size: 0.875rem; color: #666666; }
-
-        .login-error {
-          display: flex; align-items: center; gap: 8px;
-          background: rgba(211, 47, 47, 0.1); color: #D32F2F;
-          border: 1px solid rgba(211, 47, 47, 0.25);
-          border-radius: 6px; padding: 0.625rem 0.875rem;
-          font-size: 0.85rem; margin-bottom: 1rem;
-        }
-
-        .login-form { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; }
-        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-        .form-group label { font-size: 0.75rem; font-weight: 700; color: #666666; text-transform: uppercase; letter-spacing: 0.05em; }
-        .form-group input {
-          background: #FAFAFA;
-          border: 1px solid #CCCCCC;
-          border-radius: 6px;
-          padding: 0.625rem 0.875rem;
-          color: #333333;
-          font-size: 0.9rem;
-          transition: border-color 0.15s;
+          padding: 10px 14px;
+          cursor: pointer;
+          text-align: left;
+          font-family: inherit;
           width: 100%;
+          transition: border-color 0.15s, background 0.15s, transform 0.1s;
         }
-        .form-group input:focus { outline: none; border-color: var(--brand-purple); }
-        .password-input-wrap { position: relative; }
-        .password-input-wrap input { padding-right: 2.5rem; }
-        .pwd-toggle {
-          position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-          background: none; border: none; color: #666666;
-          cursor: pointer; display: flex; align-items: center; padding: 2px;
-        }
-        .btn-login {
-          background: var(--brand-purple);
-          color: white; border: none; border-radius: var(--radius-full);
-          padding: 0.75rem; font-weight: 600; font-size: 0.9rem;
-          text-transform: none; letter-spacing: 0.04em;
-          cursor: pointer; transition: background 0.15s;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-        .btn-login:hover:not(:disabled) { background: var(--brand-purple-dark); }
-        .btn-login:disabled { opacity: 0.6; cursor: not-allowed; }
-        .spin { animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
 
-        .demo-divider {
-          display: flex; align-items: center; gap: 1rem;
-          margin: 1.25rem 0; color: #666666; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;
+        .lp-demo-btn:hover:not(:disabled) {
+          border-color: var(--color-brand-blue-600, #2F5FE0);
+          background: var(--color-brand-blue-50, #EEF2FE);
+          transform: translateX(2px);
         }
-        .demo-divider::before, .demo-divider::after {
-          content: ''; flex: 1; height: 1px; background: #E3E3E3;
+
+        .lp-demo-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
         }
-        .demo-users { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
-        .demo-user-btn {
-          display: flex; align-items: center; gap: 10px;
-          background: #FAFAFA; border: 1px solid #E3E3E3;
-          border-radius: 6px; padding: 0.625rem 0.875rem;
-          cursor: pointer; text-align: left; transition: border-color 0.15s, background 0.15s;
-          width: 100%;
+
+        .lp-demo-dot {
+          width: 9px;
+          height: 9px;
+          border-radius: 50%;
+          flex-shrink: 0;
         }
-        .demo-user-btn:hover:not(:disabled) {
-          border-color: var(--brand-purple);
-          background: var(--brand-purple-light);
+
+        .lp-demo-info {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
         }
-        .demo-user-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .demo-user-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .demo-user-info { display: flex; flex-direction: column; }
-        .demo-user-role { font-size: 0.8rem; font-weight: 700; color: #333333; }
-        .demo-user-name { font-size: 0.72rem; color: #666666; }
-        .demo-pwd-hint { font-size: 0.75rem; color: #666666; text-align: center; }
-        .demo-pwd-hint code { background: #F5F5F5; padding: 2px 6px; border-radius: 4px; font-size: 0.8rem; font-weight: 700; }
+
+        .lp-demo-role {
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: var(--color-text-heading, #101828);
+        }
+
+        .lp-demo-user {
+          font-size: 0.72rem;
+          color: var(--color-text-muted, #667085);
+          font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Hint */
+        .lp-hint {
+          font-size: 0.73rem;
+          color: var(--color-text-muted, #667085);
+          text-align: center;
+        }
+
+        .lp-hint code {
+          background: var(--color-brand-blue-50, #EEF2FE);
+          padding: 2px 7px;
+          border-radius: 5px;
+          font-size: 0.78rem;
+          font-weight: 700;
+          color: var(--color-brand-blue-700, #2648B8);
+        }
 
         @media (max-width: 640px) {
-          .login-container { grid-template-columns: 1fr; }
-          .login-hero { display: none; }
+          .lp-back-nav {
+            position: static;
+            align-self: flex-start;
+            margin-bottom: 1.5rem;
+          }
+          
+          .lp-selection-container {
+            padding: 2rem 1.5rem;
+            max-width: 100%;
+          }
         }
       `}</style>
     </div>

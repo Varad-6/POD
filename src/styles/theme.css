@@ -1,99 +1,69 @@
 /* ============================================================
-   POD — FedEx-Inspired Enterprise Logistics Design System
-   Color Palette:
-   - Primary: FedEx Purple (#4D148C)
-   - Accent: FedEx Orange (#FF6200)
-   - Neutrals: White background, Dark text (#333/#111), Light gray dividers (#F5F5F5)
+   PODZO — Design System v3.0 (Blue Theme Redesign)
+   Visual Direction: Railpass Commuter Line (Royal Blue & White/Light Gray)
+   Font: Inter (Google Fonts)
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap');
 
 :root {
-  /* ── Brand Palette (SAP Fiori Horizon) ─────────────────────── */
-  --brand-purple:       #0A6ED1;   /* SAP Blue (sapButton_Emphasized_Background) */
-  --brand-purple-dark:  #0854A0;   /* SAP Dark Blue Hover State */
-  --brand-purple-light: #EFF6FC;   /* SAP Light Blue Background Fill */
+  /* ── New Blue Design Tokens (Section 2) ────────────────── */
+  --color-brand-blue-600: #2F5FE0;     /* Primary buttons, active nav, key CTAs */
+  --color-brand-blue-700: #2648B8;     /* Hover/pressed state of primary blue */
+  --color-brand-blue-50:  #EEF2FE;     /* Light blue tint — selected row bg, info banners */
+  
+  --color-bg-page:        #F6F7FB;     /* Main page background, replaces cream */
+  --color-bg-card:        #FFFFFF;     /* All cards, panels, modals */
+  --color-bg-sidebar:     #FFFFFF;     /* Sidebar becomes WHITE */
+  --color-border:         #E4E7EC;     /* Card borders, dividers — soft, barely visible */
+  
+  --color-text-heading:   #101828;     /* All headings */
+  --color-text-body:      #344054;     /* Body copy */
+  --color-text-muted:     #667085;     /* Labels, captions, secondary info */
 
-  --brand-orange:       #0A6ED1;   /* Mapped to SAP Fiori Blue */
-  --brand-orange-hover: #0854A0;   /* Mapped to SAP Fiori Dark Blue */
-  --brand-orange-light: #EFF6FC;   /* Mapped to SAP Fiori Light Blue */
+  /* Status colors (Pill colors with contrast text) */
+  --color-success:        #12B76A;     /* Green only for done/cleared/approved */
+  --color-success-bg:     #ECFDF3;
+  --color-success-text:   #027A48;
+  
+  --color-warning:        #F79009;     /* Pending/review states */
+  --color-warning-bg:     #FFFAEB;
+  --color-warning-text:   #B54708;
+  
+  --color-error:          #F04438;     /* Blocked/rejected/mismatch */
+  --color-error-bg:       #FEF3F2;
+  --color-error-text:     #B42318;
+  
+  --color-info:           #2F5FE0;     /* In-progress/en-route states */
+  --color-info-bg:        #EEF2FE;
+  --color-info-text:      #175CD3;
 
-  --brand-navy:         #354A5F;   /* Fiori Shell Blue-Gray (sapShell_Background) */
-  --brand-navy-mid:     #23303D;   /* Darker Fiori Shell background */
-  --brand-navy-light:   #1C2D3F;   /* Deepest Fiori header accent */
+  /* Card Radius */
+  --radius-card:          16px;
+  --radius-button:        10px;
+  --radius-pill:          999px;
+  --radius-input:         10px;
 
-  --accent-blue:        #0A6ED1;   /* Standard SAP Blue Accent */
-  --accent-blue-hover:  #0854A0;
-  --accent-blue-light:  #EFF6FC;
-  --accent-blue-muted:  #7FB2E8;
+  /* Shadows */
+  --shadow-card:          0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.06);
+  --shadow-card-hover:    0 4px 8px rgba(16,24,40,0.08);
+  --shadow-modal:         0 12px 32px rgba(16,24,40,0.12);
 
-  --accent-cyan:        #0A6ED1;   /* Mapped to SAP Fiori Blue */
-  --accent-emerald:     #107E3E;   /* Fiori Green (Success) */
-  --accent-emerald-light:#F1FDF5;
+  /* Font */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
 
-  /* ── Neutrals (Fiori Horizon Canvas & Shell Scale) ────────── */
-  --neutral-950: #1B2A32;
-  --neutral-900: #2C3E50;
-  --neutral-800: #324553;
-  --neutral-700: #4B6375;
-  --neutral-600: #556B7C;
-  --neutral-500: #6A7B8C;
-  --neutral-400: #A6B4C2;
-  --neutral-300: #CAD1D9;
-  --neutral-200: #D1D5DB;
-  --neutral-100: #E5E7EB;   /* Divider color */
-  --neutral-50:  #F4F5F6;   /* Fiori Canvas Background */
-  --neutral-0:   #FFFFFF;   /* Clean Card / Tile Background */
+  /* ── Dynamic Typography variables mapped to :root (Inter font) ── */
+  --text-h1-mobile: 28px;
+  --text-h1-desktop: 36px;
+  --text-h2-mobile: 22px;
+  --text-h2-desktop: 28px;
+  --text-h3-mobile: 18px;
+  --text-h3-desktop: 20px;
+  --text-body-mobile: 15px;
+  --text-body-desktop: 16px;
 
-  /* ── Semantic Colors (Fiori Standard UI5) ─────────────────── */
-  --success-600: #107E3E;   /* Fiori Positive text */
-  --success-500: #1C9F4E;   
-  --success-100: #EAF4EC;   /* Fiori Positive bg */
-  --success-5:   #EAF4EC;
-  --success-50:  #F1FDF5;
-
-  --warning-600: #B75C00;   /* Fiori Critical text */
-  --warning-500: #E37C00;
-  --warning-100: #FFF2E6;   /* Fiori Critical bg */
-  --warning-50:  #FFFDF0;
-
-  /* ── Reference Error Fills ───────────────────────── */
-  --error-700:   #BB0000;   /* Fiori Negative text */
-  --error-600:   #E30000;
-  --error-100:   #FFE6E6;   /* Fiori Negative bg */
-  --error-50:    #FFF0F0;
-
-  /* ── Informational / Neutral Highlighting ─────────── */
-  --info-600:    #0A6ED1;   /* Fiori Informative text */
-  --info-500:    #0070D2;
-  --info-100:    #EFF6FC;   /* Fiori Informative bg */
-  --info-50:     #F4F9FD;
-
-  /* ── Typography (SAP 72 Font Stack) ─────────────────────── */
-  --font-family:      "72", "72-Web", 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-  --font-mono:        'JetBrains Mono', monospace;
-
-  --text-xs:    11px;
-  --text-sm:    12px;
-  --text-base:  14px;
-  --text-md:    15px;
-  --text-lg:    16px;
-  --text-xl:    18px;
-  --text-2xl:   20px;
-  --text-3xl:   24px;
-  --text-4xl:   30px;
-
-  --weight-regular: 400;
-  --weight-medium:  500;
-  --weight-semi:    600;
-  --weight-bold:    700;
-  --weight-extra:   800;
-
-  --leading-tight:  1.2;
-  --leading-snug:   1.3;
-  --leading-normal: 1.5;
-
-  /* ── Spacing ──────────────────────────────────────────────── */
+  /* Spacing Scale */
   --space-1:  4px;
   --space-2:  8px;
   --space-3:  12px;
@@ -101,28 +71,109 @@
   --space-5:  20px;
   --space-6:  24px;
   --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
 
-  /* ── Card & Pill Radii ────────────────────────────────────── */
-  --radius-sm:  4px;
-  --radius-md:  6px;
-  --radius-lg:  6px;
-  --radius-xl:  8px;
-  --radius-full:6px; /* Normalized standard buttons (Fiori buttons are not pill-shaped) */
+  /* Layout Dimensions */
+  --sidebar-width:     260px;
+  --topbar-height:     64px;
+  --content-max-width: 1440px;
+  --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* ── Enterprise Elevation & Shadows ──────────────────────── */
-  --shadow-subtle: 0 1px 3px rgba(0, 0, 0, 0.05);
-  --shadow-card:   0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-hover:  0 8px 24px rgba(0, 0, 0, 0.12);
-  --shadow-modal:  0 20px 40px rgba(0, 0, 0, 0.2);
+  /* ── Theme Mapping Aliases (maps to design system components) ── */
+  --color-bg-primary:   var(--color-bg-page);
+  --color-bg-surface:   var(--color-bg-card);
+  --color-bg-elevated:  var(--color-bg-card);
+  
+  --color-accent-primary:       var(--color-brand-blue-600);
+  --color-accent-primary-hover: var(--color-brand-blue-700);
+  --color-accent-primary-light: var(--color-brand-blue-50);
+  --color-accent-primary-muted: var(--color-text-muted);
+  --color-accent-secondary:       var(--color-brand-blue-600);
+  --color-accent-secondary-light: var(--color-brand-blue-50);
 
-  /* ── Layout Dimensions ────────────────────────────────────── */
-  --sidebar-width:    260px;
-  --topbar-height:    64px;
-  --demo-bar-height:  0px;
-  --content-max-width:1440px;
+  --color-text-primary:   var(--color-text-heading);
+  --color-text-secondary: var(--color-text-body);
+  --color-text-muted:     var(--color-text-muted);
+  --color-text-inverse:   #FFFFFF;
 
-  --transition-fast:   0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --color-border-strong:  var(--color-border);
+  --color-border-focus:   var(--color-brand-blue-600);
+
+  /* ── Legacy Semantic/Variable Aliases to maintain backward compatibility ── */
+  --brand-purple:        var(--color-brand-blue-600);
+  --brand-purple-dark:   var(--color-brand-blue-700);
+  --brand-purple-light:  var(--color-brand-blue-50);
+  --brand-orange:        var(--color-brand-blue-600);
+  --brand-orange-hover:  var(--color-brand-blue-700);
+  --brand-orange-light:  var(--color-brand-blue-50);
+  --brand-navy:          var(--color-text-heading);
+  --brand-navy-mid:      var(--color-text-heading);
+  --brand-navy-light:    var(--color-text-body);
+  
+  --accent-blue:         var(--color-brand-blue-600);
+  --accent-blue-hover:   var(--color-brand-blue-700);
+  --accent-blue-light:   var(--color-brand-blue-50);
+  --accent-blue-muted:   var(--color-text-muted);
+  --accent-cyan:         var(--color-brand-blue-600);
+  --accent-emerald:      var(--color-success);
+  --accent-emerald-light:var(--color-success-bg);
+
+  --neutral-950: #0B0F19;
+  --neutral-900: var(--color-text-heading);
+  --neutral-800: #1E293B;
+  --neutral-700: #334155;
+  --neutral-600: var(--color-text-body);
+  --neutral-500: var(--color-text-muted);
+  --neutral-400: #94A3B8;
+  --neutral-300: var(--color-border);
+  --neutral-200: #E2E8F0;
+  --neutral-100: #F1F5F9;
+  --neutral-50:  var(--color-bg-page);
+  --neutral-0:   var(--color-bg-card);
+
+  --success-600: var(--color-success-text);
+  --success-500: var(--color-success);
+  --success-100: var(--color-success-bg);
+  --success-5:   var(--color-success-bg);
+  --success-50:  var(--color-success-bg);
+  
+  --warning-600: var(--color-warning-text);
+  --warning-500: var(--color-warning);
+  --warning-100: var(--color-warning-bg);
+  --warning-50:  var(--color-warning-bg);
+  
+  --error-700:   var(--color-error-text);
+  --error-600:   var(--color-error);
+  --error-100:   var(--color-error-bg);
+  --error-50:    var(--color-error-bg);
+  
+  --info-600:    var(--color-info-text);
+  --info-500:    var(--color-info);
+  --info-100:    var(--color-info-bg);
+  --info-50:     var(--color-info-bg);
+
+  --success-text: var(--color-success-text);
+  --success-bg:   var(--color-success-bg);
+  --warning-text: var(--color-warning-text);
+  --warning-bg:   var(--color-warning-bg);
+  --error-text:   var(--color-error-text);
+  --error-bg:     var(--color-error-bg);
+  --info-text:    var(--color-info-text);
+  --info-bg:      var(--color-info-bg);
+  --teal-text:    var(--color-info-text);
+  --teal-bg:      var(--color-info-bg);
+  --neutral-secondary: var(--color-text-muted);
+  --color-bg:    var(--color-bg-page);
+
+  --radius-sm:   6px;
+  --radius-md:   var(--radius-input);
+  --radius-lg:   var(--radius-button);
+  --radius-xl:   var(--radius-card);
+  --radius-2xl:  20px;
+  --radius-full: var(--radius-pill);
+
+  --shadow-subtle: var(--shadow-card);
+  --shadow-card:   var(--shadow-card);
+  --shadow-hover:  var(--shadow-card-hover);
 }
-
-

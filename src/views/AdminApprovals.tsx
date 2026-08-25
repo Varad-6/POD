@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { ClipboardCheck, AlertTriangle, CheckCircle2, ShieldCheck, Scale, RefreshCw } from 'lucide-react';
 import { caApi, ReviewQueueItemV3 } from '../lib/api_v3';
 import { Card } from '../components/Card';
-import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
+import { Tabs } from '../components/Tabs';
 
 export const AdminApprovals: React.FC = () => {
   const [reviews, setReviews] = useState<ReviewQueueItemV3[]>([]);
@@ -119,63 +119,25 @@ export const AdminApprovals: React.FC = () => {
               alert('Failed to clear review queue: ' + (e.message || 'Error occurred'));
             }
           }}
-          style={{
-            padding: '8px 14px',
-            backgroundColor: '#FEF2F2',
-            color: '#991B1B',
-            border: '1px solid #FCA5A5',
-            borderRadius: '8px',
-            fontSize: '12px',
-            fontWeight: 700,
-            cursor: 'pointer'
-          }}
+          className="btn btn-danger btn-sm"
+          style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)', borderColor: 'var(--color-error-light)' }}
         >
           CLEAR QUEUE
         </button>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '16px', borderBottom: '1px solid var(--neutral-200)', paddingBottom: '12px' }}>
-        <button
-          onClick={() => setActiveTab('OPEN')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px',
-            backgroundColor: activeTab === 'OPEN' ? 'var(--neutral-900)' : 'transparent',
-            color: activeTab === 'OPEN' ? '#FFFFFF' : 'var(--neutral-600)',
-            fontWeight: 700,
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          <span>Open Review Queue</span>
-          {activeTab === 'OPEN' && (
-            <span style={{ backgroundColor: 'var(--error-600)', color: '#FFFFFF', padding: '2px 6px', borderRadius: '12px', fontSize: '10px' }}>
-              {reviews.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setActiveTab('RESOLVED')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px',
-            backgroundColor: activeTab === 'RESOLVED' ? 'var(--neutral-900)' : 'transparent',
-            color: activeTab === 'RESOLVED' ? '#FFFFFF' : 'var(--neutral-600)',
-            fontWeight: 700,
-            border: 'none',
-            cursor: 'pointer'
-          }}
-        >
-          Resolved Archive
-        </button>
-      </div>
+      <Tabs 
+        tabs={[
+          { id: 'OPEN', label: 'Open Review Queue', count: activeTab === 'OPEN' ? reviews.length : undefined },
+          { id: 'RESOLVED', label: 'Resolved Archive', count: activeTab === 'RESOLVED' ? reviews.length : undefined }
+        ]}
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as any)}
+      />
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading queue...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading queue...</div>
       ) : reviews.length === 0 ? (
         <EmptyState 
           icon={<ClipboardCheck size={48} />}
@@ -183,10 +145,10 @@ export const AdminApprovals: React.FC = () => {
           description={`No dispatch records are currently flagged as ${activeTab.toLowerCase()}. All pipelines operating smoothly.`}
         />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
           
           {/* Left Table List */}
-          <Card title={`Flagged Items (${reviews.length})`}>
+          <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector">
             <div className="table-container">
               <table className="data-table">
                 <thead>
@@ -207,30 +169,22 @@ export const AdminApprovals: React.FC = () => {
                         onClick={() => setSelectedReview(r)}
                         style={{
                           cursor: 'pointer',
-                          backgroundColor: isSelected ? 'var(--neutral-100)' : 'transparent'
+                          backgroundColor: isSelected ? 'var(--color-brand-blue-50)' : 'transparent'
                         }}
                       >
-                        <td className="mono" style={{ fontWeight: 700, color: 'var(--neutral-900)' }}>
+                        <td className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>
                           {r.sap_po_no || `#PO-${r.assignment_id}`}
                         </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{r.transporter_name || 'ABC Transport'}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--neutral-500)' }}>{r.vehicle_reg || 'KV44RCGP'}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{r.vehicle_reg || 'KV44RCGP'}</div>
                         </td>
                         <td>
-                          <span style={{ 
-                            fontSize: '11px', 
-                            fontWeight: 700, 
-                            color: r.flag_reason === 'TOLERANCE_EXCEEDED' ? 'var(--error-600)' : '#f59e0b',
-                            backgroundColor: r.flag_reason === 'TOLERANCE_EXCEEDED' ? 'var(--error-50)' : 'rgba(245, 158, 11, 0.1)',
-                            padding: '3px 8px',
-                            borderRadius: '4px',
-                            textTransform: 'uppercase'
-                          }}>
+                          <span className={r.flag_reason === 'TOLERANCE_EXCEEDED' ? 'badge badge-red' : 'badge badge-amber'}>
                             {r.flag_reason.replace('_', ' ')}
                           </span>
                         </td>
-                        <td style={{ fontWeight: 600, color: r.blocks_miro_bool ? 'var(--error-600)' : 'var(--neutral-500)' }}>
+                        <td style={{ fontWeight: 600, color: r.blocks_miro_bool ? 'var(--color-error-text)' : 'var(--color-text-muted)' }}>
                           {r.blocks_miro_bool ? 'Blocks MIRO' : 'No Block'}
                         </td>
                         <td style={{ fontSize: '12px' }}>
@@ -247,47 +201,47 @@ export const AdminApprovals: React.FC = () => {
           {/* Right Action panel */}
           <div>
             {selectedReview ? (
-              <Card title="POD VERIFICATION" accentColor="var(--error-600)">
+              <Card title="POD VERIFICATION" accentColor="var(--color-brand-blue-600)">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', fontSize: '13px', backgroundColor: 'var(--neutral-50)', padding: '16px', borderRadius: '10px', border: '1px solid var(--neutral-200)' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', fontSize: '13px', backgroundColor: 'var(--color-brand-blue-50)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>PO Number</span>
-                      <strong className="mono" style={{ color: 'var(--neutral-900)' }}>{selectedReview.sap_po_no}</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>PO Number</span>
+                      <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{selectedReview.sap_po_no}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Contract</span>
-                      <strong className="mono" style={{ color: 'var(--neutral-900)' }}>C-2026-001</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Contract</span>
+                      <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>C-2026-001</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Transporter</span>
-                      <strong style={{ color: 'var(--neutral-900)' }}>{selectedReview.transporter_name || 'ABC Transport'}</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Transporter</span>
+                      <strong style={{ color: 'var(--color-text-heading)' }}>{selectedReview.transporter_name || 'ABC Transport'}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Transporter Admin</span>
-                      <strong style={{ color: 'var(--neutral-900)' }}>Sipho</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Transporter Admin</span>
+                      <strong style={{ color: 'var(--color-text-heading)' }}>Sipho</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Vehicle</span>
-                      <strong className="mono" style={{ color: 'var(--neutral-900)' }}>{selectedReview.vehicle_reg || 'KV44RCGP'}</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Vehicle</span>
+                      <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{selectedReview.vehicle_reg || 'KV44RCGP'}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Delivery Location</span>
-                      <strong style={{ color: 'var(--neutral-900)' }}>Duvha Power Station</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Delivery Location</span>
+                      <strong style={{ color: 'var(--color-text-heading)' }}>Duvha Power Station</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Dispatched Tonnage</span>
-                      <strong style={{ color: 'var(--neutral-900)' }}>{dispatchedTons.toFixed(2)} Tons</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Dispatched Tonnage</span>
+                      <strong style={{ color: 'var(--color-text-heading)' }}>{dispatchedTons.toFixed(2)} Tons</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Received Tonnage</span>
-                      <strong style={{ color: 'var(--neutral-900)' }}>{receivedTons.toFixed(2)} Tons</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Received Tonnage</span>
+                      <strong style={{ color: 'var(--color-text-heading)' }}>{receivedTons.toFixed(2)} Tons</strong>
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--neutral-500)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Net Variance</span>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Net Variance</span>
                       <strong style={{ 
-                        color: varianceKg === 0 ? 'var(--neutral-900)' : varianceKg < 0 ? 'var(--error-600)' : '#059669', 
-                        fontSize: '14px' 
+                        color: varianceKg === 0 ? 'var(--color-text-heading)' : varianceKg < 0 ? 'var(--color-error-text)' : 'var(--color-success-text)', 
+                        fontSize: '14.5px' 
                       }}>
                         {varianceKg > 0 ? '+' : ''}{varianceKg.toLocaleString()} KG ({variancePct > 0 ? '+' : ''}{variancePct.toFixed(2)}%)
                       </strong>
@@ -295,50 +249,49 @@ export const AdminApprovals: React.FC = () => {
                   </div>
 
                   {/* Document & OCR Split Preview Card */}
-                  <div style={{ border: '1px solid var(--neutral-200)', borderRadius: '8px', padding: '14px', backgroundColor: '#FFFFFF' }}>
-                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ border: '1.5px solid var(--color-border)', borderRadius: '12px', padding: '14px', backgroundColor: 'var(--color-bg-card)' }}>
+                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
                       <span>📄 STAMPED DELIVERY RECEIPT (POD)</span>
-                      <a href="/uploads/sample_pod.pdf" target="_blank" rel="noreferrer" style={{ color: 'var(--primary-600)', textTransform: 'none', textDecoration: 'underline' }}>[View Document]</a>
+                      <a href="/uploads/sample_pod.pdf" target="_blank" rel="noreferrer" style={{ color: 'var(--color-brand-blue-600)', textTransform: 'none', textDecoration: 'underline' }}>[View Document]</a>
                     </h5>
-                    <div style={{ backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid var(--neutral-200)', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ textAlign: 'center', color: 'var(--neutral-600)', fontSize: '12px' }}>
+                    <div style={{ backgroundColor: 'var(--color-bg-page)', borderRadius: '6px', border: '1px solid var(--color-border)', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ textAlign: 'center', color: 'var(--color-text-body)', fontSize: '12px' }}>
                         <span style={{ fontWeight: 700, display: 'block' }}>📷 Stamped POD Slip Attached</span>
-                        <span className="mono" style={{ fontSize: '11px', color: 'var(--neutral-400)' }}>/uploads/pods/receipt_stamped.png</span>
+                        <span className="mono" style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>/uploads/pods/receipt_stamped.png</span>
                       </div>
                     </div>
                   </div>
 
                   {/* OCR Verification Results */}
-                  <div style={{ border: '1px solid var(--neutral-200)', borderRadius: '8px', padding: '14px', backgroundColor: '#FFFFFF' }}>
-                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--neutral-700)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
+                  <div style={{ border: '1.5px solid var(--color-border)', borderRadius: '12px', padding: '14px', backgroundColor: '#FFFFFF' }}>
+                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-heading)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
                       <span>🔍 AI OCR EXTRACTION RESULTS</span>
-                      <span style={{ color: 'var(--success-600)' }}>[View OCR Results]</span>
                     </h5>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12.5px' }}>
                       <div>
-                        <span style={{ color: 'var(--neutral-500)', display: 'block' }}>Extracted Waybill:</span>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Extracted Waybill:</span>
                         <strong>{(selectedReview as any).ocr_waybill_extracted || '—'}</strong>
                       </div>
                       <div>
-                        <span style={{ color: 'var(--neutral-500)', display: 'block' }}>Confidence:</span>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Confidence:</span>
                         <strong style={{ 
-                          color: ((selectedReview as any).ocr_confidence_pct || 0) < 50 ? 'var(--error-600)' : 'var(--success-600)' 
+                          color: ((selectedReview as any).ocr_confidence_pct || 0) < 50 ? 'var(--color-error)' : 'var(--color-success)' 
                         }}>
                           {(selectedReview as any).ocr_confidence_pct ? `${(selectedReview as any).ocr_confidence_pct}%` : '—'}
                         </strong>
                       </div>
                       <div>
-                        <span style={{ color: 'var(--neutral-500)', display: 'block' }}>Extracted Weight:</span>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Extracted Weight:</span>
                         <strong>{(selectedReview as any).ocr_weight_extracted ? `${(selectedReview as any).ocr_weight_extracted} Tons` : '—'}</strong>
                       </div>
                       <div>
-                        <span style={{ color: 'var(--neutral-500)', display: 'block' }}>Match Status:</span>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Match Status:</span>
                         <strong style={{ 
                           color: (selectedReview as any).ocr_match_status === 'MATCH' 
-                            ? 'var(--success-600)' 
+                            ? 'var(--color-success-text)' 
                             : (selectedReview as any).ocr_match_status === 'LOW_CONFIDENCE' 
-                              ? '#D97706' 
-                              : 'var(--error-600)' 
+                              ? 'var(--color-warning-text)' 
+                              : 'var(--color-error-text)' 
                         }}>
                           {(selectedReview as any).ocr_match_status || '—'}
                         </strong>
@@ -347,12 +300,12 @@ export const AdminApprovals: React.FC = () => {
                   </div>
 
                   {activeTab === 'OPEN' ? (
-                    <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0 }}>Company Admin Verification Decision</h4>
+                    <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0, color: 'var(--color-text-heading)' }}>Verification Decision</h4>
                       
                       <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                          Reason / Reason Code Selection
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                          Reason Selection
                         </label>
                         <select
                           value={overrideReason}
@@ -360,10 +313,11 @@ export const AdminApprovals: React.FC = () => {
                           style={{
                             width: '100%',
                             padding: '10px 12px',
-                            border: '1px solid var(--neutral-300)',
-                            borderRadius: '8px',
+                            border: '1.5px solid var(--color-border)',
+                            borderRadius: '10px',
                             fontSize: '13px',
-                            backgroundColor: '#FFFFFF',
+                            backgroundColor: 'var(--color-bg-elevated)',
+                            color: 'var(--color-text-primary)',
                             fontWeight: 600,
                           }}
                         >
@@ -376,7 +330,7 @@ export const AdminApprovals: React.FC = () => {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--neutral-600)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
                           Verification Audit Notes
                         </label>
                         <textarea
@@ -387,9 +341,11 @@ export const AdminApprovals: React.FC = () => {
                             width: '100%',
                             height: '80px',
                             padding: '10px 12px',
-                            border: '1px solid var(--neutral-300)',
-                            borderRadius: '8px',
-                            fontSize: '13px'
+                            border: '1.5px solid var(--color-border)',
+                            borderRadius: '10px',
+                            fontSize: '13px',
+                            backgroundColor: 'var(--color-bg-elevated)',
+                            color: 'var(--color-text-primary)'
                           }}
                         />
                       </div>
@@ -398,26 +354,26 @@ export const AdminApprovals: React.FC = () => {
                         <button 
                           onClick={handleReject}
                           className="btn btn-ghost"
-                          style={{ color: 'var(--error-600)', borderColor: 'var(--error-300)', opacity: isSubmitting ? 0.6 : 1 }}
+                          style={{ color: 'var(--color-error-text)', borderColor: 'var(--color-error-light)', opacity: isSubmitting ? 0.6 : 1 }}
                           disabled={isSubmitting}
                         >
-                          {isSubmitting ? '[ CANCELLING... ]' : '[ FLAG FOR CANCEL / REJECT ]'}
+                          {isSubmitting ? 'Rejecting...' : 'Reject POD'}
                         </button>
                         <button 
                           onClick={handleApprove}
-                          className="btn btn-dark"
-                          style={{ backgroundColor: '#10B981', color: '#FFFFFF', opacity: isSubmitting ? 0.6 : 1 }}
+                          className="btn btn-primary"
+                          style={{ backgroundColor: 'var(--color-brand-blue-600)', color: '#FFFFFF', opacity: isSubmitting ? 0.6 : 1 }}
                           disabled={isSubmitting}
                         >
-                          {isSubmitting ? '[ APPROVING... ]' : '[ APPROVE POD ]'}
+                          {isSubmitting ? 'Approving...' : 'Approve POD'}
                         </button>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ borderTop: '1px solid var(--neutral-200)', paddingTop: '16px' }}>
-                      <div style={{ backgroundColor: 'var(--neutral-50)', padding: '12px 16px', borderRadius: '8px' }}>
-                        <p style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px 0' }}>VERIFICATION LOGGED</p>
-                        <p style={{ fontSize: '13px', color: 'var(--neutral-800)', margin: 0 }}>
+                    <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
+                      <div style={{ backgroundColor: 'var(--color-bg-page)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+                        <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px 0' }}>VERIFICATION LOGGED</p>
+                        <p style={{ fontSize: '13px', color: 'var(--color-text-heading)', margin: 0 }}>
                           {selectedReview.resolution_notes || 'No resolution notes entered'}
                         </p>
                       </div>
@@ -428,7 +384,7 @@ export const AdminApprovals: React.FC = () => {
               </Card>
             ) : (
               <Card title="Review Inspector">
-                <p style={{ fontSize: '13px', color: 'var(--neutral-500)', textAlign: 'center', padding: '24px 0', margin: 0 }}>
+                <p style={{ fontSize: '13.5px', color: 'var(--color-text-muted)', textAlign: 'center', padding: '24px 0', margin: 0 }}>
                   Select an item from the review queue table to resolve blocks, approve POD discrepancies, or verify payload margins.
                 </p>
               </Card>
@@ -444,11 +400,11 @@ export const AdminApprovals: React.FC = () => {
 // Page Header helper component inside view file
 const PageHeader: React.FC<{ title: string; subtitle: string }> = ({ title, subtitle }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--neutral-900)', letterSpacing: '-0.02em', margin: 0 }}>
+    <div>
+      <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-heading)', margin: 0 }}>
         {title}
       </h1>
-      <p style={{ fontSize: '14px', color: 'var(--neutral-500)', margin: 0 }}>
+      <p style={{ fontSize: '13.5px', color: 'var(--color-text-muted)', marginTop: '4px', margin: 0 }}>
         {subtitle}
       </p>
     </div>

@@ -8,7 +8,6 @@ import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { FileUploadBox } from '../components/FileUploadBox';
 import { LoadingSpinner } from '../components/LoadingSpinner';
-import { formatDate } from '../utils/format';
 import { OCR_RESULTS } from '../data/mockData';
 import { useNavigate } from 'react-router-dom';
 import { assignmentsApi, drApi, taApi } from '../lib/api_v3';
@@ -42,7 +41,6 @@ export const TransporterPODs: React.FC = () => {
     loadAssignments();
   }, []);
 
-  // Map backend status to frontend podStatus
   const getMappedPodStatus = (status: string) => {
     switch (status) {
       case 'DELIVERED':
@@ -65,7 +63,6 @@ export const TransporterPODs: React.FC = () => {
     }
   };
 
-  // Filters assignments
   const filteredAssignments = assignments
     .map(a => ({
       ...a,
@@ -154,8 +151,8 @@ export const TransporterPODs: React.FC = () => {
           <Tabs 
             tabs={[
               { id: 'ALL', label: 'All Trips', count: assignments.length },
-              { id: 'PENDING', label: 'Need Receipt (POD)', count: assignments.filter(r => getMappedPodStatus(r.status) === 'PENDING_POD').length },
-              { id: 'SUBMITTED', label: 'Waiting for Approval', count: assignments.filter(r => getMappedPodStatus(r.status) === 'SUBMITTED_AWAITING_APPROVAL' || getMappedPodStatus(r.status) === 'LOW_CONFIDENCE').length },
+              { id: 'PENDING', label: 'Need Receipt', count: assignments.filter(r => getMappedPodStatus(r.status) === 'PENDING_POD').length },
+              { id: 'SUBMITTED', label: 'In Verification', count: assignments.filter(r => getMappedPodStatus(r.status) === 'SUBMITTED_AWAITING_APPROVAL' || getMappedPodStatus(r.status) === 'LOW_CONFIDENCE').length },
               { id: 'APPROVED', label: 'Approved', count: assignments.filter(r => getMappedPodStatus(r.status).startsWith('APPROVED') || getMappedPodStatus(r.status) === 'APPROVED_INVOICE_PENDING').length },
               { id: 'REJECTED', label: 'Rejected', count: assignments.filter(r => getMappedPodStatus(r.status) === 'REJECTED').length },
             ]}
@@ -166,7 +163,7 @@ export const TransporterPODs: React.FC = () => {
       />
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading receipts...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading receipts...</div>
       ) : filteredAssignments.length === 0 ? (
         <EmptyState 
           icon={<ClipboardList size={48} />}
@@ -176,9 +173,9 @@ export const TransporterPODs: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
           {filteredAssignments.map((rec) => (
-            <Card key={rec.id} style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px', border: '1px solid var(--neutral-200)', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--neutral-100)', paddingBottom: '10px' }}>
-                <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--neutral-900)', margin: 0 }}>
+            <Card key={rec.id} style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px', border: '1px solid var(--color-border)', borderRadius: '16px', backgroundColor: 'var(--color-bg-card)', boxShadow: 'var(--shadow-card)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--color-border)', paddingBottom: '10px' }}>
+                <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-heading)', margin: 0 }}>
                   PO #{rec.poRef}
                 </h3>
                 <StatusBadge status={rec.podStatus} />
@@ -186,33 +183,33 @@ export const TransporterPODs: React.FC = () => {
 
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px', fontSize: '13px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Contract:</span>
-                  <strong className="mono">{rec.contract_id ? `C-2026-00${rec.contract_id}` : 'C-2026-001'}</strong>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Contract:</span>
+                  <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{rec.contract_id ? `C-2026-00${rec.contract_id}` : 'C-2026-001'}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Customer:</span>
-                  <strong>{rec.customer_name || 'Eskom Holdings'}</strong>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Customer:</span>
+                  <strong style={{ color: 'var(--color-text-heading)' }}>{rec.customer_name || 'Eskom Holdings'}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Delivery:</span>
-                  <strong>{rec.to_location || 'Duvha Power Station'}</strong>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Delivery:</span>
+                  <strong style={{ color: 'var(--color-text-heading)' }}>{rec.to_location || 'Duvha Power Station'}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Vehicle:</span>
-                  <strong className="mono">{rec.horseRegNo}</strong>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Vehicle:</span>
+                  <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{rec.horseRegNo}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: 'var(--neutral-500)', fontWeight: 600 }}>Driver:</span>
-                  <strong>{rec.driver_name || 'Zweli Dlamini'}</strong>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Driver:</span>
+                  <strong style={{ color: 'var(--color-text-heading)' }}>{rec.driver_name || 'Zweli Dlamini'}</strong>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--neutral-200)', paddingTop: '8px', marginTop: '4px' }}>
-                  <span style={{ color: 'var(--neutral-500)', fontWeight: 700 }}>Delivered:</span>
-                  <strong style={{ color: 'var(--neutral-900)', fontSize: '14px' }}>{((rec.netWeightKg || 34000) / 1000.0).toFixed(2)} Tons</strong>
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--color-border)', paddingTop: '8px', marginTop: '4px' }}>
+                  <span style={{ color: 'var(--color-text-muted)', fontWeight: 750 }}>Delivered Payload:</span>
+                  <strong style={{ color: 'var(--color-brand-blue-600)', fontSize: '14.5px' }}>{((rec.netWeightKg || 34000) / 1000.0).toFixed(2)} Tons</strong>
                 </div>
               </div>
 
               {rec.podStatus === 'REJECTED' && rec.rejectionReason && (
-                <div style={{ padding: '8px 12px', backgroundColor: 'var(--error-50)', color: 'var(--error-700)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, marginBottom: '16px' }}>
+                <div style={{ padding: '8px 12px', backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)', borderRadius: '8px', fontSize: '12px', fontWeight: 600, marginBottom: '16px', border: '1px solid var(--color-error-light)' }}>
                   <strong>Rejection Reason:</strong> {rec.rejectionReason}
                 </div>
               )}
@@ -230,14 +227,14 @@ export const TransporterPODs: React.FC = () => {
               )}
 
               {rec.podStatus === 'SUBMITTED_AWAITING_APPROVAL' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--warning-600)', fontWeight: 600, fontSize: '13px', marginTop: 'auto', padding: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-warning-text)', fontWeight: 600, fontSize: '13px', marginTop: 'auto', padding: '8px' }}>
                   <Clock size={16} />
                   Submitted — Awaiting Approval
                 </div>
               )}
 
               {rec.podStatus === 'LOW_CONFIDENCE' && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--warning-600)', fontWeight: 600, fontSize: '13px', marginTop: 'auto', padding: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-warning-text)', fontWeight: 600, fontSize: '13px', marginTop: 'auto', padding: '8px' }}>
                   <AlertCircle size={16} />
                   Submitted — Flagged for Admin Review
                 </div>
@@ -246,8 +243,8 @@ export const TransporterPODs: React.FC = () => {
               {rec.podStatus === 'REJECTED' && (
                 <button 
                   onClick={() => setUploadingAssignment(rec)}
-                  className="btn btn-dark"
-                  style={{ width: '100%', marginTop: 'auto' }}
+                  className="btn btn-ghost"
+                  style={{ width: '100%', marginTop: 'auto', color: 'var(--color-error-text)', borderColor: 'var(--color-error-light)' }}
                 >
                   <Upload size={16} />
                   Re-upload POD Slip
@@ -255,7 +252,7 @@ export const TransporterPODs: React.FC = () => {
               )}
 
               {(rec.podStatus === 'APPROVED') && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--success-600)', fontWeight: 600, fontSize: '13px', marginTop: 'auto', padding: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-success-text)', fontWeight: 600, fontSize: '13px', marginTop: 'auto', padding: '8px' }}>
                   <CheckCircle2 size={16} />
                   Approved — Invoice Raised
                 </div>
@@ -290,7 +287,7 @@ export const TransporterPODs: React.FC = () => {
               onClear={handleClearFile}
             />
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-              <button onClick={() => setUploadingAssignment(null)} className="btn btn-ghost">Cancel</button>
+              <button onClick={() => setUploadingAssignment(null)} className="btn btn-secondary">Cancel</button>
               <button 
                 onClick={handleSubmitVerification} 
                 disabled={!selectedFileName}
@@ -310,8 +307,8 @@ export const TransporterPODs: React.FC = () => {
           <div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
               <div>
-                <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--neutral-500)', textTransform: 'uppercase', marginBottom: '8px' }}>DOCUMENT PREVIEW</h4>
-                <div style={{ width: '100%', height: '240px', border: '1px solid var(--neutral-200)', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'var(--neutral-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>DOCUMENT PREVIEW</h4>
+                <div style={{ width: '100%', height: '240px', border: '1px solid var(--color-border)', borderRadius: '12px', overflow: 'hidden', backgroundColor: 'var(--color-bg-page)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {selectedFileObj ? (
                     <img 
                       src={URL.createObjectURL(selectedFileObj)} 
@@ -319,26 +316,26 @@ export const TransporterPODs: React.FC = () => {
                       style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                     />
                   ) : (
-                    <span style={{ color: 'var(--neutral-500)', fontSize: '12px' }}>Slip Preview</span>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>Slip Preview</span>
                   )}
                 </div>
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--neutral-500)', textTransform: 'uppercase' }}>OCR FIELD COMPARISON</h4>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--neutral-600)' }}>Confidence: {(ocrData.confidence * 100).toFixed(0)}%</span>
+                  <h4 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>OCR FIELD COMPARISON</h4>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>Confidence: {(ocrData.confidence * 100).toFixed(0)}%</span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: 'var(--neutral-50)', borderRadius: '6px', border: '1px solid var(--neutral-200)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: 'var(--color-bg-page)', borderRadius: '10px', border: '1.5px solid var(--color-border)' }}>
                     <div>
-                      <p style={{ fontSize: '10px', color: 'var(--neutral-500)', fontWeight: 700 }}>EXTRACTED WAYBILL</p>
-                      <p className="mono" style={{ fontWeight: 700, fontSize: '13px' }}>{ocrData.extracted.waybillNo}</p>
+                      <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700 }}>EXTRACTED WAYBILL</p>
+                      <p className="mono" style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-text-heading)' }}>{ocrData.extracted.waybillNo}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: '10px', color: 'var(--neutral-500)', fontWeight: 700 }}>SAP SYSTEM</p>
-                      <p className="mono" style={{ fontWeight: 700, fontSize: '13px', color: 'var(--success-600)' }}>
+                      <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700 }}>SAP SYSTEM</p>
+                      <p className="mono" style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-brand-blue-600)' }}>
                         {uploadingAssignment.waybillNo}
                       </p>
                     </div>
@@ -350,7 +347,7 @@ export const TransporterPODs: React.FC = () => {
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button 
                 onClick={() => { setUploadStep('UPLOAD'); handleClearFile(); }} 
-                className="btn btn-ghost"
+                className="btn btn-secondary"
               >
                 Re-upload
               </button>

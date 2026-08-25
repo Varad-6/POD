@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { ToastContainer } from './components/Toast';
 import LoginPage from './pages/LoginPage';
+import LandingPage from './pages/LandingPage';
 import { AuthProviderV3, useAuthV3 } from './contexts/AuthContextV3';
 import { DemoProvider } from './context/DemoContext';
 import { PodzoLogo } from './components/branding/PodzoLogo';
@@ -22,6 +23,7 @@ import { AdminContracts } from './views/AdminContracts';
 import { SupervisorDashboard } from './views/SupervisorDashboard';
 import { CustomerDashboard } from './views/CustomerDashboard';
 import { DriverDashboard } from './views/DriverDashboard';
+import { ComponentGallery } from './views/ComponentGallery';
 
 function getDefaultRoute(role: string): string {
   switch (role) {
@@ -66,31 +68,31 @@ const MainApp: React.FC = () => {
 
   useEffect(() => {
     if (loading) return;
-    if (!user && location.pathname !== '/login') {
+    if (!user && location.pathname !== '/login' && location.pathname !== '/') {
       navigate('/login', { replace: true });
-    } else if (user && location.pathname === '/login') {
+    } else if (user && (location.pathname === '/login' || location.pathname === '/')) {
       navigate(getDefaultRoute(user.role), { replace: true });
     }
   }, [user, loading, location.pathname, navigate]);
 
   useEffect(() => {
-    if (location.pathname === '/login') {
+    if (location.pathname === '/') {
+      document.title = "PODZO — Let's make delivery simple.";
+    } else if (location.pathname === '/login') {
       document.title = "PODZO — Sign In";
     } else if (user) {
       const pageTitle = getPageTitle(location.pathname, user.role);
       document.title = `PODZO — ${pageTitle}`;
-    } else {
-      document.title = "PODZO — Let's make delivery simple.";
     }
   }, [location.pathname, user]);
 
-  if (loading && location.pathname !== '/login') {
+  if (loading && location.pathname !== '/login' && location.pathname !== '/') {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0A192F', color: '#FFFFFF' }}>
-        <div style={{ backgroundColor: '#FFFFFF', padding: '16px 28px', borderRadius: '14px', marginBottom: '20px', boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-bg-page)', color: 'var(--color-text-body)' }}>
+        <div style={{ backgroundColor: 'var(--color-bg-card)', padding: '16px 28px', borderRadius: '18px', marginBottom: '20px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
           <PodzoLogo variant="full" height={54} />
         </div>
-        <div style={{ color: '#FF5B00', fontSize: '13px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <div style={{ color: 'var(--color-brand-blue-600)', fontSize: '13px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
           Loading PODZO Platform...
         </div>
       </div>
@@ -100,8 +102,9 @@ const MainApp: React.FC = () => {
   if (!user) {
     return (
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     );
   }
@@ -143,6 +146,9 @@ const MainApp: React.FC = () => {
 
               {/* Driver Routes */}
               <Route path="/driver/dashboard" element={<DriverDashboard />} />
+
+              {/* Dev/Design System Routes */}
+              <Route path="/gallery" element={<ComponentGallery />} />
 
               {/* Catch-all */}
               <Route path="*" element={<Navigate to={getDefaultRoute(user.role)} replace />} />

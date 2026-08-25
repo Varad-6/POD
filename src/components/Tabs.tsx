@@ -1,6 +1,5 @@
 // ============================================================
-// POD — Reusable Tabs Component
-// Consistent active/inactive tab styling with count pills
+// POD — Reusable Tabs Component (Blue Theme v3)
 // ============================================================
 
 import React from 'react';
@@ -26,7 +25,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
       style={{
         display: 'flex',
         gap: '24px',
-        borderBottom: '2px solid var(--neutral-200)',
+        borderBottom: '2.5px solid var(--color-border)',
         paddingBottom: '0px',
       }}
     >
@@ -39,21 +38,21 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '8px',
               padding: '10px 4px 12px 4px',
-              fontSize: '13px',
-              fontWeight: isActive ? 800 : 600,
-              color: isActive ? 'var(--brand-purple)' : 'var(--neutral-600)',
+              fontSize: '13.5px',
+              fontWeight: isActive ? 700 : 500,
+              color: isActive ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)',
               background: 'transparent',
               border: 'none',
-              borderBottom: isActive ? '3px solid var(--brand-purple)' : '3px solid transparent',
-              marginBottom: '-2px',
+              borderBottom: isActive ? '3px solid var(--color-brand-blue-600)' : '3px solid transparent',
+              marginBottom: '-2.5px',
               cursor: 'pointer',
-              transition: 'all 0.15s ease',
+              transition: 'all var(--transition-normal)',
             }}
           >
             {tab.icon}
-            <span style={{ textTransform: 'uppercase', letterSpacing: '0.03em' }}>{tab.label}</span>
+            <span style={{ letterSpacing: '0.01em' }}>{tab.label}</span>
             {tab.count !== undefined && (
               <span
                 style={{
@@ -61,8 +60,9 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
                   fontWeight: 700,
                   padding: '2px 8px',
                   borderRadius: '12px',
-                  background: isActive ? 'var(--brand-purple)' : 'var(--neutral-200)',
-                  color: isActive ? '#FFFFFF' : 'var(--neutral-700)',
+                  background: isActive ? 'var(--color-brand-blue-50)' : '#F1F5F9',
+                  color: isActive ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)',
+                  marginLeft: '4px'
                 }}
               >
                 {tab.count}

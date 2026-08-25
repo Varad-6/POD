@@ -46,10 +46,10 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Top Banner */}
+      {/* Top Banner (V3 Royal Blue Theme) */}
       <div 
         style={{ 
-          background: 'linear-gradient(135deg, #0B132B 0%, #1C2541 100%)', 
+          background: 'linear-gradient(135deg, var(--color-brand-blue-600) 0%, var(--color-brand-blue-700) 100%)', 
           borderRadius: '16px', 
           padding: '28px 32px', 
           color: '#ffffff', 
@@ -63,27 +63,33 @@ export const AdminDashboard: React.FC = () => {
       >
         <div style={{ zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <span className="pulse-dot pulse-dot--active" />
-            <span style={{ fontSize: '11px', color: '#06B6D4', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Fleet Telemetry • SAP S4/HANA Live Integration
+            <span className="pulse-dot pulse-dot--active" style={{ backgroundColor: '#FFFFFF', boxShadow: '0 0 8px #FFFFFF' }} />
+            <span style={{ fontSize: '11px', color: 'var(--color-brand-blue-50)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Fleet Telemetry • SAP S/4HANA Live Integration
             </span>
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', margin: 0 }}>
             Fleet Logistics Command Desk
           </h2>
-          <p style={{ fontSize: '13px', color: '#94A3B8', marginTop: '4px', maxWidth: '640px', margin: '4px 0 0 0' }}>
+          <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '4px', maxWidth: '640px', margin: '4px 0 0 0', lineHeight: 1.5 }}>
             Real-time tracking of outline agreement usage, weight logs, geofence validations, OCR checks, and SAP MIRO invoice automated parking.
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '12px', zIndex: 2 }}>
-          <button onClick={() => navigate('/admin/approvals')} className="btn btn-primary">
+          <button 
+            onClick={() => navigate('/admin/approvals')} 
+            className="btn btn-primary" 
+            style={{ backgroundColor: '#ffffff', color: 'var(--color-brand-blue-600)', borderColor: '#ffffff', fontWeight: 700 }}
+          >
             Inspect POD Queue ({reviews.length}) <ArrowRight size={14} />
           </button>
           <button 
             onClick={() => navigate('/admin/invoices')} 
             className="btn btn-secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.4)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = '#FFFFFF'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
           >
             MIRO Console ({invoices.length})
           </button>
@@ -91,60 +97,54 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-500)' }}>Loading telemetry...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading telemetry...</div>
       ) : (
-        <>          {/* KPI Cards Grid — Card Encapsulated & Interactive Redirection */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
-            <Card 
-              title="Flagged Reviews" 
-              icon={<ClipboardCheck size={18} color="var(--error-600)" />}
-              onClick={() => navigate('/admin/approvals')}
-              style={{ cursor: 'pointer' }}
-            >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                  <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{reviews.length}</span>
-                  <span style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 600 }}>Active Flags</span>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--neutral-600)', borderTop: '1px solid var(--neutral-100)', paddingTop: '6px', marginTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>Mismatch: <strong>{reviews.filter(r => r.flag_reason === 'TOLERANCE_EXCEEDED').length}</strong></span>
-                  <span>POD Audits: <strong>{reviews.filter(r => r.flag_reason === 'AWAITING_CA_VERIFY' || r.flag_reason === 'OCR_MISMATCH').length}</strong></span>
-                </div>
+        <>
+          {/* KPI Cards Grid — Card Encapsulated & Interactive Redirection */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+            <div className="kpi-card" onClick={() => navigate('/admin/approvals')} style={{ cursor: 'pointer' }}>
+              <div>
+                <div className="kpi-label">Flagged Reviews</div>
+                <div className="kpi-value">{reviews.length}</div>
+                <div className="kpi-trend kpi-trend--down" style={{ color: 'var(--color-error-text)' }}>Requires Attention</div>
               </div>
-            </Card>
+              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)' }}>
+                <ClipboardCheck size={20} />
+              </div>
+            </div>
 
-            <Card 
-              title="Park Pending" 
-              icon={<FileClock size={18} color="var(--brand-orange)" />}
-              onClick={() => navigate('/admin/invoices')}
-              style={{ cursor: 'pointer' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>{invoices.length}</span>
-                <span style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 600 }}>Invoices Ready to Park</span>
+            <div className="kpi-card" onClick={() => navigate('/admin/invoices')} style={{ cursor: 'pointer' }}>
+              <div>
+                <div className="kpi-label">Park Pending</div>
+                <div className="kpi-value">{invoices.length}</div>
+                <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-warning-text)' }}>Ready to Park</div>
               </div>
-            </Card>
+              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)' }}>
+                <FileClock size={20} />
+              </div>
+            </div>
 
-            <Card 
-              title="Pending MIRO" 
-              icon={<Server size={18} color="var(--brand-purple)" />}
-              onClick={() => navigate('/admin/invoices')}
-              style={{ cursor: 'pointer' }}
-            >
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
-                <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--neutral-900)' }}>
-                  {miroInvoices.filter(m => m.status === 'PARKED').length}
-                </span>
-                <span style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 600 }}>MIRO Parked Documents</span>
+            <div className="kpi-card" onClick={() => navigate('/admin/invoices')} style={{ cursor: 'pointer' }}>
+              <div>
+                <div className="kpi-label">Pending MIRO</div>
+                <div className="kpi-value">{miroInvoices.filter(m => m.status === 'PARKED').length}</div>
+                <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-brand-blue-600)' }}>Parked Docs</div>
               </div>
-            </Card>
+              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-brand-blue-50)', color: 'var(--color-brand-blue-600)' }}>
+                <Server size={20} />
+              </div>
+            </div>
 
-            <Card title="BAPI Sync Status" icon={<ShieldCheck size={18} color="var(--success-600)" />}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '8px' }}>
-                <span style={{ fontSize: '22px', fontWeight: 800, color: 'var(--success-600)' }}>ONLINE</span>
-                <span style={{ fontSize: '12px', color: 'var(--neutral-500)', fontWeight: 600 }}>SAP S21 Interface</span>
+            <div className="kpi-card">
+              <div>
+                <div className="kpi-label">BAPI Sync Status</div>
+                <div className="kpi-value" style={{ fontSize: '18px', marginTop: '10px', color: 'var(--color-success-text)' }}>ONLINE</div>
+                <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-success-text)' }}>S/4HANA Sync Active</div>
               </div>
-            </Card>
+              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)' }}>
+                <ShieldCheck size={20} />
+              </div>
+            </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
@@ -167,15 +167,15 @@ export const AdminDashboard: React.FC = () => {
                       const pct = Math.round((completedCount / totalPos) * 100);
                       return (
                         <tr key={c.id} onClick={() => navigate('/admin/contracts')} style={{ cursor: 'pointer' }}>
-                          <td className="mono" style={{ fontWeight: 700, color: 'var(--brand-purple)' }}>{c.sap_contract_no}</td>
+                          <td className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{c.sap_contract_no}</td>
                           <td style={{ fontWeight: 600 }}>{c.customer_name}</td>
                           <td style={{ minWidth: '180px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '4px', fontWeight: 600 }}>
                               <span>{pct}% Executed</span>
-                              <span style={{ color: 'var(--neutral-500)' }}>{completedCount > 0 ? 'Target Active' : '0 POs Completed'}</span>
+                              <span style={{ color: 'var(--color-text-muted)' }}>{completedCount > 0 ? 'Target Active' : '0 POs Completed'}</span>
                             </div>
-                            <div style={{ height: '6px', width: '100%', backgroundColor: 'var(--neutral-200)', borderRadius: '3px', overflow: 'hidden' }}>
-                              <div style={{ height: '100%', width: `${pct}%`, backgroundColor: pct > 70 ? '#10B981' : pct > 40 ? '#F59E0B' : '#6366F1', borderRadius: '3px' }} />
+                            <div style={{ height: '6px', width: '100%', backgroundColor: 'var(--color-border)', borderRadius: '3px', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${pct}%`, backgroundColor: 'var(--color-brand-blue-600)', borderRadius: '3px' }} />
                             </div>
                           </td>
                           <td style={{ fontSize: '12px' }}>{c.start_date} to {c.end_date}</td>
@@ -193,32 +193,32 @@ export const AdminDashboard: React.FC = () => {
             <Card title="System Telemetry Logs">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <div style={{ backgroundColor: 'rgba(37, 99, 235, 0.1)', padding: '6px', borderRadius: '6px', color: 'var(--accent-blue)' }}>
+                  <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '6px', borderRadius: '6px', color: 'var(--color-brand-blue-600)' }}>
                     <Activity size={14} />
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>OData Sync Sequence Active</p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--neutral-500)' }}>Refreshed outline contracts from S/4HANA</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--color-text-muted)' }}>Refreshed outline contracts from S/4HANA</p>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '6px', borderRadius: '6px', color: 'var(--error-600)' }}>
+                  <div style={{ backgroundColor: 'var(--color-error-bg)', padding: '6px', borderRadius: '6px', color: 'var(--color-error-text)' }}>
                     <ClipboardCheck size={14} />
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>Review Queue Alert</p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--neutral-500)' }}>{reviews.length} items flagged for manual override</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--color-text-muted)' }}>{reviews.length} items flagged for manual override</p>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '6px', borderRadius: '6px', color: 'var(--success-600)' }}>
+                  <div style={{ backgroundColor: 'var(--color-success-bg)', padding: '6px', borderRadius: '6px', color: 'var(--color-success-text)' }}>
                     <FileClock size={14} />
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>MIRO Post Sequence Connected</p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--neutral-500)' }}>Live connectivity to SAP Finance module</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--color-text-muted)' }}>Live connectivity to SAP Finance module</p>
                   </div>
                 </div>
               </div>
@@ -226,7 +226,6 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </>
       )}
-
     </div>
   );
 };

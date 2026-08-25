@@ -3,15 +3,15 @@ import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { crApi, drApi, TransportAssignmentV3 } from '../lib/api_v3';
 import {
-  PackageCheck, ShieldCheck, CheckCircle2, Scale, ArrowLeft,
-  Truck, MapPin, Clock, RefreshCw, ArrowRight, AlertTriangle
+  PackageCheck, ShieldCheck, CheckCircle2, Scale, ArrowLeft, Check,
+  Truck, MapPin, RefreshCw, ArrowRight, AlertTriangle, Lock
 } from 'lucide-react';
 
 // ─── Info section ─────────────────────────────────────────────────────────────
 const InfoBit: React.FC<{ label: string; value: string | number; mono?: boolean }> = ({ label, value, mono }) => (
   <div>
-    <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
-    <div className={mono ? 'mono' : ''} style={{ fontSize: '14px', fontWeight: 700, color: '#fff', marginTop: '2px' }}>{value}</div>
+    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
+    <div className={mono ? 'mono' : ''} style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--color-text-heading)', marginTop: '2px' }}>{value}</div>
   </div>
 );
 
@@ -53,7 +53,7 @@ export const CustomerDashboard: React.FC = () => {
       const targetQtyKg = targetQtyTons * 1000;
       setDestTare(String(tare));
       setDestGross(String(tare + targetQtyKg));
-      setUnitCalc(`Convert ${targetQtyKg} kg to ${targetQtyTons} ${selectedAssignment.po_uom === 'TO' ? 'Tons' : (selectedAssignment.po_uom || 'Tons')}`);
+      setUnitCalc(`Convert ${targetQtyKg} kg to ${targetQtyTons} Tons`);
     }
   }, [selectedAssignment]);
 
@@ -84,8 +84,6 @@ export const CustomerDashboard: React.FC = () => {
     }
   };
 
-
-
   const handleStampConfirm = async () => {
     if (!selectedAssignment) return;
     setIsSubmitting(true);
@@ -102,26 +100,29 @@ export const CustomerDashboard: React.FC = () => {
 
   const netWeight = parseFloat(destGross) - parseFloat(destTare);
   const netTons = (netWeight / 1000).toFixed(2);
+
   // ─── DETAIL VIEW ─────────────────────────────────────────────────────────
   if (selectedAssignment) {
     const a = selectedAssignment;
     const dispatchNet = a.mine_gross_kg && a.mine_tare_kg ? (a.mine_gross_kg - a.mine_tare_kg) : ((a.po_target_qty || 34.0) * 1000);
     const tolerancePct = a.tolerance_pct ?? 0.5;
+    const isVarianceExceeded = Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct;
 
     if (successDone) {
       return (
-        <div style={{ maxWidth: '640px', margin: '60px auto', textAlign: 'center', padding: '40px', backgroundColor: '#F0FDF4', borderRadius: '20px', border: '2px solid #10B981' }}>
-          <CheckCircle2 size={56} color="#10B981" style={{ margin: '0 auto 16px' }} />
-          <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#065F46', margin: '0 0 8px' }}>Truck Unloaded Successfully!</h2>
-          <p style={{ fontSize: '14px', color: '#047857', margin: '0 0 8px' }}>
+        <div style={{ maxWidth: '640px', margin: '60px auto', textAlign: 'center', padding: '40px', backgroundColor: 'var(--color-success-bg)', borderRadius: '16px', border: '1.5px solid var(--color-success-light)', boxShadow: 'var(--shadow-card)' }}>
+          <CheckCircle2 size={56} color="var(--color-success)" style={{ margin: '0 auto 16px' }} />
+          <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-success-text)', margin: '0 0 8px' }}>Truck Unloaded Successfully!</h2>
+          <p style={{ fontSize: '14.5px', color: 'var(--color-success-text)', margin: '0 0 8px', fontWeight: 600 }}>
             PO #{a.sap_po_no} — Net Weight: {netTons} Tons
           </p>
-          <p style={{ fontSize: '13px', color: '#059669', margin: '0 0 28px' }}>
+          <p style={{ fontSize: '13.5px', color: 'var(--color-success-text)', opacity: 0.9, margin: '0 0 28px' }}>
             The delivery receipt has been stamped. The driver can now upload the POD document.
           </p>
           <button
             onClick={handleBack}
-            style={{ padding: '12px 28px', backgroundColor: '#10B981', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+            className="btn btn-primary"
+            style={{ minHeight: '44px', padding: '12px 28px' }}
           >
             Back to Trucks Queue
           </button>
@@ -130,74 +131,82 @@ export const CustomerDashboard: React.FC = () => {
     }
 
     return (
-      <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ maxWidth: '720px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
         {/* Back */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
             onClick={handleBack}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: '#fff', fontSize: '13px', fontWeight: 600, color: '#64748B', cursor: 'pointer' }}
+            className="btn btn-ghost btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <ArrowLeft size={14} /> All Trucks
           </button>
-          <span style={{ color: '#CBD5E1' }}>›</span>
-          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>PO #{a.sap_po_no}</span>
+          <span style={{ color: 'var(--color-border)' }}>›</span>
+          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>PO #{a.sap_po_no}</span>
           <span style={{ marginLeft: 'auto' }}><StatusBadge status={a.status} /></span>
         </div>
 
-        {/* Header Banner — shows siding info from supervisor/driver */}
+        {/* Header Banner: White card with a light blue tinted header strip */}
         <div style={{
-          background: 'linear-gradient(135deg, #0F4C81 0%, #1565C0 100%)',
-          borderRadius: '14px', padding: '22px 26px', color: '#fff',
-          boxShadow: '0 6px 24px rgba(21,101,192,0.25)'
+          backgroundColor: 'var(--color-bg-card)',
+          borderRadius: '16px',
+          border: '1.5px solid var(--color-border)',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-card)'
         }}>
-          <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '14px' }}>
-            Incoming Delivery — Unloading Yard
+          <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '12px 20px', borderBottom: '1px solid var(--color-border)' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-700)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Incoming Delivery — Unloading Yard
+            </h3>
           </div>
-          <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
-            <InfoBit label="PO Number" value={`PO #${a.sap_po_no}`} mono />
-            <InfoBit label="Driver" value={a.driver_name || '—'} />
-            <InfoBit label="Truck" value={a.vehicle_reg || '—'} mono />
-            <InfoBit label="Cargo" value={a.material || '—'} />
-          </div>
-          <div style={{ marginTop: '16px', padding: '12px 14px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <MapPin size={14} color="rgba(255,255,255,0.7)" />
-            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.8)' }}>
-              <strong>From:</strong> {a.from_location || 'MON1 Plant / Siding'} &nbsp;→&nbsp; <strong>To:</strong> {a.to_location || 'PODZO Mining – Emoyeni Siding'}
-            </span>
+          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+              <InfoBit label="PO Number" value={`PO #${a.sap_po_no}`} mono />
+              <InfoBit label="Driver" value={a.driver_name || '—'} />
+              <InfoBit label="Truck" value={a.vehicle_reg || '—'} mono />
+              <InfoBit label="Cargo" value={a.material || '—'} />
+            </div>
+            <div style={{ padding: '12px 14px', backgroundColor: 'var(--color-bg-page)', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '12px', border: '1px solid var(--color-border)' }}>
+              <MapPin size={14} color="var(--color-brand-blue-600)" />
+              <span style={{ fontSize: '12.5px', color: 'var(--color-text-body)' }}>
+                <strong>From:</strong> {a.from_location || 'MON1 Plant / Siding'} &nbsp;→&nbsp; <strong>To:</strong> {a.to_location || 'Emoyeni Siding'}
+              </span>
+            </div>
           </div>
         </div>
 
         {/* ── ORIGIN WEIGHBRIDGE CERTIFICATE — READ ONLY LOCK ── */}
         <div style={{
-          backgroundColor: '#F8FAFC', borderRadius: '14px', border: '1px solid #CBD5E1',
+          backgroundColor: 'var(--color-bg-page)', borderRadius: '16px', border: '1.5px solid var(--color-border)',
           padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.03)', position: 'relative'
+          boxShadow: 'var(--shadow-card)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#1E293B', textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>🔒 ORIGIN WEIGHBRIDGE CERTIFICATE</span>
-              <span style={{ fontSize: '10px', fontWeight: 800, backgroundColor: '#E2E8F0', color: '#475569', padding: '2px 8px', borderRadius: '12px', border: '1px solid #CBD5E1' }}>READ ONLY • IMMUTABLE</span>
+            <h4 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Lock size={14} color="var(--color-text-muted)" />
+              <span>ORIGIN WEIGHBRIDGE CERTIFICATE</span>
+              <span className="badge badge-neutral" style={{ padding: '2px 8px', fontSize: '10px' }}>READ ONLY</span>
             </h4>
-            <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>Source: Supervisor Weighbridge</span>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Source: Supervisor Gate</span>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', fontSize: '13px', backgroundColor: '#FFFFFF', padding: '16px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '16px', fontSize: '13px', backgroundColor: 'var(--color-bg-card)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
             <div>
-              <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Bilty Reference</span>
-              <strong className="mono" style={{ color: '#0F172A', fontSize: '14px' }}>{(a as any).bilty_no || 'BLT-778899'}</strong>
+              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Bilty Reference</span>
+              <strong className="mono" style={{ color: 'var(--color-text-heading)', fontSize: '14px' }}>{(a as any).bilty_no || 'BLT-778899'}</strong>
             </div>
             <div>
-              <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Origin Tare Weight 🔒</span>
-              <strong className="mono" style={{ color: '#0F172A', fontSize: '14px' }}>{(a as any).mine_tare_kg ? `${(a as any).mine_tare_kg.toLocaleString()} kg` : '10,000 kg'}</strong>
+              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Origin Tare</span>
+              <strong className="mono" style={{ color: 'var(--color-text-heading)', fontSize: '14px' }}>{(a as any).mine_tare_kg ? `${(a as any).mine_tare_kg.toLocaleString()} kg` : '10,000 kg'}</strong>
             </div>
             <div>
-              <span style={{ fontSize: '10px', color: '#64748B', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Origin Gross Weight 🔒</span>
-              <strong className="mono" style={{ color: '#0F172A', fontSize: '14px' }}>{(a as any).mine_gross_kg ? `${(a as any).mine_gross_kg.toLocaleString()} kg` : '44,000 kg'}</strong>
+              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Origin Gross</span>
+              <strong className="mono" style={{ color: 'var(--color-text-heading)', fontSize: '14px' }}>{(a as any).mine_gross_kg ? `${(a as any).mine_gross_kg.toLocaleString()} kg` : '44,000 kg'}</strong>
             </div>
             <div>
-              <span style={{ fontSize: '10px', color: '#1E293B', fontWeight: 800, display: 'block', textTransform: 'uppercase' }}>Net Dispatch Tonnage 🔒</span>
-              <strong className="mono" style={{ color: '#2563EB', fontSize: '16px' }}>
+              <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 800, display: 'block', textTransform: 'uppercase' }}>Net Dispatch</span>
+              <strong className="mono" style={{ color: 'var(--color-brand-blue-600)', fontSize: '15px' }}>
                 {(a as any).mine_gross_kg && (a as any).mine_tare_kg
                   ? `${(((a as any).mine_gross_kg - (a as any).mine_tare_kg) / 1000).toFixed(2)} Tons`
                   : '34.00 Tons'}
@@ -207,92 +216,96 @@ export const CustomerDashboard: React.FC = () => {
         </div>
 
         {/* ── Step 1: Record Destination Scale Weights (Gross & Tare) ── */}
-        <div style={{ backgroundColor: '#fff', borderRadius: '14px', border: weighSaved ? '1px solid #D1FAE5' : '2px solid #3B82F6', overflow: 'hidden', boxShadow: weighSaved ? 'none' : '0 4px 20px rgba(59,130,246,0.1)' }}>
+        <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: weighSaved ? '1.5px solid var(--color-border)' : '2.5px solid var(--color-brand-blue-600)', overflow: 'hidden', boxShadow: weighSaved ? 'var(--shadow-card)' : 'var(--shadow-card-hover)' }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: '12px',
-            padding: '16px 20px', borderBottom: '1px solid #F1F5F9',
-            backgroundColor: weighSaved ? '#F0FDF4' : '#EFF6FF'
+            padding: '16px 20px', borderBottom: '1px solid var(--color-border)',
+            backgroundColor: weighSaved ? 'var(--color-bg-card)' : 'var(--color-brand-blue-50)'
           }}>
             <div style={{
               width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: weighSaved ? '#10B981' : '#3B82F6', color: '#fff', fontWeight: 800, fontSize: '13px'
+              backgroundColor: weighSaved ? 'var(--color-brand-blue-600)' : 'var(--color-brand-blue-600)', color: '#fff', fontWeight: 800, fontSize: '13px'
             }}>
-              {weighSaved ? <CheckCircle2 size={18} /> : <Scale size={16} />}
+              {weighSaved ? <Check size={16} /> : <Scale size={16} />}
             </div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: weighSaved ? '#065F46' : '#1D4ED8' }}>
+              <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
                 Step 1: Record Destination Scale Measurements (Yard Scale)
               </div>
-              <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
                 Enter the receiving gross and tare readings captured on your destination scale
               </div>
             </div>
-            {weighSaved && <span style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 700, color: '#059669', backgroundColor: '#D1FAE5', padding: '3px 10px', borderRadius: '20px' }}>Saved ✓</span>}
+            {weighSaved && <span className="badge badge-green" style={{ marginLeft: 'auto' }}>Saved ✓</span>}
           </div>
 
           <div style={{ padding: '22px' }}>
             <form onSubmit={handleCaptureWeights} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                    🚛📦 Destination Gross Weight (kg)
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                    Destination Gross Weight (kg)
                   </label>
                   <input
                     type="number"
                     value={destGross}
                     onChange={e => setDestGross(e.target.value)}
                     placeholder="e.g. 43900"
-                    style={{ width: '100%', padding: '14px 16px', border: '1px solid #CBD5E1', borderRadius: '10px', fontSize: '18px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace' }}
+                    style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '18px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
                     disabled={weighSaved}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                    🚛 Destination Tare Weight (kg)
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+                    Destination Tare Weight (kg)
                   </label>
                   <input
                     type="number"
                     value={destTare}
                     onChange={e => setDestTare(e.target.value)}
                     placeholder="e.g. 9950"
-                    style={{ width: '100%', padding: '14px 16px', border: '1px solid #CBD5E1', borderRadius: '10px', fontSize: '18px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace' }}
+                    style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '18px', fontWeight: 700, textAlign: 'right', fontFamily: 'monospace', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
                     disabled={weighSaved}
                   />
                 </div>
               </div>
 
-              {/* Weight Reconciliation Preview */}
+              {/* Weight Reconciliation & Variance */}
               {destGross && destTare && (
-                <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', padding: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>⚖️ WEIGHT RECONCILIATION & VARIANCE</span>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 800, padding: '3px 10px', borderRadius: '12px',
-                      backgroundColor: Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct ? '#FEE2E2' : '#D1FAE5',
-                      color: Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct ? '#991B1B' : '#065F46'
-                    }}>
-                      {Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct ? `🔴 OUTSIDE TOLERANCE (±${tolerancePct}%)` : '✓ WITHIN TOLERANCE'}
+                <div style={{ 
+                  backgroundColor: isVarianceExceeded ? 'var(--color-error-bg)' : 'var(--color-success-bg)', 
+                  borderRadius: '12px', 
+                  padding: '16px', 
+                  border: isVarianceExceeded ? '1px solid var(--color-error-light)' : '1px solid var(--color-success-light)', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '10px' 
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)', textTransform: 'uppercase' }}>⚖️ WEIGHT RECONCILIATION & VARIANCE</span>
+                    <span className={isVarianceExceeded ? 'badge badge-red' : 'badge badge-green'}>
+                      {isVarianceExceeded ? `🔴 OUTSIDE TOLERANCE (±${tolerancePct}%)` : '✓ WITHIN TOLERANCE'}
                     </span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', fontSize: '12px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '12px', fontSize: '12.5px' }}>
                     <div>
-                      <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Dispatch Net</span>
-                      <strong>{dispatchNet.toLocaleString()} kg</strong>
+                      <span style={{ fontSize: '10px', color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)', opacity: 0.8, display: 'block' }}>Dispatch Net</span>
+                      <strong style={{ color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>{dispatchNet.toLocaleString()} kg</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Received Net</span>
-                      <strong>{isNaN(netWeight) ? '0' : netWeight.toLocaleString()} kg</strong>
+                      <span style={{ fontSize: '10px', color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)', opacity: 0.8, display: 'block' }}>Received Net</span>
+                      <strong style={{ color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>{isNaN(netWeight) ? '0' : netWeight.toLocaleString()} kg</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Variance Difference</span>
-                      <strong style={{ color: (netWeight - dispatchNet) < 0 ? '#DC2626' : '#059669' }}>
+                      <span style={{ fontSize: '10px', color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)', opacity: 0.8, display: 'block' }}>Difference</span>
+                      <strong style={{ color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>
                         {isNaN(netWeight) ? '0' : (netWeight - dispatchNet).toLocaleString()} kg
                       </strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: '#64748B', display: 'block' }}>Variance %</span>
-                      <strong style={{ color: Math.abs(((netWeight - dispatchNet) / dispatchNet) * 100) > tolerancePct ? '#DC2626' : '#059669' }}>
+                      <span style={{ fontSize: '10px', color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)', opacity: 0.8, display: 'block' }}>Variance %</span>
+                      <strong style={{ color: isVarianceExceeded ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>
                         {isNaN(netWeight) ? '0%' : `${(((netWeight - dispatchNet) / dispatchNet) * 100).toFixed(2)}%`}
                       </strong>
                     </div>
@@ -301,12 +314,12 @@ export const CustomerDashboard: React.FC = () => {
               )}
 
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '8px' }}>Any Damage, Variance or Issues? (Notes)</label>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Any Damage, Variance or Issues? (Notes)</label>
                 <input
                   type="text"
                   value={issues}
                   onChange={e => setIssues(e.target.value)}
-                  style={{ width: '100%', padding: '12px 14px', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
                   disabled={weighSaved}
                 />
               </div>
@@ -315,7 +328,8 @@ export const CustomerDashboard: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  style={{ padding: '14px', backgroundColor: '#3B82F6', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer' }}
+                  className="btn btn-primary"
+                  style={{ minHeight: '48px', padding: '14px', width: '100%', justifyContent: 'center' }}
                 >
                   {isSubmitting ? 'Saving Receiving Scale Data...' : 'Save Destination Scale & Reconcile'}
                 </button>
@@ -326,30 +340,30 @@ export const CustomerDashboard: React.FC = () => {
 
         {/* ── Step 2: Confirm Unloading & Close ── */}
         <div style={{
-          backgroundColor: '#fff', borderRadius: '14px',
-          border: '1px solid #E2E8F0', overflow: 'hidden',
+          backgroundColor: 'var(--color-bg-card)', borderRadius: '16px',
+          border: '1.5px solid var(--color-border)', overflow: 'hidden',
           opacity: !weighSaved ? 0.5 : 1,
           pointerEvents: !weighSaved ? 'none' : 'auto',
           transition: 'all 0.3s'
         }}>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid #F1F5F9',
-            backgroundColor: weighSaved ? '#ECFDF5' : '#F8FAFC'
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid var(--color-border)',
+            backgroundColor: weighSaved ? 'var(--color-bg-card)' : 'var(--color-bg-card)'
           }}>
             <div style={{
               width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              backgroundColor: weighSaved ? '#059669' : '#E2E8F0',
-              color: weighSaved ? '#fff' : '#94A3B8', fontWeight: 800
+              backgroundColor: weighSaved ? 'var(--color-brand-blue-600)' : 'var(--color-border)',
+              color: weighSaved ? '#fff' : 'var(--color-text-muted)', fontWeight: 800
             }}>
               <ShieldCheck size={18} />
             </div>
             <div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: weighSaved ? '#065F46' : '#94A3B8' }}>
-                Step 2: Confirm Unloading & Close
+              <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                Step 2: Confirm Unloading & Stamp Receipt
               </div>
-              <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
-                Stamp the delivery. Net weight: <strong>{netTons} Tons</strong>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2.5px' }}>
+                Stamp the delivery. Received Net Weight: <strong>{netTons} Tons</strong>
               </div>
             </div>
           </div>
@@ -358,18 +372,17 @@ export const CustomerDashboard: React.FC = () => {
             <button
               onClick={handleStampConfirm}
               disabled={isSubmitting || !weighSaved}
+              className="btn btn-primary"
               style={{
-                width: '100%', padding: '16px', fontSize: '16px', fontWeight: 800,
-                backgroundColor: weighSaved ? '#059669' : '#E2E8F0',
-                color: weighSaved ? '#fff' : '#94A3B8',
-                border: 'none', borderRadius: '10px',
-                cursor: isSubmitting ? 'wait' : 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                boxShadow: weighSaved ? '0 4px 16px rgba(5,150,105,0.3)' : 'none',
+                width: '100%', minHeight: '48px', padding: '16px', fontSize: '15px', fontWeight: 800,
+                backgroundColor: 'var(--color-brand-blue-600)',
+                color: '#fff',
+                justifyContent: 'center',
+                boxShadow: weighSaved ? 'var(--shadow-card-hover)' : 'none',
                 transition: 'all 0.2s'
               }}
             >
-              {isSubmitting ? 'Processing...' : <><CheckCircle2 size={18} /> Save Stamp & Finish Truck Unloading</>}
+              {isSubmitting ? 'Processing...' : <><CheckCircle2 size={18} /> Save Stamp & Close Truck Unloading</>}
             </button>
           </div>
         </div>
@@ -383,22 +396,23 @@ export const CustomerDashboard: React.FC = () => {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0F172A', margin: 0 }}>Unloading Yard</h1>
-          <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>Yard Receiving Gate</h1>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
             Trucks arriving at your yard. Click any truck to record weights and confirm unloading.
           </p>
         </div>
         <button
           onClick={loadIncoming}
           disabled={loading}
-          style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '8px', border: '1px solid #E2E8F0', backgroundColor: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#64748B' }}
+          className="btn btn-ghost btn-sm"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           <RefreshCw size={13} /> Refresh
         </button>
       </div>
 
       {loading ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: '#94A3B8' }}>Loading incoming trucks...</div>
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading incoming trucks...</div>
       ) : incoming.length === 0 ? (
         <EmptyState
           icon={<PackageCheck size={48} />}
@@ -406,58 +420,67 @@ export const CustomerDashboard: React.FC = () => {
           description="No trucks are currently on their way to your yard. Check back later."
         />
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {incoming.map(a => (
             <div
               key={a.id}
               onClick={() => setSelectedAssignment(a)}
               style={{
-                backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #E2E8F0',
+                backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1px solid var(--color-border)',
                 padding: '18px 22px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', gap: '18px',
-                boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'all 0.15s'
+                boxShadow: 'var(--shadow-card)', transition: 'all var(--transition-normal)'
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
+              onMouseEnter={e => { 
+                (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card-hover)'; 
+                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; 
+              }}
+              onMouseLeave={e => { 
+                (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card)'; 
+                (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; 
+              }}
             >
-              {/* Blue left accent */}
-              <div style={{ width: '4px', height: '54px', borderRadius: '2px', backgroundColor: '#3B82F6', flexShrink: 0 }} />
+              {/* Left blue accent indicator */}
+              <div style={{ width: '4px', height: '54px', borderRadius: '2px', backgroundColor: 'var(--color-brand-blue-600)', flexShrink: 0 }} />
 
               {/* PO */}
               <div style={{ flexShrink: 0 }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO</div>
-                <div className="mono" style={{ fontSize: '17px', fontWeight: 900, color: '#0F172A' }}>#{a.sap_po_no}</div>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO</div>
+                <div className="mono" style={{ fontSize: '17px', fontWeight: 900, color: 'var(--color-text-primary)' }}>#{a.sap_po_no}</div>
               </div>
 
-              <div style={{ width: '1px', height: '40px', backgroundColor: '#F1F5F9' }} />
+              <div style={{ width: '1px', height: '40px', backgroundColor: 'var(--color-border)' }} />
 
               {/* Driver + Truck */}
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: '#0F172A' }}>{a.driver_name || 'Driver'}</div>
-                <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.driver_name || 'Driver'}</div>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                   <Truck size={11} /> <span className="mono">{a.vehicle_reg}</span>
                 </div>
               </div>
 
               {/* Material */}
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>Product</div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#0F172A' }}>{a.material}</div>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Product</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.material}</div>
               </div>
 
               {/* From → To */}
               <div style={{ flex: 2, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>{a.from_location || 'MON1 Siding'}</span>
-                <ArrowRight size={12} color="#CBD5E1" />
-                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>{a.to_location || 'Emoyeni Siding'}</span>
+                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>{a.from_location || 'MON1 Siding'}</span>
+                <ArrowRight size={12} color="var(--color-border)" />
+                <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>{a.to_location || 'Emoyeni Siding'}</span>
               </div>
 
               <StatusBadge status={a.status} />
 
-              <div style={{
-                padding: '8px 14px', backgroundColor: '#EFF6FF', color: '#1D4ED8',
-                borderRadius: '8px', fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap'
-              }}>
+              <div 
+                className="btn btn-secondary btn-sm"
+                style={{
+                  backgroundColor: 'var(--color-brand-blue-50)', color: 'var(--color-brand-blue-600)',
+                  border: 'none', fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap'
+                }}
+              >
                 Process Unload →
               </div>
             </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  FileText, CheckCircle2, Truck, User, Calendar, MapPin,
+  FileText, CheckCircle2, Truck, User, Calendar, MapPin, Check,
   Package, ArrowLeft, Clock, AlertCircle, ChevronRight, RefreshCw
 } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
@@ -8,14 +8,15 @@ import { useContractPo } from '../contexts/ContractPoContext';
 import { taApi, transportersApi, assignmentsApi, JobConfigV3, Driver, Vehicle } from '../lib/api_v3';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
+import { Tabs } from '../components/Tabs';
 import { formatCurrency } from '../utils/format';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const InfoRow: React.FC<{ label: string; value: string | number; mono?: boolean; highlight?: boolean }> = ({ label, value, mono, highlight }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--neutral-400)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
-    <span className={mono ? 'mono' : ''} style={{ fontSize: '14px', fontWeight: 700, color: highlight ? 'var(--accent-blue)' : 'var(--neutral-900)' }}>
+    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+    <span className={mono ? 'mono' : ''} style={{ fontSize: '14.5px', fontWeight: 700, color: highlight ? 'var(--color-brand-blue-600)' : 'var(--color-text-heading)' }}>
       {value}
     </span>
   </div>
@@ -26,20 +27,16 @@ const StepBadge: React.FC<{ step: number; active: boolean; done: boolean; label:
     <div style={{
       width: '36px', height: '36px', borderRadius: '50%',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: done ? 'var(--success-500)' : active ? 'var(--accent-blue)' : 'var(--neutral-200)',
-      color: done || active ? '#fff' : 'var(--neutral-500)',
+      backgroundColor: done || active ? 'var(--color-brand-blue-600)' : 'var(--color-border)',
+      color: '#fff',
       fontWeight: 800, fontSize: '14px', transition: 'all 0.2s'
     }}>
-      {done ? <CheckCircle2 size={18} /> : step}
+      {done ? <Check size={18} /> : step}
     </div>
-    <span style={{ fontSize: '10px', fontWeight: 600, color: done ? 'var(--success-600)' : active ? 'var(--accent-blue)' : 'var(--neutral-400)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+    <span style={{ fontSize: '11px', fontWeight: 700, color: done ? 'var(--color-brand-blue-700)' : active ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)', textAlign: 'center', whiteSpace: 'nowrap' }}>
       {label}
     </span>
   </div>
-);
-
-const Divider: React.FC = () => (
-  <div style={{ height: '1px', backgroundColor: 'var(--neutral-100)', margin: '20px 0' }} />
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -60,11 +57,10 @@ export const TransporterPOs: React.FC = () => {
   const [selectedVehicleId, setSelectedVehicleId] = useState('');
   const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split('T')[0]);
   const [pickupLocation, setPickupLocation] = useState('MON1 Plant / Siding');
-  const [assignmentStep, setAssignmentStep] = useState(1); // 1=pick driver, 2=confirm
+  const [assignmentStep, setAssignmentStep] = useState(1);
   const [successPO, setSuccessPO] = useState<string | null>(null);
 
   const transporterId = user?.entityId || 1;
-
   const [assignmentsList, setAssignmentsList] = useState<any[]>([]);
 
   const loadData = async () => {
@@ -81,7 +77,6 @@ export const TransporterPOs: React.FC = () => {
       setDrivers(drs);
       setVehicles(vhs);
       setAssignmentsList(activeAssigns);
-      // Clear selections by default to force Truck-first selection flow
       setSelectedVehicleId('');
       setSelectedDriverId('');
     } catch (err) {
@@ -128,7 +123,6 @@ export const TransporterPOs: React.FC = () => {
       });
       setSuccessPO(selectedPO.sap_po_no || '');
       await loadData();
-      // Keep detail view open showing success
     } catch (err) {
       console.error('Failed to assign:', err);
       alert('Something went wrong. Please try again.');
@@ -136,9 +130,6 @@ export const TransporterPOs: React.FC = () => {
       setIsSubmitting(false);
     }
   };
-
-  // Filter jobConfigs
-  const filtered = filteredJobConfigs;
 
   const pendingCount = jobConfigs.filter(j => j.status === 'PENDING').length;
   const assignedCount = jobConfigs.filter(j => j.status === 'ASSIGNED').length;
@@ -157,59 +148,51 @@ export const TransporterPOs: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
           <button
             onClick={handleBack}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 14px', borderRadius: '8px',
-              border: '1px solid var(--neutral-200)',
-              backgroundColor: '#fff', cursor: 'pointer',
-              fontSize: '13px', fontWeight: 600, color: 'var(--neutral-600)'
-            }}
+            className="btn btn-secondary btn-sm"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             <ArrowLeft size={14} /> Back to All Orders
           </button>
-          <span style={{ color: 'var(--neutral-400)', fontSize: '13px' }}>›</span>
-          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--neutral-700)' }}>
+          <span style={{ color: 'var(--color-border)', fontSize: '13px' }}>›</span>
+          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
             PO #{selectedPO.sap_po_no}
           </span>
         </div>
 
-        {/* PO Header Banner */}
+        {/* PO Header Banner (V3 Blue Theme) */}
         <div style={{
-          background: 'linear-gradient(135deg, #1E293B 0%, #334155 100%)',
+          background: 'linear-gradient(135deg, var(--color-brand-blue-600) 0%, var(--color-brand-blue-700) 100%)',
           borderRadius: '16px', padding: '28px 32px', color: '#fff',
-          marginBottom: '24px', position: 'relative', overflow: 'hidden'
+          marginBottom: '24px', position: 'relative', overflow: 'hidden',
+          boxShadow: 'var(--shadow-card)'
         }}>
           <div style={{
             position: 'absolute', top: '-30px', right: '-30px',
             width: '160px', height: '160px', borderRadius: '50%',
-            backgroundColor: 'rgba(255,255,255,0.04)'
+            backgroundColor: 'rgba(255,255,255,0.05)'
           }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-brand-blue-50)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>
                 Transport Purchase Order
               </div>
-              <h1 className="mono" style={{ fontSize: '32px', fontWeight: 900, color: '#fff', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
+              <h1 className="mono" style={{ fontSize: '32px', fontWeight: 800, color: '#fff', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>
                 PO #{selectedPO.sap_po_no}
               </h1>
-              <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.65)', margin: 0, fontWeight: 500 }}>
+              <p style={{ fontSize: '14.5px', color: 'rgba(255,255,255,0.85)', margin: 0, fontWeight: 600 }}>
                 {selectedPO.material || 'Washed Coal'} — {selectedPO.target_qty || 34} Tons @ {formatCurrency(selectedPO.rate || 151.5)}/Ton
               </p>
             </div>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '6px' }}>Total Value</div>
-              <div className="mono" style={{ fontSize: '26px', fontWeight: 900, color: '#38BDF8' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-brand-blue-50)', textTransform: 'uppercase', marginBottom: '6px' }}>Total Value</div>
+              <div className="mono" style={{ fontSize: '26px', fontWeight: 900, color: '#FFFFFF' }}>
                 {formatCurrency((selectedPO.rate || 151.5) * (selectedPO.target_qty || 34))}
               </div>
               <div style={{ marginTop: '8px' }}>
                 {isAssigned ? (
-                  <span style={{ backgroundColor: '#10B981', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700 }}>
-                    ✓ Driver Assigned
-                  </span>
+                  <span className="badge badge-green">✓ Assigned</span>
                 ) : (
-                  <span style={{ backgroundColor: '#F59E0B', color: '#fff', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700 }}>
-                    ⏳ Needs Assignment
-                  </span>
+                  <span className="badge badge-amber">⏳ Pending</span>
                 )}
               </div>
             </div>
@@ -217,12 +200,12 @@ export const TransporterPOs: React.FC = () => {
         </div>
 
         {/* PO Detail Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
           {/* Order Details Card */}
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid var(--neutral-150)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', padding: '24px', border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-              <Package size={16} color="var(--accent-blue)" />
-              <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--neutral-500)' }}>Order Details</span>
+              <Package size={16} color="var(--color-brand-blue-600)" />
+              <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>Order Details</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <InfoRow label="Material / Product" value={selectedPO.material || 'SL BIT 20% ASH Washed Coal'} />
@@ -233,10 +216,10 @@ export const TransporterPOs: React.FC = () => {
           </div>
 
           {/* Route Details Card */}
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '24px', border: '1px solid var(--neutral-150)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', padding: '24px', border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-              <MapPin size={16} color="#10B981" />
-              <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--neutral-500)' }}>Route Information</span>
+              <MapPin size={16} color="var(--color-brand-blue-600)" />
+              <span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>Route Information</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <InfoRow label="Loading Point (Origin)" value="MON1 Plant / Siding" />
@@ -249,59 +232,54 @@ export const TransporterPOs: React.FC = () => {
 
         {/* ─── ASSIGNMENT SECTION ─── */}
         {successPO ? (
-          // Success State
           <div style={{
-            backgroundColor: '#F0FDF4', border: '2px solid #10B981',
-            borderRadius: '16px', padding: '40px 32px', textAlign: 'center'
+            backgroundColor: 'var(--color-success-bg)', border: '1.5px solid var(--color-success-light)',
+            borderRadius: '16px', padding: '40px 32px', textAlign: 'center', boxShadow: 'var(--shadow-card)'
           }}>
-            <CheckCircle2 size={56} color="#10B981" style={{ margin: '0 auto 16px' }} />
-            <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#065F46', margin: '0 0 8px' }}>
+            <CheckCircle2 size={56} color="var(--color-success)" style={{ margin: '0 auto 16px' }} />
+            <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-success-text)', margin: '0 0 8px' }}>
               Driver Successfully Assigned!
             </h2>
-            <p style={{ fontSize: '14px', color: '#047857', margin: '0 0 24px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--color-success-text)', margin: '0 0 24px' }}>
               PO #{successPO} has been assigned. The driver will see this trip on their phone.
             </p>
             <button
               onClick={handleBack}
-              style={{
-                padding: '12px 28px', backgroundColor: '#10B981', color: '#fff',
-                border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer'
-              }}
+              className="btn btn-primary"
+              style={{ minHeight: '44px' }}
             >
               Back to All Orders
             </button>
           </div>
         ) : isAssigned ? (
-          // Already Assigned State
-          <div style={{ backgroundColor: '#fff', borderRadius: '12px', padding: '28px', border: '1px solid var(--neutral-150)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', padding: '28px', border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <CheckCircle2 size={20} color="#10B981" />
-              <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#065F46' }}>This order is already assigned</h3>
+              <CheckCircle2 size={20} color="var(--color-success)" />
+              <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: 'var(--color-success-text)' }}>This order is already assigned</h3>
             </div>
-            <p style={{ fontSize: '13px', color: 'var(--neutral-500)', margin: 0 }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-text-body)', margin: 0 }}>
               A driver and truck have been assigned to this order. Track the delivery from your dashboard.
             </p>
           </div>
         ) : (
-          // Assignment Form
-          <div style={{ backgroundColor: '#fff', borderRadius: '16px', border: '1px solid var(--neutral-150)', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
 
             {/* Form Header */}
-            <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--neutral-100)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--color-brand-blue-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Truck size={20} color="#fff" />
               </div>
               <div>
-                <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0 }}>Assign a Driver & Truck</h3>
-                <p style={{ fontSize: '12px', color: 'var(--neutral-500)', margin: 0 }}>Select who will do this delivery run</p>
+                <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--color-text-heading)' }}>Assign a Driver & Truck</h3>
+                <p style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', margin: 0 }}>Select who will do this delivery run</p>
               </div>
             </div>
 
             {/* Step Progress */}
-            <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--neutral-100)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <StepBadge step={1} active={assignmentStep === 1} done={assignmentStep > 1} label="Choose People" />
-              <div style={{ flex: 1, height: '2px', backgroundColor: assignmentStep > 1 ? 'var(--success-500)' : 'var(--neutral-200)', borderRadius: '2px', transition: 'background-color 0.3s' }} />
-              <StepBadge step={2} active={assignmentStep === 2} done={false} label="Confirm & Send" />
+            <div style={{ padding: '20px 28px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <StepBadge step={1} active={assignmentStep === 1} done={assignmentStep > 1} label="Choose compatible fleet" />
+              <div style={{ flex: 1, height: '2.5px', backgroundColor: assignmentStep > 1 ? 'var(--color-brand-blue-600)' : 'var(--color-border)', borderRadius: '2px', transition: 'background-color 0.3s' }} />
+              <StepBadge step={2} active={assignmentStep === 2} done={false} label="Confirm & Dispatch" />
             </div>
 
             <form onSubmit={handleAssignSubmit}>
@@ -313,17 +291,16 @@ export const TransporterPOs: React.FC = () => {
                     {/* Step 1.1: Choose Truck First */}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                          <Truck size={14} color="var(--accent-blue)" /> 1. Select a Truck
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                          <Truck size={14} color="var(--color-brand-blue-600)" /> 1. Select a Truck
                         </label>
-                        <span style={{ fontSize: '11px', color: 'var(--neutral-500)', fontWeight: 600 }}>
-                          Cargo Required: <strong style={{ color: 'var(--neutral-800)' }}>{selectedPO.material || 'Bulk Cargo / Coal'}</strong> ({selectedPO.target_qty || 34} Tons)
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                          Cargo Required: <strong style={{ color: 'var(--color-text-heading)' }}>{selectedPO.material || 'Bulk Cargo / Coal'}</strong> ({selectedPO.target_qty || 34} Tons)
                         </span>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {vehicles.map((v, idx) => {
-                          // Standard Truck Specs & Types for Mining/Logistics logistics domain
                           const specs = [
                             { type: 'Side Tipper B-Double', body: 'Open Top Hydraulic Tipper', suitableFor: ['Washed Coal', 'Coal', 'Ore', 'Aggregate', 'Bulk Sand'], icon: '🚛', payload: 34 },
                             { type: 'End Tipper Super-Cube', body: 'Reinforced Steel Dump Body', suitableFor: ['Washed Coal', 'Raw Coal', 'GRAVEL', 'SPARE_PARTS_BOX'], icon: '🚚', payload: 30 },
@@ -340,10 +317,10 @@ export const TransporterPOs: React.FC = () => {
                               style={{
                                 display: 'flex', alignItems: 'flex-start', gap: '14px',
                                 padding: '16px', borderRadius: '12px',
-                                border: isSelected ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
-                                backgroundColor: isSelected ? '#F0F7FF' : '#fff',
+                                border: isSelected ? '2px solid var(--color-brand-blue-600)' : '1.5px solid var(--color-border)',
+                                backgroundColor: isSelected ? 'var(--color-brand-blue-50)' : '#fff',
                                 cursor: 'pointer', transition: 'all 0.15s ease',
-                                boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.1)' : 'none'
+                                boxShadow: isSelected ? 'var(--shadow-card-hover)' : 'none'
                               }}
                             >
                               <input
@@ -352,34 +329,34 @@ export const TransporterPOs: React.FC = () => {
                                 value={v.id}
                                 checked={isSelected}
                                 onChange={e => setSelectedVehicleId(e.target.value)}
-                                style={{ accentColor: 'var(--accent-blue)', marginTop: '4px' }}
+                                style={{ accentColor: 'var(--color-brand-blue-600)', marginTop: '4px' }}
                               />
                               <div style={{ flex: 1 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span style={{ fontSize: '18px' }}>{spec.icon}</span>
-                                    <span className="mono" style={{ fontWeight: 800, fontSize: '15px', color: 'var(--neutral-900)' }}>{v.reg_no}</span>
-                                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent-blue)', backgroundColor: '#DBEAFE', padding: '2px 8px', borderRadius: '6px' }}>
+                                    <span className="mono" style={{ fontWeight: 800, fontSize: '15px', color: 'var(--color-text-heading)' }}>{v.reg_no}</span>
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-brand-blue-600)', backgroundColor: 'var(--color-brand-blue-50)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--color-border)' }}>
                                       {spec.type}
                                     </span>
                                   </div>
-                                  <span style={{ fontSize: '12px', fontWeight: 800, color: v.capacity >= (selectedPO.target_qty || 30) ? '#059669' : '#D97706' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: 800, color: v.capacity >= (selectedPO.target_qty || 30) ? 'var(--color-success-text)' : 'var(--color-warning-text)' }}>
                                     Capacity: {v.capacity} Tons
                                   </span>
                                 </div>
 
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px', fontSize: '11px', color: 'var(--neutral-600)' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginTop: '8px', fontSize: '11.5px', color: 'var(--color-text-body)' }}>
                                   <span>🔒 Body Spec: <strong>{spec.body}</strong></span>
                                   <span>📦 Works best with: <strong>{spec.suitableFor.join(', ')}</strong></span>
                                 </div>
 
                                 {materialMatch && (
-                                  <div style={{ marginTop: '8px', fontSize: '11px', fontWeight: 700, color: '#047857', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <CheckCircle2 size={12} color="#047857" /> Recommended for {selectedPO.material || 'this cargo'}
+                                  <div style={{ marginTop: '8px', fontSize: '11px', fontWeight: 700, color: 'var(--color-success-text)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <CheckCircle2 size={12} color="var(--color-success)" /> Recommended for {selectedPO.material || 'this cargo'}
                                   </div>
                                 )}
                               </div>
-                              {isSelected && <CheckCircle2 size={18} color="var(--accent-blue)" style={{ marginTop: '2px' }} />}
+                              {isSelected && <Check size={18} color="var(--color-brand-blue-600)" style={{ marginTop: '2px' }} />}
                             </label>
                           );
                         })}
@@ -392,31 +369,30 @@ export const TransporterPOs: React.FC = () => {
                       opacity: selectedVehicleId ? 1 : 0.65,
                       pointerEvents: selectedVehicleId ? 'auto' : 'none',
                       transition: 'all 0.2s ease',
-                      border: selectedVehicleId ? 'none' : '1px dashed var(--neutral-300)',
+                      border: selectedVehicleId ? 'none' : '1.5px dashed var(--color-border)',
                       borderRadius: '12px',
                       padding: selectedVehicleId ? '0' : '16px',
-                      backgroundColor: selectedVehicleId ? 'transparent' : '#FAFAFA'
+                      backgroundColor: selectedVehicleId ? 'transparent' : 'var(--color-bg-page)'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: selectedVehicleId ? 'var(--neutral-600)' : 'var(--neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                          <User size={14} color={selectedVehicleId ? 'var(--accent-blue)' : 'var(--neutral-400)'} /> 2. Select a Driver
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: selectedVehicleId ? 'var(--color-text-muted)' : 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                          <User size={14} color={selectedVehicleId ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)'} /> 2. Select a Driver
                         </label>
                         {!selectedVehicleId && (
-                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#C2410C', backgroundColor: '#FFF7ED', border: '1px solid #FFEDD5', padding: '3px 10px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            🔒 Select a Truck First to Unlock Drivers
+                          <span className="badge badge-amber" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            🔒 Select a Truck First
                           </span>
                         )}
                       </div>
 
                       {!selectedVehicleId ? (
-                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--neutral-500)', fontSize: '13px', fontWeight: 600 }}>
+                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px', fontWeight: 600 }}>
                           👈 Please choose a truck above to view and assign compatible drivers.
                         </div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {drivers.map(d => {
                             const isDriverSelected = selectedDriverId === d.id.toString();
-                            // Check if driver is busy on an active assigned job
                             const activeJob = assignmentsList.find((a: any) => a.driver_id === d.id && !['DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status));
                             const isBusy = !!activeJob;
 
@@ -426,8 +402,8 @@ export const TransporterPOs: React.FC = () => {
                                 style={{
                                   display: 'flex', alignItems: 'center', gap: '14px',
                                   padding: '14px 16px', borderRadius: '10px',
-                                  border: isDriverSelected ? '2px solid var(--accent-blue)' : '1px solid var(--neutral-200)',
-                                  backgroundColor: isBusy ? '#F8FAFC' : isDriverSelected ? '#EFF6FF' : '#fff',
+                                  border: isDriverSelected ? '2px solid var(--color-brand-blue-600)' : '1.5px solid var(--color-border)',
+                                  backgroundColor: isBusy ? '#F8FAFC' : isDriverSelected ? 'var(--color-brand-blue-50)' : '#fff',
                                   cursor: isBusy ? 'not-allowed' : 'pointer',
                                   opacity: isBusy ? 0.6 : 1,
                                   transition: 'all 0.15s'
@@ -440,27 +416,22 @@ export const TransporterPOs: React.FC = () => {
                                   disabled={isBusy}
                                   checked={isDriverSelected}
                                   onChange={e => setSelectedDriverId(e.target.value)}
-                                  style={{ accentColor: 'var(--accent-blue)' }}
+                                  style={{ accentColor: 'var(--color-brand-blue-600)' }}
                                 />
                                 <div style={{ flex: 1 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span style={{ fontWeight: 700, fontSize: '14px' }}>{d.name}</span>
+                                    <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--color-text-heading)' }}>{d.name}</span>
                                     {isBusy && (
-                                      <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#FEE2E2', color: '#991B1B', padding: '1px 7px', borderRadius: '4px' }}>
-                                        ⛔ Already on a delivery trip (PO #{activeJob.sap_po_no})
-                                      </span>
-                                    )}
-                                    {isDriverSelected && selectedVehicle && !isBusy && (
-                                      <span style={{ fontSize: '10px', fontWeight: 700, backgroundColor: '#FEF3C7', color: '#B45309', padding: '1px 7px', borderRadius: '4px' }}>
-                                        Assigned to {selectedVehicle.reg_no}
+                                      <span className="badge badge-red">
+                                        ⛔ Busy (PO #{activeJob.sap_po_no})
                                       </span>
                                     )}
                                   </div>
-                                  <div style={{ fontSize: '11px', color: 'var(--neutral-500)', marginTop: '2px' }}>
-                                    License: {d.license_no} &nbsp;|&nbsp; PrDP valid till {d.prdp_expiry}
+                                  <div style={{ fontSize: '11.5px', color: 'var(--color-text-body)', marginTop: '2px' }}>
+                                    License: <span className="mono">{d.license_no}</span> | Phone: {d.phone || '+27 82 000 0000'}
                                   </div>
                                 </div>
-                                {isDriverSelected && <CheckCircle2 size={16} color="var(--accent-blue)" />}
+                                {isDriverSelected && <Check size={18} color="var(--color-brand-blue-600)" />}
                               </label>
                             );
                           })}
@@ -468,89 +439,79 @@ export const TransporterPOs: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Schedule */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                    {/* Step Navigation */}
+                    {selectedVehicleId && selectedDriverId && (
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setAssignmentStep(2)}
+                          className="btn btn-primary"
+                          style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                          Next: Review Assignment <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    )}
+
+                  </div>
+                ) : (
+                  // Step 2: Confirm and Save
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '20px', borderRadius: '12px', border: '1.5px solid var(--color-border)' }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-brand-blue-700)', textTransform: 'uppercase', margin: '0 0 16px 0', letterSpacing: '0.04em' }}>
+                        Verification Summary
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div>
+                          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, margin: '0 0 4px 0' }}>SELECTED DRIVER</p>
+                          <p style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--color-text-heading)', margin: 0 }}>{selectedDriver?.name}</p>
+                          <p style={{ fontSize: '11.5px', color: 'var(--color-text-body)', margin: '2px 0 0 0' }}>Lic: {selectedDriver?.license_no}</p>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, margin: '0 0 4px 0' }}>SELECTED VEHICLE</p>
+                          <p className="mono" style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--color-text-heading)', margin: 0 }}>{selectedVehicle?.reg_no}</p>
+                          <p style={{ fontSize: '11.5px', color: 'var(--color-text-body)', margin: '2px 0 0 0' }}>Payload Limit: {selectedVehicle?.capacity} Tons</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                       <div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                          <Calendar size={12} /> Scheduled Date
-                        </label>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Scheduled Date</label>
                         <input
                           type="date"
                           value={scheduledDate}
                           onChange={e => setScheduledDate(e.target.value)}
-                          style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--neutral-200)', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}
+                          style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
                           required
                         />
                       </div>
                       <div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--neutral-600)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
-                          <MapPin size={12} /> Loading Location
-                        </label>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Pickup Siding</label>
                         <input
                           type="text"
                           value={pickupLocation}
                           onChange={e => setPickupLocation(e.target.value)}
-                          style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--neutral-200)', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}
+                          style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
                           required
                         />
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setAssignmentStep(2)}
-                      disabled={!selectedDriverId || !selectedVehicleId}
-                      style={{
-                        padding: '14px 24px', backgroundColor: !selectedDriverId || !selectedVehicleId ? 'var(--neutral-200)' : 'var(--accent-blue)',
-                        color: !selectedDriverId || !selectedVehicleId ? 'var(--neutral-400)' : '#fff',
-                        border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700,
-                        cursor: !selectedDriverId || !selectedVehicleId ? 'not-allowed' : 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      Next: Review & Confirm <ChevronRight size={16} />
-                    </button>
-                  </div>
-
-                ) : (
-                  // Step 2: Confirmation
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div style={{ backgroundColor: 'var(--neutral-50)', borderRadius: '12px', padding: '20px', border: '1px solid var(--neutral-150)' }}>
-                      <h4 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--neutral-400)', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.06em' }}>Confirm Delivery Job Details</h4>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <InfoRow label="Purchase Order" value={`PO #${selectedPO.sap_po_no}`} mono highlight />
-                        <InfoRow label="Material" value={selectedPO.material || 'Washed Coal'} />
-                        <InfoRow label="Assigned Driver" value={selectedDriver?.name || '—'} />
-                        <InfoRow label="Driver License" value={selectedDriver?.license_no || '—'} mono />
-                        <InfoRow label="Truck Plate" value={selectedVehicle?.reg_no || '—'} mono />
-                        <InfoRow label="Truck Capacity" value={`${selectedVehicle?.capacity || 0} Tons`} />
-                        <InfoRow label="Trip Date" value={scheduledDate} />
-                        <InfoRow label="Loading Location" value={pickupLocation} />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px', borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
                       <button
                         type="button"
                         onClick={() => setAssignmentStep(1)}
-                        style={{
-                          flex: 1, padding: '14px', backgroundColor: '#fff',
-                          border: '1px solid var(--neutral-200)', borderRadius: '10px',
-                          fontSize: '14px', fontWeight: 600, cursor: 'pointer', color: 'var(--neutral-700)'
-                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '12px 20px' }}
                       >
-                        ← Go Back
+                        Back to Selection
                       </button>
                       <button
                         type="submit"
                         disabled={isSubmitting}
-                        style={{
-                          flex: 2, padding: '14px', backgroundColor: isSubmitting ? 'var(--neutral-300)' : '#10B981',
-                          color: '#fff', border: 'none', borderRadius: '10px',
-                          fontSize: '14px', fontWeight: 700, cursor: isSubmitting ? 'wait' : 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                        }}
+                        className="btn btn-primary"
+                        style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '8px' }}
                       >
                         {isSubmitting ? 'Assigning...' : <><CheckCircle2 size={16} /> Confirm & Assign Driver</>}
                       </button>
@@ -565,6 +526,8 @@ export const TransporterPOs: React.FC = () => {
     );
   }
 
+  const filtered = filteredJobConfigs;
+
   // ─── LIST VIEW ──────────────────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -572,58 +535,35 @@ export const TransporterPOs: React.FC = () => {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--neutral-900)', margin: 0 }}>Purchase Orders</h1>
-          <p style={{ fontSize: '13px', color: 'var(--neutral-500)', margin: '4px 0 0 0' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>Purchase Orders</h1>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
             All transport POs assigned to your company. Click any order to view details & assign a driver.
           </p>
         </div>
         <button
           onClick={loadData}
           disabled={loading}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '9px 16px', borderRadius: '8px', border: '1px solid var(--neutral-200)',
-            backgroundColor: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: 'var(--neutral-600)'
-          }}
+          className="btn btn-ghost btn-sm"
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           <RefreshCw size={13} className={loading ? 'spin' : ''} /> Refresh
         </button>
       </div>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: '8px' }}>
-        {[
+      {/* Filter Tabs using the standard Tabs component */}
+      <Tabs 
+        tabs={[
           { id: 'ALL', label: 'All Orders', count: jobConfigs.length },
-          { id: 'PENDING', label: '⏳ Needs Driver', count: pendingCount },
-          { id: 'ASSIGNED', label: '✓ Assigned', count: assignedCount },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveFilter(tab.id as any)}
-            style={{
-              padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-              backgroundColor: activeFilter === tab.id ? 'var(--neutral-900)' : '#fff',
-              color: activeFilter === tab.id ? '#fff' : 'var(--neutral-600)',
-              fontSize: '13px', fontWeight: 600,
-              boxShadow: activeFilter === tab.id ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
-              transition: 'all 0.15s'
-            }}
-          >
-            {tab.label}
-            {tab.count > 0 && (
-              <span style={{
-                marginLeft: '8px', padding: '2px 7px', borderRadius: '12px', fontSize: '11px', fontWeight: 800,
-                backgroundColor: activeFilter === tab.id ? 'rgba(255,255,255,0.2)' : 'var(--neutral-100)',
-                color: activeFilter === tab.id ? '#fff' : 'var(--neutral-600)',
-              }}>{tab.count}</span>
-            )}
-          </button>
-        ))}
-      </div>
+          { id: 'PENDING', label: 'Needs Driver', count: pendingCount },
+          { id: 'ASSIGNED', label: 'Driver Assigned', count: assignedCount },
+        ]}
+        activeTab={activeFilter}
+        onChange={(id) => setActiveFilter(id as any)}
+      />
 
       {/* PO Cards Grid */}
       {loading ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--neutral-400)', fontSize: '14px' }}>
+        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '14px' }}>
           Loading purchase orders...
         </div>
       ) : filtered.length === 0 ? (
@@ -634,79 +574,77 @@ export const TransporterPOs: React.FC = () => {
         />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {filtered.map(jc => {
+          {filtered.map((jc: JobConfigV3) => {
             const isPending = jc.status === 'PENDING';
             return (
               <div
                 key={jc.id}
                 onClick={() => handleOpenPO(jc)}
                 style={{
-                  backgroundColor: '#fff',
-                  borderRadius: '12px',
-                  border: isPending ? '1px solid #FDE68A' : '1px solid var(--neutral-150)',
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+                  backgroundColor: 'var(--color-bg-card)',
+                  borderRadius: '16px',
+                  border: '1px solid var(--color-border)',
+                  boxShadow: 'var(--shadow-card)',
                   padding: '20px 24px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '20px',
-                  transition: 'all 0.15s',
+                  transition: 'all var(--transition-normal)',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.1)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-1px)'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; }}
+                onMouseEnter={e => { 
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card-hover)'; 
+                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; 
+                }}
+                onMouseLeave={e => { 
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card)'; 
+                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; 
+                }}
               >
-                {/* Left accent */}
-                <div style={{ width: '4px', height: '56px', borderRadius: '2px', backgroundColor: isPending ? '#F59E0B' : '#10B981', flexShrink: 0 }} />
+                {/* Left accent line: pending is orange, assigned is blue */}
+                <div style={{ width: '4px', height: '56px', borderRadius: '2px', backgroundColor: isPending ? 'var(--color-warning)' : 'var(--color-brand-blue-600)', flexShrink: 0 }} />
 
                 {/* PO Number */}
                 <div style={{ flexShrink: 0 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO Number</div>
-                  <div className="mono" style={{ fontSize: '18px', fontWeight: 900, color: 'var(--neutral-900)' }}>#{jc.sap_po_no}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO Number</div>
+                  <div className="mono" style={{ fontSize: '18px', fontWeight: 900, color: 'var(--color-text-primary)' }}>#{jc.sap_po_no}</div>
                 </div>
 
-                <div style={{ width: '1px', height: '48px', backgroundColor: 'var(--neutral-100)' }} />
+                <div style={{ width: '1px', height: '48px', backgroundColor: 'var(--color-border)' }} />
 
                 {/* Material */}
                 <div style={{ flex: 2 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Product</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--neutral-900)' }}>{jc.material || 'Washed Coal'}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Product</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{jc.material || 'Washed Coal'}</div>
                 </div>
 
                 {/* Quantity */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quantity</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700 }}>{jc.target_qty || 34} Tons</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quantity</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{jc.target_qty || 34} Tons</div>
                 </div>
 
                 {/* Rate */}
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--neutral-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rate / Ton</div>
-                  <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-blue)' }}>{formatCurrency(jc.rate || 151.5)}</div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rate / Ton</div>
+                  <div className="mono" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{formatCurrency(jc.rate || 151.5)}</div>
                 </div>
 
                 {/* Status */}
                 <div style={{ flexShrink: 0 }}>
                   {isPending ? (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
-                      backgroundColor: '#FEF3C7', color: '#92400E',
-                      padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700
-                    }}>
+                    <span className="badge badge-amber" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                       <AlertCircle size={12} /> Assign Driver
                     </span>
                   ) : (
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '5px',
-                      backgroundColor: '#D1FAE5', color: '#065F46',
-                      padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700
-                    }}>
+                    <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
                       <CheckCircle2 size={12} /> Driver Assigned
                     </span>
                   )}
                 </div>
 
                 {/* Arrow */}
-                <ChevronRight size={18} color="var(--neutral-300)" style={{ flexShrink: 0 }} />
+                <ChevronRight size={18} color="var(--color-text-muted)" style={{ flexShrink: 0 }} />
               </div>
             );
           })}

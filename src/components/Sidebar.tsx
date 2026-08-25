@@ -9,9 +9,6 @@ import {
   LogOut, 
   LayoutDashboard,
   Activity,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
@@ -55,8 +52,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
       <aside 
         style={{
           width: collapsed ? '72px' : '260px',
-          backgroundColor: '#0A192F',
-          color: '#FFFFFF',
+          backgroundColor: 'var(--color-bg-sidebar)',
+          color: 'var(--color-text-body)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -66,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
           left: 0,
           padding: collapsed ? '20px 8px 16px 8px' : '24px 16px 20px 16px',
           zIndex: 1000,
-          borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+          borderRight: '1px solid var(--color-border)',
           boxSizing: 'border-box',
           overflowY: 'auto',
           transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
@@ -76,39 +73,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
         <div>
           <div style={{ marginBottom: '24px', paddingLeft: collapsed ? '0' : '4px', paddingRight: collapsed ? '0' : '4px' }}>
             {collapsed ? (
-              <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#FFFFFF', padding: '6px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#FFFFFF', padding: '6px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                 <PodzoLogo variant="mark" height={28} />
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.15)' }}>
+                <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)' }}>
                   <PodzoLogo variant="compact" height={32} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', marginTop: '4px' }}>
                   <span 
                     style={{ 
-                      display: 'inline-block',
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      backgroundColor: '#FF5B00',
-                      boxShadow: '0 0 8px #FF5B00'
-                    }} 
-                  />
-                  <span 
-                    style={{ 
-                      fontSize: '10px', 
-                      color: '#FF5B00', 
-                      backgroundColor: 'rgba(255, 91, 0, 0.15)',
-                      border: '1px solid rgba(255, 91, 0, 0.3)',
-                      padding: '1px 8px',
-                      borderRadius: '6px',
+                      fontSize: '11px', 
+                      color: 'var(--color-text-muted)', 
                       fontWeight: 700, 
-                      letterSpacing: '0.04em',
+                      letterSpacing: '0.05em',
                       textTransform: 'uppercase'
                     }}
                   >
-                    Control Tower
+                    {formatRoleName(currentUser.role)} Console
                   </span>
                 </div>
               </div>
@@ -117,8 +100,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
 
           {/* Section Divider Header */}
           {!collapsed && (
-            <div style={{ paddingLeft: '8px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <div style={{ paddingLeft: '16px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 MAIN NAVIGATION
               </span>
             </div>
@@ -251,7 +234,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
         </div>
 
         {/* Bottom Section: Health Telemetry, Collapse Button & Logout */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '16px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
           {/* Sidebar Collapse/Expand Toggle Button */}
           {onToggle && (
             <button
@@ -263,25 +246,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
                 justifyContent: collapsed ? 'center' : 'flex-start',
                 gap: '12px',
                 padding: collapsed ? '12px 0' : '10px 14px',
-                color: '#FFFFFF',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: 'var(--color-text-body)',
+                backgroundColor: 'transparent',
+                border: '1.5px solid var(--color-border)',
                 cursor: 'pointer',
                 textAlign: 'left',
                 width: '100%',
                 fontSize: '13px',
-                fontWeight: 700,
-                borderRadius: '8px',
-                transition: 'all 0.15s ease',
+                fontWeight: 600,
+                borderRadius: 'var(--radius-md)',
+                transition: 'all var(--transition-normal)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.backgroundColor = '#F8FAFC';
+                e.currentTarget.style.borderColor = 'var(--color-brand-blue-600)';
+                e.currentTarget.style.color = 'var(--color-brand-blue-600)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = 'var(--color-border)';
+                e.currentTarget.style.color = 'var(--color-text-body)';
               }}
             >
-              {collapsed ? <PanelLeftOpen size={18} color="#FFFFFF" style={{ flexShrink: 0 }} /> : <PanelLeftClose size={18} color="#FFFFFF" style={{ flexShrink: 0 }} />}
+              {collapsed ? <PanelLeftOpen size={18} style={{ flexShrink: 0 }} /> : <PanelLeftClose size={18} style={{ flexShrink: 0 }} />}
               {!collapsed && <span>Collapse Sidebar</span>}
             </button>
           )}
@@ -291,21 +278,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
             title={collapsed ? "SAP S21 Adapter Online" : undefined}
             style={{
               padding: collapsed ? '10px 0' : '10px 14px',
-              borderRadius: '10px',
-              background: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--color-bg-card)',
+              border: '1px solid var(--color-border)',
               fontSize: '12px',
-              color: '#94A3B8',
+              color: 'var(--color-text-body)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: collapsed ? 'center' : 'space-between',
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
-              <Activity size={15} color="#10B981" style={{ flexShrink: 0 }} />
+              <span 
+                style={{ 
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--color-success)'
+                }} 
+              />
               {!collapsed && <span>SAP S21 Adapter</span>}
             </span>
-            {!collapsed && <span style={{ fontWeight: 800, color: '#10B981', fontSize: '11px', letterSpacing: '0.04em' }}>ONLINE</span>}
+            {!collapsed && <span style={{ fontWeight: 800, color: 'var(--color-success-text)', fontSize: '11px', letterSpacing: '0.04em' }}>ONLINE</span>}
           </div>
 
           {/* Log Out Button */}
@@ -318,7 +313,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
               justifyContent: collapsed ? 'center' : 'flex-start',
               gap: '12px',
               padding: collapsed ? '12px 0' : '12px 14px',
-              color: '#94A3B8',
+              color: 'var(--color-text-muted)',
               backgroundColor: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -326,15 +321,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
               width: '100%',
               fontSize: '14px',
               fontWeight: 600,
-              borderRadius: '8px',
-              transition: 'all 0.15s ease',
+              borderRadius: 'var(--radius-md)',
+              transition: 'all var(--transition-normal)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.color = '#EF4444';
-              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
+              e.currentTarget.style.color = 'var(--color-error-text)';
+              e.currentTarget.style.backgroundColor = 'var(--color-error-bg)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.color = '#94A3B8';
+              e.currentTarget.style.color = 'var(--color-text-muted)';
               e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
@@ -352,11 +347,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
         width="420px"
       >
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
-          <p style={{ fontSize: '14px', color: 'var(--neutral-600)', marginBottom: '24px' }}>
+          <p style={{ fontSize: '14px', color: 'var(--color-text-body)', marginBottom: '24px' }}>
             Are you sure you want to end your current session? You will be redirected to the login screen.
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button onClick={() => setShowLogoutConfirm(false)} className="btn btn-ghost">
+            <button onClick={() => setShowLogoutConfirm(false)} className="btn btn-secondary">
               Cancel
             </button>
             <button onClick={confirmLogout} className="btn btn-danger">

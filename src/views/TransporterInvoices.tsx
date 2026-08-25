@@ -12,7 +12,6 @@ export const TransporterInvoices: React.FC = () => {
   const loadInvoices = async () => {
     setLoading(true);
     try {
-      // Fetch ledgerList
       const resLedger = await fetch('http://localhost:3001/api/v3/delivery-invoices?status=LEDGER', {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3')}` }
       });
@@ -43,9 +42,9 @@ export const TransporterInvoices: React.FC = () => {
       />
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--neutral-50)' }}>Loading invoices...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading invoices...</div>
       ) : (
-        <Card title="Transporter Accounts Ledger">
+        <Card title="Transporter Accounts Ledger" subtitle="Immutable log of cleared freight statements directly synced from SAP Finance">
           {ledgerList.length === 0 ? (
             <EmptyState 
               message="No invoice statements yet" 
@@ -68,31 +67,31 @@ export const TransporterInvoices: React.FC = () => {
                 <tbody>
                   {ledgerList.map((inv) => (
                     <tr key={inv.id}>
-                      <td className="mono" style={{ fontWeight: 800, color: 'var(--neutral-900)' }}>
+                      <td className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)' }}>
                         {inv.invoice_no || 'INV-PENDING'}
                       </td>
-                      <td className="mono" style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>#{inv.waybill_no || `WB-${inv.assignment_id}`}</td>
+                      <td className="mono" style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>#{inv.waybill_no || `WB-${inv.assignment_id}`}</td>
                       <td>{formatDate(new Date())}</td>
-                      <td className="mono" style={{ textAlign: 'right', fontWeight: 800, fontSize: '14px' }}>
+                      <td className="mono" style={{ textAlign: 'right', fontWeight: 800, fontSize: '14.5px', color: 'var(--color-text-heading)' }}>
                         {formatCurrency(inv.amount)}
                       </td>
                       <td>
                         <StatusBadge status={inv.status} />
                       </td>
                       <td>
-                        {inv.posted_date ? formatDate(inv.posted_date) : <span style={{ color: 'var(--neutral-400)' }}>—</span>}
+                        {inv.posted_date ? formatDate(inv.posted_date) : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
                       </td>
-                      <td className="mono" style={{ fontWeight: 700, color: 'var(--success-600)' }}>
-                        {inv.payment_ref || <span style={{ color: 'var(--neutral-400)' }}>—</span>}
+                      <td className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>
+                        {inv.payment_ref || <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
                       </td>
                     </tr>
                   ))}
                   
-                  <tr style={{ background: 'var(--neutral-100)', fontWeight: 800 }}>
-                    <td colSpan={3} style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '11px', color: 'var(--neutral-600)' }}>
+                  <tr style={{ background: 'var(--color-brand-blue-50)', fontWeight: 800 }}>
+                    <td colSpan={3} style={{ fontWeight: 700, textTransform: 'uppercase', fontSize: '11px', color: 'var(--color-brand-blue-700)' }}>
                       Total Payments Received & Cleared
                     </td>
-                    <td className="mono" style={{ textAlign: 'right', color: 'var(--success-600)', fontSize: '16px', fontWeight: 800 }}>
+                    <td className="mono" style={{ textAlign: 'right', color: 'var(--color-success-text)', fontSize: '16px', fontWeight: 850 }}>
                       {formatCurrency(totalPaidSum)}
                     </td>
                     <td colSpan={3}></td>
