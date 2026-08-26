@@ -41,6 +41,7 @@ const liveSyncLogs: SAPSyncLog[] = [
 
 /**
  * Helper to execute authorized OData / API requests to SAP S21.
+ * Supports recursive nextLink pagination handling for large S21 datasets.
  */
 async function sapFetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const targetUrl = PROXY_URL
@@ -69,9 +70,18 @@ async function sapFetch<T>(endpoint: string, options: RequestInit = {}): Promise
   }
 
   const data = await response.json();
-  // Standard OData v2 response wrapper handling (d.results or data)
-  return (data?.d?.results || data?.d || data) as T;
+  const results = (data?.d?.results || data?.d || data) as any;
+
+  // Handle OData pagination if __next / nextLink is returned by SAP
+  const nextLink = data?.d?.__next || data?.__next || data?.['@odata.nextLink'];
+  if (Array.isArray(results) && nextLink) {
+    const nextResults = await sapFetch<any[]>(nextLink, options);
+    return [...results, ...nextResults] as unknown as T;
+  }
+
+  return results as T;
 }
+
 
 export const S21SAPAdapter: ISAPAdapter = {
   /**
