@@ -113,15 +113,18 @@ export const AdminContracts: React.FC = () => {
           {/* Left: Contracts & PO queues */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
-            <Card title="Active S/4HANA Quantity Contracts" subtitle="Outline agreement lists directly mapped from SAP master database schema">
-              <div className="table-container">
+            <Card 
+              title={`Active S/4HANA Quantity Contracts (${contracts.length})`}
+              subtitle={`Showing ${contracts.length} active outline agreements synchronized from SAP S21 master data`}
+            >
+              <div className="table-container" style={{ maxHeight: '380px', overflowY: 'auto' }}>
                 <table className="data-table">
-                  <thead>
+                  <thead style={{ position: 'sticky', top: 0, zIndex: 5, backgroundColor: 'var(--color-bg-card)' }}>
                     <tr>
                       <th>Contract Ref</th>
                       <th>Yard/Customer</th>
                       <th>Validity Period</th>
-                      <th>Material</th>
+                      <th>Material / Items</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -129,6 +132,19 @@ export const AdminContracts: React.FC = () => {
                     {contracts.map((c) => {
                       const isSelected = selectedContract?.id === c.id;
                       
+                      // Calculate distinct line item materials if present in linked POs
+                      const contractPoMaterials = purchaseOrders
+                        .filter(po => po.contract_id === c.id)
+                        .map(po => po.material);
+                      const uniqueMaterials = Array.from(new Set(contractPoMaterials));
+
+                      let materialDisplay = (c as any).material || 'Washed Coal Grade A';
+                      if (uniqueMaterials.length > 1) {
+                        materialDisplay = `Multiple Items (${uniqueMaterials.length})`;
+                      } else if (uniqueMaterials.length === 1) {
+                        materialDisplay = uniqueMaterials[0];
+                      }
+
                       return (
                         <tr 
                           key={c.id}
@@ -145,7 +161,23 @@ export const AdminContracts: React.FC = () => {
                           <td style={{ fontSize: '12px' }}>
                             {c.start_date} to {c.end_date}
                           </td>
-                          <td style={{ color: 'var(--color-text-body)' }}>{(c as any).material || 'Washed Coal Grade A'}</td>
+                          <td style={{ color: 'var(--color-text-body)', fontWeight: uniqueMaterials.length > 1 ? 700 : 500 }}>
+                            {uniqueMaterials.length > 1 ? (
+                              <span style={{ 
+                                backgroundColor: '#EFF6FF', 
+                                color: '#1D4ED8', 
+                                border: '1px solid #BFDBFE', 
+                                padding: '3px 8px', 
+                                borderRadius: '6px', 
+                                fontSize: '11px',
+                                fontWeight: 700
+                              }}>
+                                {materialDisplay}
+                              </span>
+                            ) : (
+                              materialDisplay
+                            )}
+                          </td>
                           <td>
                             <StatusBadge status={c.status} />
                           </td>
@@ -156,6 +188,7 @@ export const AdminContracts: React.FC = () => {
                 </table>
               </div>
             </Card>
+
 
             {/* PO Distribution Desk */}
             {!selectedContract ? (

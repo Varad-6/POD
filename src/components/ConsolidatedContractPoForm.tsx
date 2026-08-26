@@ -162,8 +162,18 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
             <span style={{ color: '#334155', fontWeight: 600 }}>{contract.start_date} → {contract.end_date}</span>
           </div>
           <div>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>Primary Material</span>
-            <span style={{ color: '#334155', fontWeight: 600 }}>{(contract as any).material || 'Washed Coal Grade A'}</span>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>Primary Material / Items</span>
+            <span style={{ color: '#334155', fontWeight: 600 }}>
+              {(() => {
+                const uniqueMats = Array.from(new Set(contractPOs.map(po => po.material)));
+                if (uniqueMats.length > 1) {
+                  return <strong style={{ color: '#2563EB' }}>Multiple Items ({uniqueMats.length})</strong>;
+                } else if (uniqueMats.length === 1) {
+                  return uniqueMats[0];
+                }
+                return (contract as any).material || 'Washed Coal Grade A';
+              })()}
+            </span>
           </div>
         </div>
       </div>
