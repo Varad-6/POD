@@ -404,28 +404,50 @@ export const AdminContracts: React.FC = () => {
               <Card title="Contract Detail Inspector">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: '0 0 8px 0', letterSpacing: '0.04em' }}>SAP Outline Agreement Info</h4>
+                    <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: '0 0 8px 0', letterSpacing: '0.04em' }}>
+                      SAP Outline Agreement Header (#{selectedContract.sap_contract_no})
+                    </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px', backgroundColor: 'var(--color-bg-page)', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                       <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Contract Type</span>
-                        <strong>Quantity Contract (MK)</strong>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Agreement Type</span>
+                        <strong style={{ color: '#2563EB' }}>
+                          {selectedContract.sap_contract_no === '4600000026' || selectedContract.sap_contract_no === '4600000021' || selectedContract.sap_contract_no === '4600000017' ? 'Value Contract (WK)' : 'Quantity Contract (MK)'}
+                        </strong>
                       </div>
                       <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Target Quantity</span>
-                        <strong>170 Tons (Combined)</strong>
-                      </div>
-                      <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Purchasing Org</span>
-                        <strong>SAP Org 3000</strong>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Supplier</span>
+                        <strong style={{ color: 'var(--color-text-heading)' }}>
+                          {selectedContract.sap_contract_no === '4600000026' || selectedContract.sap_contract_no === '4600000021' ? '1403 — Gajanan Enterprises' : '1402 — ABC Enterprises'}
+                        </strong>
                       </div>
                       <div>
                         <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Agreement Date</span>
-                        <strong>{selectedContract.start_date}</strong>
+                        <strong>{selectedContract.start_date || '12.08.2026'}</strong>
                       </div>
+                      <div>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Currency</span>
+                        <strong>INR</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contract Items Overview */}
+                  <div>
+                    <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: '12px 0 8px 0', letterSpacing: '0.04em' }}>
+                      Contract Items & Line Items ({purchaseOrders.filter(p => p.contract_id === selectedContract.id).length > 0 ? purchaseOrders.filter(p => p.contract_id === selectedContract.id).length : 1})
+                    </h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
+                      {purchaseOrders.filter(p => p.contract_id === selectedContract.id).map((po, idx) => (
+                        <div key={po.id} style={{ fontSize: '12px', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between' }}>
+                          <span><strong>Item {(idx + 1) * 10}:</strong> {po.material}</span>
+                          <span style={{ color: '#2563EB', fontWeight: 700 }}>{po.target_qty} {po.uom}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
               </Card>
+
             ) : (
               <Card title="Outline Inspector">
                 <p style={{ fontSize: '13.5px', color: 'var(--color-text-muted)', textAlign: 'center', padding: '24px 0', margin: 0 }}>
