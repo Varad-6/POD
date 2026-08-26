@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { caApi, ContractV3, PurchaseOrderV3, transportersApi, Transporter } from '../lib/api_v3';
 import { Card } from '../components/Card';
+import { ConsolidatedContractPoForm } from '../components/ConsolidatedContractPoForm';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
 import { Send, Clock, Calendar, Check, ShieldCheck, MapPin } from 'lucide-react';
@@ -50,8 +51,11 @@ export const AdminContracts: React.FC = () => {
     loadData();
   }, []);
 
+  const [selectedPOsToAssign, setSelectedPOsToAssign] = useState<PurchaseOrderV3[]>([]);
+
   const handleContractSelect = async (c: ContractV3) => {
     setSelectedPOToAssign(null);
+    setSelectedPOsToAssign([]);
     try {
       const detail = await caApi.getContractDetails(c.id);
       setSelectedContract(detail);
@@ -64,10 +68,12 @@ export const AdminContracts: React.FC = () => {
   };
 
   const handleDistributeSubmit = async () => {
-    if (!selectedPOToAssign || !targetTransporterId) return;
+    const targetPo = selectedPOToAssign || (selectedPOsToAssign.length > 0 ? selectedPOsToAssign[0] : null);
+    if (!targetPo || !targetTransporterId) return;
     setIsSubmitting(true);
     try {
-      await caApi.distributePo(selectedPOToAssign.id, {
+      await caApi.distributePo(targetPo.id, {
+        po_ids: selectedPOsToAssign.map(p => p.id),
         transporter_id: parseInt(targetTransporterId),
         availability_window: `${availStart}-${availEnd}`,
         availability_window_start: availStart,
@@ -82,13 +88,15 @@ export const AdminContracts: React.FC = () => {
         handleContractSelect(selectedContract);
       }
       setSelectedPOToAssign(null);
+      setSelectedPOsToAssign([]);
     } catch (err) {
-      console.error('Failed to distribute PO:', err);
-      alert('Error distributing PO');
+      console.error('Failed to distribute transport execution:', err);
+      alert('Error creating multi-PO transport execution');
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -150,91 +158,112 @@ export const AdminContracts: React.FC = () => {
             </Card>
 
             {/* PO Distribution Desk */}
-            <Card title="Purchase Orders Distribution Queue" subtitle="Inspect purchase order references linked to selected outline contracts">
-              {!selectedContract ? (
+            {!selectedContract ? (
+              <Card title="Purchase Orders Distribution Queue" subtitle="Inspect purchase order references linked to selected outline contracts">
                 <div style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--color-text-muted)' }}>
                   <p style={{ fontWeight: 750, fontSize: '14px', margin: '0 0 6px 0', color: 'var(--color-text-heading)' }}>No Contract Selected</p>
                   <p style={{ fontSize: '13px', margin: 0 }}>Click on any Active S/4HANA Contract row above to inspect its linked Purchase Orders.</p>
                 </div>
-              ) : purchaseOrders.length === 0 ? (
-                <p style={{ textAlign: 'center', padding: '24px', color: 'var(--color-text-muted)', fontSize: '13px' }}>
-                  No active purchase orders found for Contract #{selectedContract.sap_contract_no}.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {purchaseOrders.map((po) => (
-                    <div 
-                      key={po.id}
-                      style={{
-                        border: '1.5px solid var(--color-border)',
-                        borderRadius: '12px',
-                        padding: '16px 20px',
-                        backgroundColor: 'var(--color-bg-card)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        boxShadow: 'var(--shadow-card)',
-                        transition: 'all var(--transition-normal)'
-                      }}
-                    >
-                      <div>
-                        <p className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)', margin: '0 0 4px 0', fontSize: '15px' }}>
-                          PO #{po.sap_po_no}
-                        </p>
-                        <p style={{ fontSize: '13px', color: 'var(--color-text-body)', margin: '2px 0' }}>
-                          Product: <strong>{po.material}</strong> | Target: <strong>{po.target_qty} {po.uom}s</strong>
-                        </p>
-                        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: 0 }}>
-                          Rate: {formatCurrency(po.rate)} | Cost Center: {po.cost_center || 'N/A'}
-                        </p>
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <StatusBadge status={po.status} />
-                        {po.status === 'OPEN' && (
-                          <button 
-                            onClick={() => setSelectedPOToAssign(po)}
-                            className="btn btn-primary btn-sm"
-                          >
-                            <Send size={12} />
-                            Distribute PO
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+              </Card>
+            ) : (
+              <ConsolidatedContractPoForm
+                contract={selectedContract}
+                purchaseOrders={purchaseOrders}
+                selectedPoIds={selectedPOsToAssign.map(p => p.id)}
+                onSelectPosChange={(pos) => {
+                  setSelectedPOsToAssign(pos);
+                  if (pos.length > 0) setSelectedPOToAssign(pos[0]);
+                  else setSelectedPOToAssign(null);
+                }}
+                onConfirmTransport={(pos) => {
+                  setSelectedPOsToAssign(pos);
+                  if (pos.length > 0) setSelectedPOToAssign(pos[0]);
+                }}
+                actionLabel="Proceed to Carrier Allocation"
+              />
+            )}
+
+
           </div>
 
           {/* Right Column: PO Distribution Form */}
           <div>
-            {selectedPOToAssign ? (
+            {(selectedPOsToAssign.length > 0 || selectedPOToAssign) ? (
               <Card title="Assign Job & Send to Transporter" accentColor="var(--color-brand-blue-600)">
                 
-                {/* 1. Header Summary Badge */}
-                <div style={{ backgroundColor: 'var(--color-brand-blue-50)', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '14px 16px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                    <div>
-                      <span style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-brand-blue-600)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Purchase Order</span>
-                      <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-heading)', margin: '2px 0 0 0' }}>#{selectedPOToAssign.sap_po_no}</h3>
-                    </div>
-                    <span style={{ backgroundColor: '#FFFFFF', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, color: 'var(--color-brand-blue-600)', border: '1px solid var(--color-border)' }}>
-                      RATE: {formatCurrency(selectedPOToAssign.rate)} / {selectedPOToAssign.uom}
+                {/* 1. Contract Context Summary Banner */}
+                {selectedContract && (
+                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Contract Context</div>
+                    <div className="mono" style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-text-heading)' }}>#{selectedContract.sap_contract_no}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-body)', fontWeight: 600 }}>{selectedContract.customer_name || 'SAP Client Entity'}</div>
+                  </div>
+                )}
+
+                {/* 2. Selected Purchase Orders Collection (Multi-PO or Single-PO) */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      SELECTED PURCHASE ORDERS ({selectedPOsToAssign.length > 0 ? selectedPOsToAssign.length : 1})
                     </span>
                   </div>
-                  <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-body)', margin: '0 0 4px 0' }}>
-                    {selectedPOToAssign.material}
-                  </p>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                    <span>Target Volume: <strong>{selectedPOToAssign.target_qty} {selectedPOToAssign.uom}s</strong></span>
-                    <span>Cost Center: <strong>{selectedPOToAssign.cost_center || 'CC-MINING-01'}</strong></span>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).map((po) => (
+                      <div key={po.id} style={{
+                        backgroundColor: 'var(--color-brand-blue-50)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '8px',
+                        padding: '10px 12px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong className="mono" style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>PO #{po.sap_po_no}</strong>
+                            <StatusBadge status={po.status} />
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>
+                            {po.material}
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-600)' }}>
+                            {po.target_qty} {po.uom}
+                          </span>
+                          <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                            {formatCurrency(po.rate)} / {po.uom}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
+                </div>
+
+                {/* 3. Total Planned Payload Summary */}
+                <div style={{
+                  backgroundColor: '#EFF6FF',
+                  border: '1px solid #BFDBFE',
+                  borderRadius: '10px',
+                  padding: '12px 14px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', textTransform: 'uppercase' }}>
+                    TOTAL PLANNED PAYLOAD
+                  </span>
+                  <span style={{ fontSize: '16px', fontWeight: 900, color: '#1D4ED8' }}>
+                    {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).reduce((sum, p) => sum + (Number(p.target_qty) || 0), 0).toFixed(2)} TON
+                  </span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '20px' }}>
                   
-                  {/* 2. Route Telemetry */}
+                  {/* 4. Route Telemetry */}
                   <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
                       Route Locations
@@ -251,7 +280,7 @@ export const AdminContracts: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* 3. Carrier Allocation */}
+                  {/* 5. Carrier Allocation */}
                   <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
                       Choose Transporter
@@ -280,21 +309,10 @@ export const AdminContracts: React.FC = () => {
                           ))}
                         </select>
                       </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Cargo Quantity ({selectedPOToAssign.uom})
-                        </label>
-                        <input 
-                          type="number"
-                          defaultValue={selectedPOToAssign.target_qty}
-                          style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', fontWeight: 700 }}
-                        />
-                      </div>
                     </div>
                   </div>
 
-                  {/* 4. SAP SLA Schedule */}
+                  {/* 6. SAP SLA Schedule */}
                   <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
                     <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
                       SLA Schedule Parameters
@@ -333,7 +351,7 @@ export const AdminContracts: React.FC = () => {
 
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1.5px solid var(--color-border)', paddingTop: '16px' }}>
                   <button 
-                    onClick={() => setSelectedPOToAssign(null)} 
+                    onClick={() => { setSelectedPOToAssign(null); setSelectedPOsToAssign([]); }} 
                     className="btn btn-secondary"
                   >
                     Cancel
@@ -343,9 +361,11 @@ export const AdminContracts: React.FC = () => {
                     disabled={isSubmitting}
                     className="btn btn-primary"
                   >
-                    {isSubmitting ? 'Distributing...' : 'Release PO & Notify'}
+                    <Send size={14} />
+                    {isSubmitting ? 'Releasing...' : 'Release PO & Notify'}
                   </button>
                 </div>
+
               </Card>
             ) : selectedContract ? (
               <Card title="Contract Detail Inspector">

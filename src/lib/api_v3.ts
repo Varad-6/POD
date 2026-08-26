@@ -90,8 +90,14 @@ export const caApi = {
   getPurchaseOrders: () => request<PurchaseOrderV3[]>('/purchase-orders'),
   getContractDetails: (id: number) => request<ContractV3>(`/contracts/${id}`),
   getContractPdf: (id: number) => request<{ pdf_url: string }>(`/contracts/${id}/pdf`),
-  distributePo: (poId: number, data: { transporter_id: number; availability_window: string; timebound: string }) =>
-    request<{ id: number; message: string }>(`/po/${poId}/distribute`, { method: 'POST', body: JSON.stringify(data) }),
+  syncS21: (contractsData?: any[]) =>
+    request<{ success: boolean; total_contracts: number; total_pos: number; message: string }>('/sync/s21', {
+      method: 'POST', body: JSON.stringify({ contracts: contractsData || [] })
+    }),
+  distributePo: (poId: number, data: { transporter_id: number; po_ids?: number[]; availability_window?: string; timebound?: string }) =>
+
+    request<{ id: number; po_ids?: number[]; message: string }>(`/po/${poId}/distribute`, { method: 'POST', body: JSON.stringify(data) }),
+
   getReviewQueue: (status: 'OPEN' | 'RESOLVED' = 'OPEN') =>
     request<ReviewQueueItemV3[]>(`/review-queue?status=${status}`),
   clearReviewQueue: () =>

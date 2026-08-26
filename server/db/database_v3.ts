@@ -58,6 +58,20 @@ export function initDb(): Database.Database {
   addColumnIfNotExists('purchase_orders', 'allowed_queue_time_mins', 'INTEGER DEFAULT 60');
   addColumnIfNotExists('purchase_orders', 'detention_rate_per_hour', 'REAL DEFAULT 150.00');
 
+  // Ensure job_config_pos junction table exists
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS job_config_pos (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_config_id     INTEGER NOT NULL REFERENCES job_configs(id) ON DELETE CASCADE,
+      po_id             INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+      planned_qty       REAL NOT NULL,
+      uom               TEXT NOT NULL DEFAULT 'TO',
+      created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(job_config_id, po_id)
+    );
+  `);
+
+
   // Check if seeded
   const userCount = (instance.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }).c;
   if (userCount === 0) {

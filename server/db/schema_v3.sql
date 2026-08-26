@@ -79,6 +79,21 @@ CREATE TABLE IF NOT EXISTS job_configs (
   status                      TEXT NOT NULL CHECK(status IN ('PENDING', 'ASSIGNED', 'EXPIRED')) DEFAULT 'PENDING'
 );
 
+-- Junction table linking Job Configurations / Transport Executions to multiple POs
+CREATE TABLE IF NOT EXISTS job_config_pos (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  job_config_id     INTEGER NOT NULL REFERENCES job_configs(id) ON DELETE CASCADE,
+  po_id             INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  planned_qty       REAL NOT NULL,
+  uom               TEXT NOT NULL DEFAULT 'TO',
+  created_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(job_config_id, po_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_config_pos_job ON job_config_pos(job_config_id);
+CREATE INDEX IF NOT EXISTS idx_job_config_pos_po ON job_config_pos(po_id);
+
+
 CREATE TABLE IF NOT EXISTS drivers (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   transporter_id  INTEGER NOT NULL REFERENCES transporters(id),

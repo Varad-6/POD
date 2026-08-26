@@ -71,6 +71,7 @@ router.post('/demo/reset', requireAuth, (req: Request, res: Response) => {
     safeDelete(db, 'DELETE FROM weight_logs');
     safeDelete(db, 'DELETE FROM driver_assignment_data');
     safeDelete(db, 'DELETE FROM transport_assignments');
+    safeDelete(db, 'DELETE FROM job_config_pos');
     safeDelete(db, 'DELETE FROM job_configs');
 
     // Reset all purchase orders status to OPEN (Real S21 POs preserved)
@@ -227,6 +228,88 @@ router.get('/assignments', requireAuth, requireRole('CA', 'TA', 'SR'), (req: Req
   return res.json(db.prepare(query).all(...params));
 });
 
+// Helper function to sync S21 Contracts and POs into local database idempotently
+function syncS21ContractsAndPOs(db: any, s21ContractsPayload?: any[]) {
+  if (!s21ContractsPayload || !Array.isArray(s21ContractsPayload)) return;
+
+  const insertCustomer = db.prepare(`
+    INSERT OR IGNORE INTO customers (name, sap_customer_no, gps_lat, gps_lng, address)
+    VALUES (?, ?, -25.7670, 29.4630, 'Witbank, ZA')
+  `);
+  
+  const insertContract = db.prepare(`
+    INSERT INTO contracts (sap_contract_no, customer_id, start_date, end_date, pdf_url, status)
+    VALUES (?, ?, ?, ?, ?, 'ACTIVE')
+    ON CONFLICT(sap_contract_no) DO UPDATE SET
+      start_date = excluded.start_date,
+      end_date = excluded.end_date,
+      status = excluded.status
+  `);
+
+  const insertPO = db.prepare(`
+    INSERT INTO purchase_orders (contract_id, sap_po_no, material, uom, target_qty, rate, tolerance_pct, cost_center, status)
+    VALUES (?, ?, ?, ?, ?, ?, 0.5, ?, 'OPEN')
+    ON CONFLICT(sap_po_no) DO UPDATE SET
+      material = excluded.material,
+      target_qty = excluded.target_qty,
+      rate = excluded.rate
+  `);
+
+  for (const c of s21ContractsPayload) {
+    if (!c.sap_contract_no) continue;
+    const custNo = c.sap_customer_no || 'SAP-CUST-1001';
+    const custName = c.customer_name || 'PODZO Mining – Emoyeni Siding';
+    insertCustomer.run(custName, custNo);
+
+    const customerRow = db.prepare('SELECT id FROM customers WHERE sap_customer_no = ?').get(custNo) as any;
+    const customerId = customerRow ? customerRow.id : 1;
+
+    insertContract.run(
+      c.sap_contract_no,
+      customerId,
+      c.start_date || '2026-08-12',
+      c.end_date || '2027-08-12',
+      c.pdf_url || `/uploads/contracts/ctr_${c.sap_contract_no}.pdf`
+    );
+
+    const contractRow = db.prepare('SELECT id FROM contracts WHERE sap_contract_no = ?').get(c.sap_contract_no) as any;
+    if (contractRow && Array.isArray(c.purchase_orders)) {
+      for (const po of c.purchase_orders) {
+        if (!po.sap_po_no) continue;
+        insertPO.run(
+          contractRow.id,
+          po.sap_po_no,
+          po.material || 'Washed Coal Grade A',
+          po.uom || 'TO',
+          po.target_qty || 34.0,
+          po.rate || 151.50,
+          po.cost_center || 'CC-MINING-01'
+        );
+      }
+    }
+  }
+}
+
+// POST /api/v3/sync/s21 - Sync fresh S21 Contracts & POs into PODZO
+router.post('/sync/s21', requireAuth, (req: Request, res: Response) => {
+  const db = getDb();
+  const { contracts = [] } = req.body;
+  
+  if (Array.isArray(contracts) && contracts.length > 0) {
+    syncS21ContractsAndPOs(db, contracts);
+  }
+
+  const updatedContractsCount = (db.prepare('SELECT COUNT(*) as c FROM contracts').get() as any)?.c || 0;
+  const updatedPOsCount = (db.prepare('SELECT COUNT(*) as c FROM purchase_orders').get() as any)?.c || 0;
+
+  return res.json({
+    success: true,
+    message: 'S21 Contracts & Purchase Orders synchronized successfully.',
+    total_contracts: updatedContractsCount,
+    total_pos: updatedPOsCount
+  });
+});
+
 // GET /api/v3/contracts
 router.get('/contracts', requireAuth, (req: Request, res: Response) => {
   const db = getDb();
@@ -245,6 +328,7 @@ router.get('/contracts', requireAuth, (req: Request, res: Response) => {
       ) as completed_count
     FROM contracts c
     JOIN customers cu ON cu.id = c.customer_id
+    ORDER BY c.id ASC
   `).all();
   return res.json(contracts);
 });
@@ -254,12 +338,13 @@ router.get('/purchase-orders', requireAuth, (req: Request, res: Response) => {
   const db = getDb();
   const contractId = req.query.contract_id;
   if (contractId) {
-    const pos = db.prepare('SELECT po.*, c.sap_contract_no FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id WHERE po.contract_id = ?').all(contractId);
+    const pos = db.prepare('SELECT po.*, c.sap_contract_no FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id WHERE po.contract_id = ? ORDER BY po.id ASC').all(contractId);
     return res.json(pos);
   }
-  const pos = db.prepare('SELECT po.*, c.sap_contract_no FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id').all();
+  const pos = db.prepare('SELECT po.*, c.sap_contract_no FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id ORDER BY po.id ASC').all();
   return res.json(pos);
 });
+
 
 // GET /api/v3/contracts/:id
 router.get('/contracts/:id', requireAuth, requireRole('CA', 'TA', 'CR'), (req: Request, res: Response) => {
@@ -288,8 +373,9 @@ router.get('/contracts/:id/pdf', requireAuth, requireRole('CA', 'TA'), (req: Req
 // POST /api/v3/po/:id/distribute
 router.post('/po/:id/distribute', requireAuth, requireRole('CA'), (req: Request, res: Response) => {
   const db = getDb();
-  const poId = req.params.id;
+  const primaryPoId = req.params.id;
   const { 
+    po_ids = [],
     transporter_id, 
     availability_window, 
     timebound,
@@ -305,12 +391,61 @@ router.post('/po/:id/distribute', requireAuth, requireRole('CA'), (req: Request,
     return res.status(400).json({ error: 'transporter_id is required' });
   }
 
+  // Build full set of target PO IDs
+  const allPoIds = Array.from(new Set([Number(primaryPoId), ...po_ids.map(Number)])).filter(id => !isNaN(id) && id > 0);
+
+  // Validate that all POs belong to the SAME Contract
+  const contractsCheck = db.prepare(`
+    SELECT DISTINCT contract_id FROM purchase_orders WHERE id IN (${allPoIds.map(() => '?').join(',')})
+  `).all(...allPoIds) as any[];
+
+  if (contractsCheck.length > 1) {
+    return res.status(400).json({ error: 'Purchase Orders must belong to the same Contract.' });
+  }
+
+  // Fetch target POs details
+  const targetPOs = db.prepare(`
+    SELECT id, sap_po_no, target_qty, uom, status FROM purchase_orders WHERE id IN (${allPoIds.map(() => '?').join(',')})
+  `).all(...allPoIds) as any[];
+
+  // Validate allocations and remaining balances for each PO
+  const allocationsToInsert: { po: any; allocQty: number }[] = [];
+  const poAllocMap = req.body.allocations || {}; // { [poId]: qty }
+
+  for (const targetPo of targetPOs) {
+    // Calculate currently allocated quantity across existing active job_configs
+    const currentAllocRow = db.prepare(`
+      SELECT COALESCE(SUM(jcp.planned_qty), 0) as total_alloc
+      FROM job_config_pos jcp
+      JOIN job_configs jc ON jc.id = jcp.job_config_id
+      WHERE jcp.po_id = ? AND jc.status != 'CANCELLED'
+    `).get(targetPo.id) as any;
+
+    const currentlyAllocated = Number(currentAllocRow?.total_alloc || 0);
+    const targetQty = Number(targetPo.target_qty || 0);
+    const remainingQty = Math.max(0, targetQty - currentlyAllocated);
+
+    const requestedQty = poAllocMap[targetPo.id] ? Number(poAllocMap[targetPo.id]) : (allPoIds.length === 1 && req.body.allocated_qty ? Number(req.body.allocated_qty) : remainingQty);
+
+    if (requestedQty <= 0) {
+      return res.status(400).json({ error: `Requested allocation quantity for PO #${targetPo.sap_po_no} must be greater than 0.` });
+    }
+
+    if (requestedQty > remainingQty + 0.001) {
+      return res.status(400).json({ 
+        error: `Allocation quantity (${requestedQty.toFixed(2)} ${targetPo.uom}) exceeds remaining PO #${targetPo.sap_po_no} capacity (${remainingQty.toFixed(2)} ${targetPo.uom} available out of ${targetQty.toFixed(2)} ${targetPo.uom}).` 
+      });
+    }
+
+    allocationsToInsert.push({ po: targetPo, allocQty: requestedQty });
+  }
+
   // Calculate tender_response_deadline ISO string based on acceptance_window_hours
   const hoursNum = Number(acceptance_window_hours) || 4;
   const deadlineDate = new Date(Date.now() + hoursNum * 3600 * 1000);
   const tender_response_deadline = deadlineDate.toISOString();
 
-  // Create job configuration with SLA schedule parameters
+  // Insert master job configuration using primary PO
   const result = db.prepare(`
     INSERT INTO job_configs (
       po_id, transporter_id, availability_window, availability_window_start, availability_window_end,
@@ -319,7 +454,7 @@ router.post('/po/:id/distribute', requireAuth, requireRole('CA'), (req: Request,
     )
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')
   `).run(
-    poId, 
+    primaryPoId, 
     transporter_id, 
     availability_window || `${availability_window_start}-${availability_window_end}`,
     availability_window_start,
@@ -332,11 +467,35 @@ router.post('/po/:id/distribute', requireAuth, requireRole('CA'), (req: Request,
     timebound || new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   );
 
-  // Update PO status to ASSIGNED
-  db.prepare("UPDATE purchase_orders SET status = 'ASSIGNED' WHERE id = ?").run(poId);
+  const jobConfigId = result.lastInsertRowid;
 
-  return res.status(201).json({ id: result.lastInsertRowid, message: 'PO distributed to transporter with SLA schedule parameters' });
+  // Insert linked POs into job_config_pos junction table and update PO status dynamically
+  const insertJunction = db.prepare(`
+    INSERT OR REPLACE INTO job_config_pos (job_config_id, po_id, planned_qty, uom)
+    VALUES (?, ?, ?, ?)
+  `);
+  const updatePoStatus = db.prepare("UPDATE purchase_orders SET status = ? WHERE id = ?");
+
+  for (const item of allocationsToInsert) {
+    insertJunction.run(jobConfigId, item.po.id, item.allocQty, item.po.uom || 'TO');
+    
+    // Recalculate total allocated quantity to set correct status (ASSIGNED vs FULLY_ALLOCATED)
+    const newAllocRow = db.prepare(`
+      SELECT COALESCE(SUM(jcp.planned_qty), 0) as total_alloc
+      FROM job_config_pos jcp
+      JOIN job_configs jc ON jc.id = jcp.job_config_id
+      WHERE jcp.po_id = ? AND jc.status != 'CANCELLED'
+    `).get(item.po.id) as any;
+
+    const totalAllocated = Number(newAllocRow?.total_alloc || 0);
+    const newStatus = totalAllocated >= Number(item.po.target_qty) - 0.001 ? 'ASSIGNED' : 'OPEN';
+    updatePoStatus.run(newStatus, item.po.id);
+  }
+
+  return res.status(201).json({ id: jobConfigId, po_ids: allPoIds, message: `Transport Execution created with ${allPoIds.length} Purchase Order allocation(s).` });
 });
+
+
 
 // GET /api/v3/review-queue
 router.get('/review-queue', requireAuth, requireRole('CA', 'SR'), (req: Request, res: Response) => {
