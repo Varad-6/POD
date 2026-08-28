@@ -33,11 +33,12 @@ const StepBadge: React.FC<{ step: number; active: boolean; done: boolean; label:
     }}>
       {done ? <Check size={18} /> : step}
     </div>
-    <span style={{ fontSize: '11px', fontWeight: 700, color: done ? 'var(--color-brand-blue-700)' : active ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+    <span style={{ fontSize: '11.5px', fontWeight: active ? 800 : 600, color: done || active ? 'var(--color-brand-blue-700)' : 'var(--color-text-body)', textAlign: 'center', whiteSpace: 'nowrap' }}>
       {label}
     </span>
   </div>
 );
+
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 

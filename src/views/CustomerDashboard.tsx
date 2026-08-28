@@ -391,25 +391,69 @@ export const CustomerDashboard: React.FC = () => {
   }
 
   // ─── LIST VIEW ───────────────────────────────────────────────────────────
+  const expectedArrivals = incoming.filter(a => a.status === 'IN_TRANSIT' || a.status === 'DISPATCHED');
+  const unloadingPending = incoming.filter(a => a.status === 'ARRIVED_AT_DESTINATION' || a.status === 'ARRIVED');
+  const confirmationPending = incoming.filter(a => a.status === 'UNLOADED_PENDING_CONFIRMATION');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>Yard Receiving Gate</h1>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>Yard Receiving Gate & Deliveries</h1>
           <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
-            Trucks arriving at your yard. Click any truck to record weights and confirm unloading.
+            Incoming truck deliveries scheduled for your receiving location.
           </p>
         </div>
-        <button
-          onClick={loadIncoming}
-          disabled={loading}
-          className="btn btn-ghost btn-sm"
-          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
+        <button onClick={loadIncoming} disabled={loading} className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <RefreshCw size={13} /> Refresh
         </button>
       </div>
+
+      {/* ── Customer Actionable KPI Status Cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+        
+        <div className="kpi-card" style={{ borderLeft: '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Expected Arrivals</div>
+            <div className="kpi-value">{expectedArrivals.length}</div>
+            <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-brand-blue-600)' }}>
+              En Route to Yard
+            </div>
+          </div>
+          <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-brand-blue-50)', color: 'var(--color-brand-blue-600)' }}>
+            <Truck size={20} />
+          </div>
+        </div>
+
+        <div className="kpi-card" style={{ borderLeft: unloadingPending.length > 0 ? '4px solid #D97706' : '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Unloading Pending</div>
+            <div className="kpi-value">{unloadingPending.length}</div>
+            <div className="kpi-trend kpi-trend--up" style={{ color: unloadingPending.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)' }}>
+              {unloadingPending.length > 0 ? 'Truck Arrived at Gate' : 'No trucks pending unloading'}
+            </div>
+          </div>
+          <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)' }}>
+            <PackageCheck size={20} />
+          </div>
+        </div>
+
+        <div className="kpi-card" style={{ borderLeft: confirmationPending.length > 0 ? '4px solid #DC2626' : '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Delivery Confirmation Pending</div>
+            <div className="kpi-value">{confirmationPending.length}</div>
+            <div className="kpi-trend kpi-trend--down" style={{ color: confirmationPending.length > 0 ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>
+              {confirmationPending.length > 0 ? 'Confirmation Required' : 'All receipts confirmed'}
+            </div>
+          </div>
+          <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)' }}>
+            <ShieldCheck size={20} />
+          </div>
+        </div>
+
+      </div>
+
 
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading incoming trucks...</div>

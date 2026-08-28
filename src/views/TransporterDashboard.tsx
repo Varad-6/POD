@@ -74,6 +74,36 @@ const NavCard: React.FC<{
 export const TransporterDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthV3();
+  const [jobConfigs, setJobConfigs] = React.useState<any[]>([]);
+  const [assignments, setAssignments] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    async function loadTAStats() {
+      setLoading(true);
+      try {
+        const jobs = await fetch('http://localhost:3001/api/v3/job-configs', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
+        }).then(r => r.json());
+        setJobConfigs(jobs || []);
+
+        const trips = await fetch('http://localhost:3001/api/v3/assignments', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
+        }).then(r => r.json());
+        setAssignments(trips || []);
+      } catch (err) {
+        console.warn('Failed to load TA metrics:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadTAStats();
+  }, []);
+
+  const pendingPO = jobConfigs.filter(j => j.status === 'PENDING');
+  const pendingDriverAssign = jobConfigs.filter(j => j.status === 'PENDING' && (!j.driver_id || !j.vehicle_id));
+  const activeTransports = assignments.filter(a => a.status === 'DISPATCHED' || a.status === 'IN_TRANSIT' || a.status === 'ACCEPTED');
+  const podPending = assignments.filter(a => a.status === 'DELIVERED' && !a.pod_file_url);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
@@ -91,7 +121,7 @@ export const TransporterDashboard: React.FC = () => {
 
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-brand-blue-50)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
-            Transporter Portal
+            Transporter Admin • Operations Console
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
             Welcome, {user?.displayName?.split(' ')[0] || 'Transporter'}
@@ -102,36 +132,68 @@ export const TransporterDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Quick Nav Cards ── */}
+      {/* ── Actionable KPI Status Cards ── */}
       <div>
         <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 16px' }}>
-          What do you want to do?
+          Action Required Right Now
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
-          <NavCard
-            icon={<FileText size={20} />}
-            title="Purchase Orders"
-            description="View all delivery orders from SAP. Assign drivers and trucks to pending orders."
-            route="/transporter/purchase-orders"
-            color="var(--color-brand-blue-600)"
-            badge="Action Required"
-          />
-          <NavCard
-            icon={<ClipboardList size={20} />}
-            title="Delivery Receipts (PODs)"
-            description="Upload the stamped delivery receipts after trucks are unloaded at customer yard."
-            route="/transporter/pods"
-            color="var(--color-brand-blue-600)"
-          />
-          <NavCard
-            icon={<Receipt size={20} />}
-            title="Invoices & Payments"
-            description="Create tax invoices for completed deliveries and track payment status from SAP."
-            route="/transporter/invoices"
-            color="var(--color-brand-blue-600)"
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+          
+          <div className="kpi-card" onClick={() => navigate('/transporter/purchase-orders')} style={{ cursor: 'pointer', borderLeft: pendingPO.length > 0 ? '4px solid #2563EB' : '1px solid var(--color-border)' }}>
+            <div>
+              <div className="kpi-label">Pending PO</div>
+              <div className="kpi-value">{pendingPO.length}</div>
+              <div className="kpi-trend kpi-trend--up" style={{ color: pendingPO.length > 0 ? '#2563EB' : 'var(--color-text-muted)' }}>
+                {pendingPO.length > 0 ? 'Requires Transport Action' : 'All released POs handled'}
+              </div>
+            </div>
+            <div className="kpi-icon-wrapper" style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
+              <FileText size={20} />
+            </div>
+          </div>
+
+          <div className="kpi-card" onClick={() => navigate('/transporter/purchase-orders')} style={{ cursor: 'pointer', borderLeft: pendingDriverAssign.length > 0 ? '4px solid #D97706' : '1px solid var(--color-border)' }}>
+            <div>
+              <div className="kpi-label">Pending Driver Assignment</div>
+              <div className="kpi-value">{pendingDriverAssign.length}</div>
+              <div className="kpi-trend kpi-trend--up" style={{ color: pendingDriverAssign.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)' }}>
+                {pendingDriverAssign.length > 0 ? 'Driver / Vehicle Needed' : 'All jobs assigned'}
+              </div>
+            </div>
+            <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)' }}>
+              <Truck size={20} />
+            </div>
+          </div>
+
+          <div className="kpi-card" onClick={() => navigate('/transporter/trips')} style={{ cursor: 'pointer', borderLeft: '1px solid var(--color-border)' }}>
+            <div>
+              <div className="kpi-label">Active Transports</div>
+              <div className="kpi-value">{activeTransports.length}</div>
+              <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-brand-blue-600)' }}>
+                Trips In Transit
+              </div>
+            </div>
+            <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-brand-blue-50)', color: 'var(--color-brand-blue-600)' }}>
+              <ClipboardList size={20} />
+            </div>
+          </div>
+
+          <div className="kpi-card" onClick={() => navigate('/transporter/pods')} style={{ cursor: 'pointer', borderLeft: podPending.length > 0 ? '4px solid #DC2626' : '1px solid var(--color-border)' }}>
+            <div>
+              <div className="kpi-label">POD Pending</div>
+              <div className="kpi-value">{podPending.length}</div>
+              <div className="kpi-trend kpi-trend--down" style={{ color: podPending.length > 0 ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>
+                {podPending.length > 0 ? 'POD Upload Required' : 'All PODs uploaded'}
+              </div>
+            </div>
+            <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)' }}>
+              <Receipt size={20} />
+            </div>
+          </div>
+
         </div>
       </div>
+
 
       {/* ── How it works ── */}
       <div>

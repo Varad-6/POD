@@ -11,27 +11,37 @@ import {
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 const JourneyStep: React.FC<{ num: number; label: string; done: boolean; active: boolean }> = ({ num, label, done, active }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}>
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flex: 1 }}>
     <div style={{
       width: '32px', height: '32px', borderRadius: '50%',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: done || active ? 'var(--color-brand-blue-600)' : 'var(--color-border)',
-      color: '#fff',
-      fontWeight: 800, fontSize: '13px',
-      boxShadow: active ? '0 0 0 4px rgba(47, 95, 224, 0.2)' : 'none',
+      backgroundColor: done || active ? '#FFFFFF' : 'rgba(255, 255, 255, 0.25)',
+      color: done || active ? '#1D4ED8' : '#FFFFFF',
+      fontWeight: 900, fontSize: '13px',
+      border: active ? '2px solid #FFFFFF' : 'none',
+      boxShadow: active ? '0 0 0 4px rgba(255, 255, 255, 0.4)' : 'none',
       transition: 'all var(--transition-normal)'
     }}>
-      {done ? <Check size={16} /> : num}
+      {done ? <Check size={16} strokeWidth={3} /> : num}
     </div>
-    <span style={{ fontSize: '11px', fontWeight: 700, color: done ? 'var(--color-brand-blue-700)' : active ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)', textAlign: 'center', whiteSpace: 'nowrap' }}>
+    <span style={{ 
+      fontSize: '11.5px', 
+      fontWeight: active ? 900 : 700, 
+      color: '#FFFFFF', 
+      textAlign: 'center', 
+      whiteSpace: 'nowrap',
+      opacity: active ? 1 : done ? 0.95 : 0.85,
+      textShadow: active ? '0 1px 2px rgba(0,0,0,0.3)' : 'none'
+    }}>
       {label}
     </span>
   </div>
 );
 
 const StepConnector: React.FC<{ done: boolean }> = ({ done }) => (
-  <div style={{ flex: 1, height: '2.5px', backgroundColor: done ? 'var(--color-brand-blue-600)' : 'var(--color-border)', marginBottom: '16px', transition: 'background-color 0.3s' }} />
+  <div style={{ flex: 1, height: '3px', backgroundColor: done ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)', marginBottom: '18px', transition: 'background-color 0.3s' }} />
 );
+
 
 // ─── Section card ─────────────────────────────────────────────────────────────
 const ActionCard: React.FC<{ title: string; subtitle?: string; icon: React.ReactNode; locked?: boolean; children: React.ReactNode; accentColor?: string }> = ({ title, subtitle, icon, locked, children, accentColor = 'var(--color-brand-blue-600)' }) => (
@@ -232,6 +242,43 @@ export const DriverDashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* ── Driver Actionable KPI Cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+        <div className="kpi-card" style={{ padding: '16px', borderLeft: '4px solid #2563EB' }}>
+          <div>
+            <div className="kpi-label">Assigned Trips</div>
+            <div className="kpi-value" style={{ fontSize: '20px' }}>{assignments.length}</div>
+            <div style={{ fontSize: '11px', color: '#2563EB', fontWeight: 700 }}>Total Driver Trips</div>
+          </div>
+        </div>
+
+        <div className="kpi-card" style={{ padding: '16px', borderLeft: assignments.filter(a => a.status === 'ASSIGNED' || a.status === 'ACCEPTED').length > 0 ? '4px solid #D97706' : '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Pickup Pending</div>
+            <div className="kpi-value" style={{ fontSize: '20px' }}>{assignments.filter(a => a.status === 'ASSIGNED' || a.status === 'ACCEPTED').length}</div>
+            <div style={{ fontSize: '11px', color: 'var(--color-warning-text)', fontWeight: 700 }}>Gate / Tare Required</div>
+          </div>
+        </div>
+
+        <div className="kpi-card" style={{ padding: '16px', borderLeft: assignments.filter(a => a.status === 'DISPATCHED' || a.status === 'IN_TRANSIT').length > 0 ? '4px solid #2563EB' : '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Delivery Pending</div>
+            <div className="kpi-value" style={{ fontSize: '20px' }}>{assignments.filter(a => a.status === 'DISPATCHED' || a.status === 'IN_TRANSIT').length}</div>
+            <div style={{ fontSize: '11px', color: 'var(--color-brand-blue-600)', fontWeight: 700 }}>En Route to Site</div>
+          </div>
+        </div>
+
+        <div className="kpi-card" style={{ padding: '16px', borderLeft: assignments.filter(a => a.status === 'DELIVERED' && !(a as any).pod_file_url).length > 0 ? '4px solid #DC2626' : '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">POD Upload Pending</div>
+            <div className="kpi-value" style={{ fontSize: '20px' }}>{assignments.filter(a => a.status === 'DELIVERED' && !(a as any).pod_file_url).length}</div>
+            <div style={{ fontSize: '11px', color: 'var(--color-error-text)', fontWeight: 700 }}>Photo Receipt Needed</div>
+          </div>
+        </div>
+
+      </div>
+
 
       {/* ── Tab Switcher ── */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '2.5px solid var(--color-border)', paddingBottom: '12px' }}>

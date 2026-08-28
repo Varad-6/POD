@@ -551,6 +551,11 @@ export const SupervisorDashboard: React.FC = () => {
   }
 
   // ─── LIST VIEW ───────────────────────────────────────────────────────────
+  const pendingGateCheck = assignments.filter(a => a.status === 'ASSIGNED' || a.status === 'ACCEPTED');
+  const pendingWeighbridge = assignments.filter(a => (a.status !== 'ASSIGNED' && !a.mine_tare_kg) || (a.loading_status === 'LOADED' && !a.bilty_no));
+  const pendingBilty = assignments.filter(a => a.mine_tare_kg && !a.bilty_no);
+  const readyForDispatch = assignments.filter(a => a.bilty_no && a.status !== 'DISPATCHED');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
@@ -558,7 +563,7 @@ export const SupervisorDashboard: React.FC = () => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-primary)', margin: 0 }}>
-            Gate & Weighbridge
+            Gate & Weighbridge Operations
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
             All active truck runs at your gate. Click any truck to process it step by step.
@@ -576,7 +581,65 @@ export const SupervisorDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* ── Actionable KPI Status Cards ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+        
+        <div className="kpi-card" style={{ borderLeft: pendingGateCheck.length > 0 ? '4px solid #2563EB' : '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Pending Gate Check</div>
+            <div className="kpi-value">{pendingGateCheck.length}</div>
+            <div className="kpi-trend kpi-trend--up" style={{ color: pendingGateCheck.length > 0 ? '#2563EB' : 'var(--color-text-muted)' }}>
+              {pendingGateCheck.length > 0 ? 'Awaiting OTP & Verification' : 'No trucks pending at gate'}
+            </div>
+          </div>
+          <div className="kpi-icon-wrapper" style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
+            <ShieldCheck size={20} />
+          </div>
+        </div>
+
+        <div className="kpi-card" style={{ borderLeft: pendingWeighbridge.length > 0 ? '4px solid #D97706' : '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Pending Weighbridge</div>
+            <div className="kpi-value">{pendingWeighbridge.length}</div>
+            <div className="kpi-trend kpi-trend--up" style={{ color: pendingWeighbridge.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)' }}>
+              {pendingWeighbridge.length > 0 ? 'Tare / Gross Weighing Needed' : 'No weighbridge queue'}
+            </div>
+          </div>
+          <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)' }}>
+            <Scale size={20} />
+          </div>
+        </div>
+
+        <div className="kpi-card" style={{ borderLeft: pendingBilty.length > 0 ? '4px solid #DC2626' : '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Pending Bilty</div>
+            <div className="kpi-value">{pendingBilty.length}</div>
+            <div className="kpi-trend kpi-trend--down" style={{ color: pendingBilty.length > 0 ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>
+              {pendingBilty.length > 0 ? 'Bilty Upload Required' : 'All Biltys uploaded'}
+            </div>
+          </div>
+          <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)' }}>
+            <FileText size={20} />
+          </div>
+        </div>
+
+        <div className="kpi-card" style={{ borderLeft: '1px solid var(--color-border)' }}>
+          <div>
+            <div className="kpi-label">Ready for Dispatch</div>
+            <div className="kpi-value">{readyForDispatch.length}</div>
+            <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-success-text)' }}>
+              Pre-dispatch Completed
+            </div>
+          </div>
+          <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)' }}>
+            <Truck size={20} />
+          </div>
+        </div>
+
+      </div>
+
       {/* Full-width Flagged Reviews alert banner */}
+
       {reviews.length > 0 && (
         <div style={{
           display: 'flex', alignItems: 'center', gap: '14px',

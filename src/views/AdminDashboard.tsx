@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardCheck, FileClock, CheckCircle, XCircle, ArrowRight, Server, ShieldCheck, Activity } from 'lucide-react';
-import { caApi, invoicesApi, ContractV3, ReviewQueueItemV3, DeliveryInvoiceV3, MiroInvoice } from '../lib/api_v3';
+import { ClipboardCheck, FileClock, ArrowRight, Server, FileText, CheckCircle2, Activity } from 'lucide-react';
+
+import { caApi, invoicesApi, ContractV3, PurchaseOrderV3, ReviewQueueItemV3, DeliveryInvoiceV3, MiroInvoice } from '../lib/api_v3';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [contracts, setContracts] = useState<ContractV3[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderV3[]>([]);
   const [reviews, setReviews] = useState<ReviewQueueItemV3[]>([]);
   const [invoices, setInvoices] = useState<DeliveryInvoiceV3[]>([]);
   const [miroInvoices, setMiroInvoices] = useState<MiroInvoice[]>([]);
@@ -17,13 +19,15 @@ export const AdminDashboard: React.FC = () => {
     setLoading(true);
     try {
       const c = await caApi.getContracts();
-      setContracts(c);
+      setContracts(c || []);
+      const pos = await caApi.getPurchaseOrders();
+      setPurchaseOrders(pos || []);
       const r = await caApi.getReviewQueue('OPEN');
-      setReviews(r);
+      setReviews(r || []);
       const i = await caApi.getDeliveryInvoices('SENT_TO_CA');
-      setInvoices(i);
+      setInvoices(i || []);
       const mi = await invoicesApi.listMiro();
-      setMiroInvoices(mi);
+      setMiroInvoices(mi || []);
     } catch (err) {
       console.error('Failed to load dashboard metrics:', err);
     } finally {
@@ -42,6 +46,11 @@ export const AdminDashboard: React.FC = () => {
       window.removeEventListener('pod_data_refreshed', handleDataRefreshed);
     };
   }, []);
+
+  const openPOs = purchaseOrders.filter(p => p.status === 'OPEN');
+  const openReviews = reviews.filter(r => r.status === 'OPEN');
+  const pendingPodVerify = invoices.filter(i => i.status === 'SENT_TO_CA');
+  const pendingMiro = miroInvoices.filter(m => m.status === 'PARKED');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -65,7 +74,7 @@ export const AdminDashboard: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
             <span className="pulse-dot pulse-dot--active" style={{ backgroundColor: '#FFFFFF', boxShadow: '0 0 8px #FFFFFF' }} />
             <span style={{ fontSize: '11px', color: 'var(--color-brand-blue-50)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Fleet Telemetry • SAP S/4HANA Live Integration
+              Company Admin • Action & Verification Control
             </span>
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', margin: 0 }}>
@@ -82,7 +91,7 @@ export const AdminDashboard: React.FC = () => {
             className="btn btn-primary" 
             style={{ backgroundColor: '#ffffff', color: 'var(--color-brand-blue-600)', borderColor: '#ffffff', fontWeight: 700 }}
           >
-            Inspect POD Queue ({reviews.length}) <ArrowRight size={14} />
+            Inspect POD Queue ({openReviews.length}) <ArrowRight size={14} />
           </button>
           <button 
             onClick={() => navigate('/admin/invoices')} 
@@ -91,7 +100,7 @@ export const AdminDashboard: React.FC = () => {
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = '#FFFFFF'; }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
           >
-            MIRO Console ({invoices.length})
+            MIRO Console ({pendingPodVerify.length})
           </button>
         </div>
       </div>
@@ -102,50 +111,65 @@ export const AdminDashboard: React.FC = () => {
         <>
           {/* KPI Cards Grid — Card Encapsulated & Interactive Redirection */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            <div className="kpi-card" onClick={() => navigate('/admin/approvals')} style={{ cursor: 'pointer' }}>
+            
+            {/* 1. Pending PO Release */}
+            <div className="kpi-card" onClick={() => navigate('/admin/contracts')} style={{ cursor: 'pointer', borderLeft: openPOs.length > 0 ? '4px solid #2563EB' : '1px solid var(--color-border)' }}>
+              <div>
+                <div className="kpi-label">Pending PO Release</div>
+                <div className="kpi-value">{openPOs.length}</div>
+                <div className="kpi-trend kpi-trend--up" style={{ color: openPOs.length > 0 ? '#2563EB' : 'var(--color-text-muted)' }}>
+                  {openPOs.length > 0 ? 'Requires CA Action' : 'All released POs handled'}
+                </div>
+              </div>
+              <div className="kpi-icon-wrapper" style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
+                <FileText size={20} />
+              </div>
+            </div>
+
+            {/* 2. Flagged Reviews */}
+            <div className="kpi-card" onClick={() => navigate('/admin/approvals')} style={{ cursor: 'pointer', borderLeft: openReviews.length > 0 ? '4px solid #DC2626' : '1px solid var(--color-border)' }}>
               <div>
                 <div className="kpi-label">Flagged Reviews</div>
-                <div className="kpi-value">{reviews.length}</div>
-                <div className="kpi-trend kpi-trend--down" style={{ color: 'var(--color-error-text)' }}>Requires Attention</div>
+                <div className="kpi-value">{openReviews.length}</div>
+                <div className="kpi-trend kpi-trend--down" style={{ color: openReviews.length > 0 ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>
+                  {openReviews.length > 0 ? 'Requires Attention' : 'No reviews require attention'}
+                </div>
               </div>
               <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)' }}>
                 <ClipboardCheck size={20} />
               </div>
             </div>
 
-            <div className="kpi-card" onClick={() => navigate('/admin/invoices')} style={{ cursor: 'pointer' }}>
+            {/* 3. Pending POD Verification */}
+            <div className="kpi-card" onClick={() => navigate('/admin/approvals')} style={{ cursor: 'pointer', borderLeft: pendingPodVerify.length > 0 ? '4px solid #D97706' : '1px solid var(--color-border)' }}>
               <div>
-                <div className="kpi-label">Park Pending</div>
-                <div className="kpi-value">{invoices.length}</div>
-                <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-warning-text)' }}>Ready to Park</div>
+                <div className="kpi-label">Pending POD Verification</div>
+                <div className="kpi-value">{pendingPodVerify.length}</div>
+                <div className="kpi-trend kpi-trend--up" style={{ color: pendingPodVerify.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)' }}>
+                  {pendingPodVerify.length > 0 ? 'Awaiting Verification' : 'No POD verification pending'}
+                </div>
               </div>
               <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)' }}>
                 <FileClock size={20} />
               </div>
             </div>
 
-            <div className="kpi-card" onClick={() => navigate('/admin/invoices')} style={{ cursor: 'pointer' }}>
+            {/* 4. Pending MIRO */}
+            <div className="kpi-card" onClick={() => navigate('/admin/invoices')} style={{ cursor: 'pointer', borderLeft: pendingMiro.length > 0 ? '4px solid #059669' : '1px solid var(--color-border)' }}>
               <div>
                 <div className="kpi-label">Pending MIRO</div>
-                <div className="kpi-value">{miroInvoices.filter(m => m.status === 'PARKED').length}</div>
-                <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-brand-blue-600)' }}>Parked Docs</div>
+                <div className="kpi-value">{pendingMiro.length}</div>
+                <div className="kpi-trend kpi-trend--up" style={{ color: pendingMiro.length > 0 ? 'var(--color-success-text)' : 'var(--color-text-muted)' }}>
+                  {pendingMiro.length > 0 ? 'Parked Invoices Ready' : 'No MIRO items pending'}
+                </div>
               </div>
-              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-brand-blue-50)', color: 'var(--color-brand-blue-600)' }}>
+              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)' }}>
                 <Server size={20} />
               </div>
             </div>
 
-            <div className="kpi-card">
-              <div>
-                <div className="kpi-label">BAPI Sync Status</div>
-                <div className="kpi-value" style={{ fontSize: '18px', marginTop: '10px', color: 'var(--color-success-text)' }}>ONLINE</div>
-                <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-success-text)' }}>S/4HANA Sync Active</div>
-              </div>
-              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)' }}>
-                <ShieldCheck size={20} />
-              </div>
-            </div>
           </div>
+
 
           <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
             <Card title="Live Outline Agreements Usage Meter">
