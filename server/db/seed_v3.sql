@@ -37,13 +37,31 @@ INSERT OR IGNORE INTO vehicles (id, transporter_id, reg_no, capacity) VALUES
   (4, 1, 'LP33DEFGP', 28.0);
 
 -- CONTRACTS (5 Actual SAP S21 Contracts from Screenshots)
-INSERT OR IGNORE INTO contracts (id, sap_contract_no, customer_id, start_date, end_date, pdf_url, status) VALUES
-  (1, '4600000017', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000017.pdf', 'ACTIVE'),
-  (2, '4600000018', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000018.pdf', 'ACTIVE'),
-  (3, '4600000019', 2, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000019.pdf', 'ACTIVE'),
-  (4, '4600000020', 2, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000020.pdf', 'ACTIVE'),
-  (5, '4600000021', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000021.pdf', 'ACTIVE'),
-  (6, '4600000026', 1, '2026-08-12', '2027-08-12', '/uploads/contracts/ctr_4600000026.pdf', 'ACTIVE');
+INSERT OR IGNORE INTO contracts (id, sap_contract_no, customer_id, contract_type, supplier_no, supplier_name, agreement_date, start_date, end_date, currency, purchasing_org, plant, pdf_url, status) VALUES
+  (1, '4600000017', 1, 'MK', '1402', 'ABC Enterprises', '2026-08-12', '2026-08-12', '2027-08-12', 'INR', '1000', 'MON1 Plant', '/uploads/contracts/ctr_4600000017.pdf', 'ACTIVE'),
+  (2, '4600000018', 1, 'MK', '1402', 'ABC Enterprises', '2026-08-12', '2026-08-12', '2027-08-12', 'INR', '1000', 'MON1 Plant', '/uploads/contracts/ctr_4600000018.pdf', 'ACTIVE'),
+  (3, '4600000019', 2, 'MK', '1402', 'ABC Enterprises', '2026-08-12', '2026-08-12', '2027-08-12', 'INR', '1000', 'MON1 Plant', '/uploads/contracts/ctr_4600000019.pdf', 'ACTIVE'),
+  (4, '4600000020', 2, 'MK', '1402', 'ABC Enterprises', '2026-08-12', '2026-08-12', '2027-08-12', 'INR', '1000', 'MON1 Plant', '/uploads/contracts/ctr_4600000020.pdf', 'ACTIVE'),
+  (5, '4600000021', 1, 'WK', '1403', 'Gajanan Enterprises', '2026-08-12', '2026-08-12', '2027-08-12', 'INR', '1000', 'MON1 Plant', '/uploads/contracts/ctr_4600000021.pdf', 'ACTIVE'),
+  (6, '4600000026', 1, 'WK', '1403', 'Gajanan Enterprises', '2026-08-12', '2026-08-12', '2027-08-12', 'INR', '1000', 'MON1 Plant', '/uploads/contracts/ctr_4600000026.pdf', 'ACTIVE');
+
+-- CONTRACT ITEMS (ALL 7 actual items for Contract 4600000026 from S21 SAP)
+INSERT OR IGNORE INTO contract_items (id, contract_id, item_no, material_no, material_desc, target_qty, ordered_qty, remaining_qty, uom, net_price, currency, price_unit, material_group, plant, storage_loc, item_status, expected_s21_count) VALUES
+  -- Contract 4600000026 (7 Line Items)
+  (1, 6, '10', '4000657', 'SPARE_PARTS_BOX',   100.0, 0.0, 100.0, 'EA', 125000.00, 'INR', 1, 'SPARE', 'MON1 Plant', 'SL01', 'ACTIVE', 7),
+  (2, 6, '20', '4000658', 'CRUSHER_JAW_PLATE', 100.0, 0.0, 100.0, 'PC', 200001.00, 'INR', 1, 'HEAVY', 'MON1 Plant', 'SL01', 'ACTIVE', 7),
+  (3, 6, '30', '4000660', 'DEF_ADBLUE_20L',    100.0, 0.0, 100.0, 'BT', 28000.00,  'INR', 1, 'FLUID', 'MON1 Plant', 'SL02', 'ACTIVE', 7),
+  (4, 6, '40', '200119',  'Shaft',             100.0, 0.0, 100.0, 'EA', 45000.00,  'INR', 1, 'PARTS', 'MON1 Plant', 'SL01', 'ACTIVE', 7),
+  (5, 6, '50', '200117',  'Body',              100.0, 0.0, 100.0, 'EA', 85000.00,  'INR', 1, 'PARTS', 'MON1 Plant', 'SL01', 'ACTIVE', 7),
+  (6, 6, '60', '200116',  'Wheels',            100.0, 0.0, 100.0, 'EA', 35000.00,  'INR', 1, 'PARTS', 'MON1 Plant', 'SL01', 'ACTIVE', 7),
+  (7, 6, '70', '200100',  'STEEL PLATE',       100.0, 0.0, 100.0, 'EA', 55000.00,  'INR', 1, 'RAW',   'MON1 Plant', 'SL03', 'ACTIVE', 7),
+
+  -- Single items for Contracts 1 to 5
+  (8,  1, '10', '40006653', 'SL BIT 20%ASH',       151500.0, 0.0, 151500.0, 'TO',  151.50,    'INR', 1, 'COAL',  'MON1 Plant', 'SL01', 'ACTIVE', 1),
+  (9,  2, '10', '40006654', 'FERT_50KG_BAG',     15.0,     0.0, 15.0,     'BAG', 45000.00,  'INR', 1, 'FERT',  'MON1 Plant', 'SL01', 'ACTIVE', 1),
+  (10, 3, '10', '40006660', 'DEF_ADBLUE_20L',    25.0,     0.0, 25.0,     'BT',  28000.00,  'INR', 1, 'FLUID', 'MON1 Plant', 'SL02', 'ACTIVE', 1),
+  (11, 4, '10', '40006657', 'SPARE_PARTS_BOX',   20.0,     0.0, 20.0,     'EA',  125000.00, 'INR', 1, 'SPARE', 'MON1 Plant', 'SL01', 'ACTIVE', 1),
+  (12, 5, '10', '40006658', 'CRUSHER_JAW_PLATE', 12.0,     0.0, 12.0,     'PC',  3400000.00,'INR', 1, 'HEAVY', 'MON1 Plant', 'SL01', 'ACTIVE', 1);
 
 -- PURCHASE ORDERS (Exact SAP PO Numbers from Contract Data.xlsx sheet - ALL OPEN INITIAL STATE)
 INSERT OR IGNORE INTO purchase_orders (id, contract_id, sap_po_no, material, uom, target_qty, rate, tolerance_pct, cost_center, status) VALUES
@@ -82,3 +100,8 @@ INSERT OR IGNORE INTO purchase_orders (id, contract_id, sap_po_no, material, uom
   (13, 3, '4500001736', 'DEF_ADBLUE_20L (40006660)', 'BT', 25.0, 28000.00, 0.5, 'CC-LOGISTICS-01', 'OPEN'),
   (14, 3, '4500001737', 'DEF_ADBLUE_20L (40006660)', 'BT', 25.0, 28000.00, 0.5, 'CC-LOGISTICS-01', 'OPEN'),
   (15, 3, '4500001738', 'DEF_ADBLUE_20L (40006660)', 'BT', 25.0, 28000.00, 0.5, 'CC-LOGISTICS-01', 'OPEN');
+
+-- PO ITEMS (PO Line Items linked to Purchase Orders & Contract Items)
+INSERT OR IGNORE INTO po_items (id, po_id, contract_item_id, item_no, material_no, material_desc, ordered_qty, delivered_qty, remaining_qty, uom, net_price, currency, price_unit, plant, storage_loc, delivery_date, item_status) VALUES
+  (1, 26, 2, '10', '4000658', 'CRUSHER_JAW_PLATE', 100.0, 0.0, 100.0, 'PC', 200001.00, 'INR', 1, 'MON1 Plant', 'SL01', '2026-08-15', 'OPEN'),
+  (2, 1,  8, '10', '40006653', 'SL BIT 20%ASH',     34.0,  0.0, 34.0,  'TO', 151.50,    'INR', 1, 'MON1 Plant', 'SL01', '2026-08-15', 'OPEN');

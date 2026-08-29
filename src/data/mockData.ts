@@ -82,6 +82,29 @@ export const CONTRACTS = [
     "currency": "INR",
     "fromLocation": "MON1 Plant",
     "toLocation": "Crusher Site"
+  },
+  {
+    "contractNumber": "4600000026",
+    "qualityType": "Multiple Contract Items (7)",
+    "targetQuantity": 700,
+    "uom": "EA",
+    "netValue": 645000.0,
+    "rate": 200.0,
+    "validFrom": "2026-08-12",
+    "validTo": "2027-08-12",
+    "soldToParty": "1403 - Gajanan Enterprises",
+    "currency": "INR",
+    "fromLocation": "MON1 Plant",
+    "toLocation": "Mining Site Yard 01",
+    "items": [
+      { "itemNumber": "10", "materialNumber": "4000657", "materialDescription": "SPARE_PARTS_BOX",   "targetQuantity": 100, "orderUnit": "EA", "netPrice": 200.0, "priceUnit": 1, "plant": "MON1 Plant", "materialGroup": "SPARE", "storageLocation": "SL01", "status": "ACTIVE" },
+      { "itemNumber": "20", "materialNumber": "4000658", "materialDescription": "CRUSHER_JAW_PLATE", "targetQuantity": 100, "orderUnit": "PC", "netPrice": 200.0, "priceUnit": 1, "plant": "MON1 Plant", "materialGroup": "HEAVY", "storageLocation": "SL01", "status": "ACTIVE" },
+      { "itemNumber": "30", "materialNumber": "4000660", "materialDescription": "DEF_ADBLUE_20L",    "targetQuantity": 100, "orderUnit": "BT", "netPrice": 200.0, "priceUnit": 1, "plant": "MON1 Plant", "materialGroup": "FLUID", "storageLocation": "SL02", "status": "ACTIVE" },
+      { "itemNumber": "40", "materialNumber": "200119",  "materialDescription": "Shaft",             "targetQuantity": 100, "orderUnit": "EA", "netPrice": 50.0,  "priceUnit": 1, "plant": "MON1 Plant", "materialGroup": "PARTS", "storageLocation": "SL01", "status": "ACTIVE" },
+      { "itemNumber": "50", "materialNumber": "200117",  "materialDescription": "Body",              "targetQuantity": 100, "orderUnit": "EA", "netPrice": 50.0,  "priceUnit": 1, "plant": "MON1 Plant", "materialGroup": "PARTS", "storageLocation": "SL01", "status": "ACTIVE" },
+      { "itemNumber": "60", "materialNumber": "200116",  "materialDescription": "Wheels",            "targetQuantity": 100, "orderUnit": "EA", "netPrice": 50.0,  "priceUnit": 1, "plant": "MON1 Plant", "materialGroup": "PARTS", "storageLocation": "SL01", "status": "ACTIVE" },
+      { "itemNumber": "70", "materialNumber": "200100",  "materialDescription": "STEEL PLATE",       "targetQuantity": 100, "orderUnit": "EA", "netPrice": 50.0,  "priceUnit": 1, "plant": "MON1 Plant", "materialGroup": "RAW",   "storageLocation": "SL03", "status": "ACTIVE" }
+    ]
   }
 ];
 

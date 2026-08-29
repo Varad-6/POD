@@ -197,29 +197,91 @@ export interface UserV3 {
   entityId?: number;
 }
 
+export interface ContractItemV3 {
+  id: number;
+  contract_id: number;
+  item_no: string;
+  material_no: string;
+  material_desc: string;
+  target_qty: number;
+  ordered_qty: number;
+  remaining_qty: number;
+  uom: string;
+  net_price: number;
+  currency: string;
+  price_unit: number;
+  material_group?: string;
+  plant?: string;
+  storage_loc?: string;
+  item_status: string;
+  expected_s21_count?: number;
+}
+
 export interface ContractV3 {
   id: number;
   sap_contract_no: string;
   customer_id: number;
   customer_name?: string;
+  contract_type?: string;
+  supplier_no?: string;
+  supplier_name?: string;
+  agreement_date?: string;
   start_date: string;
   end_date: string;
+  currency?: string;
+  purchasing_org?: string;
+  plant?: string;
   pdf_url?: string;
   status: 'ACTIVE' | 'EXPIRED' | 'TERMINATED';
+  items?: ContractItemV3[];
   purchase_orders?: PurchaseOrderV3[];
+  items_count?: number;
+  expected_items_count?: number;
+  sync_mismatch?: boolean;
+  source_indicator?: string;
+}
+
+export interface PurchaseOrderItemV3 {
+  id: number;
+  po_id: number;
+  contract_item_id?: number;
+  item_no: string;
+  material_no: string;
+  material_desc: string;
+  ordered_qty: number;
+  delivered_qty: number;
+  remaining_qty: number;
+  uom: string;
+  net_price: number;
+  currency: string;
+  price_unit: number;
+  plant?: string;
+  storage_loc?: string;
+  delivery_date?: string;
+  item_status: string;
 }
 
 export interface PurchaseOrderV3 {
   id: number;
   contract_id: number;
+  contract_item_id?: number;
   sap_po_no: string;
+  sap_item_no?: string;
   material: string;
+  material_desc?: string;
   uom: string;
   target_qty: number;
   rate: number;
   tolerance_pct: number;
   cost_center?: string;
+  sap_plant?: string;
   status: string;
+  items?: PurchaseOrderItemV3[];
+  items_count?: number;
+  expected_items_count?: number;
+  actual_items_count?: number;
+  sync_mismatch?: boolean;
+  source_indicator?: string;
 }
 
 export interface JobConfigV3 {

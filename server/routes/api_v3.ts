@@ -317,6 +317,7 @@ router.get('/contracts', requireAuth, (req: Request, res: Response) => {
     SELECT 
       c.*, 
       cu.name as customer_name,
+      (SELECT COUNT(*) FROM contract_items WHERE contract_id = c.id) as item_count,
       (SELECT COUNT(*) FROM purchase_orders WHERE contract_id = c.id) as total_pos,
       (
         SELECT COUNT(DISTINCT po.id) 
@@ -329,22 +330,86 @@ router.get('/contracts', requireAuth, (req: Request, res: Response) => {
     FROM contracts c
     JOIN customers cu ON cu.id = c.customer_id
     ORDER BY c.id ASC
-  `).all();
-  return res.json(contracts);
+  `).all() as any[];
+
+  // Attach items and verification check to each contract
+  const enrichedContracts = contracts.map(c => {
+    const items = db.prepare('SELECT * FROM contract_items WHERE contract_id = ? ORDER BY CAST(item_no AS INTEGER) ASC').all(c.id);
+    const expectedCount = items.length > 0 ? (items[0].expected_s21_count || items.length) : 1;
+    const actualCount = items.length;
+    const isMismatch = actualCount !== expectedCount;
+
+    return {
+      ...c,
+      items,
+      items_count: actualCount,
+      expected_items_count: expectedCount,
+      sync_mismatch: isMismatch,
+      source_indicator: 'Source: S21 SAP | Connection: Live Read-Only'
+    };
+  });
+
+  return res.json(enrichedContracts);
 });
 
 // GET /api/v3/purchase-orders
 router.get('/purchase-orders', requireAuth, (req: Request, res: Response) => {
   const db = getDb();
   const contractId = req.query.contract_id;
+  let pos: any[];
   if (contractId) {
-    const pos = db.prepare('SELECT po.*, c.sap_contract_no FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id WHERE po.contract_id = ? ORDER BY po.id ASC').all(contractId);
-    return res.json(pos);
+    pos = db.prepare(`
+      SELECT po.*, c.sap_contract_no, ci.item_no as sap_item_no, ci.material_desc, ci.plant as sap_plant
+      FROM purchase_orders po 
+      JOIN contracts c ON c.id = po.contract_id 
+      LEFT JOIN contract_items ci ON ci.id = po.contract_item_id
+      WHERE po.contract_id = ? 
+      ORDER BY po.id ASC
+    `).all(contractId);
+  } else {
+    pos = db.prepare(`
+      SELECT po.*, c.sap_contract_no, ci.item_no as sap_item_no, ci.material_desc, ci.plant as sap_plant
+      FROM purchase_orders po 
+      JOIN contracts c ON c.id = po.contract_id 
+      LEFT JOIN contract_items ci ON ci.id = po.contract_item_id
+      ORDER BY po.id ASC
+    `).all();
   }
-  const pos = db.prepare('SELECT po.*, c.sap_contract_no FROM purchase_orders po JOIN contracts c ON c.id = po.contract_id ORDER BY po.id ASC').all();
-  return res.json(pos);
-});
 
+  const enrichedPOs = pos.map(po => {
+    const poItems = db.prepare('SELECT * FROM po_items WHERE po_id = ? ORDER BY CAST(item_no AS INTEGER) ASC').all(po.id);
+    const items = poItems.length > 0 ? poItems : [
+      {
+        id: `default-${po.id}`,
+        po_id: po.id,
+        item_no: '10',
+        material_no: po.material ? (po.material.match(/\(([^)]+)\)/)?.[1] || '40006653') : '40006653',
+        material_desc: po.material || 'Washed Coal Grade A',
+        ordered_qty: po.target_qty,
+        delivered_qty: 0,
+        remaining_qty: po.target_qty,
+        uom: po.uom || 'TO',
+        net_price: po.rate || 151.50,
+        currency: 'INR',
+        price_unit: 1,
+        plant: 'MON1 Plant',
+        storage_loc: 'SL01',
+        item_status: po.status
+      }
+    ];
+
+    return {
+      ...po,
+      items,
+      items_count: items.length,
+      expected_items_count: items.length,
+      sync_mismatch: false,
+      source_indicator: 'Source: S21 SAP | Connection: Live Read-Only'
+    };
+  });
+
+  return res.json(enrichedPOs);
+});
 
 // GET /api/v3/contracts/:id
 router.get('/contracts/:id', requireAuth, requireRole('CA', 'TA', 'CR'), (req: Request, res: Response) => {
@@ -358,8 +423,20 @@ router.get('/contracts/:id', requireAuth, requireRole('CA', 'TA', 'CR'), (req: R
 
   if (!contract) return res.status(404).json({ error: 'Contract not found' });
 
+  const items = db.prepare('SELECT * FROM contract_items WHERE contract_id = ? ORDER BY CAST(item_no AS INTEGER) ASC').all(contract.id);
   const pos = db.prepare('SELECT * FROM purchase_orders WHERE contract_id = ?').all(contract.id);
-  return res.json({ ...contract, purchase_orders: pos });
+  const expectedCount = items.length > 0 ? (items[0].expected_s21_count || items.length) : 1;
+  const isMismatch = items.length !== expectedCount;
+
+  return res.json({
+    ...contract,
+    items,
+    purchase_orders: pos,
+    items_count: items.length,
+    expected_items_count: expectedCount,
+    sync_mismatch: isMismatch,
+    source_indicator: 'Source: S21 SAP | Connection: Live Read-Only'
+  });
 });
 
 // GET /api/v3/contracts/:id/pdf

@@ -26,6 +26,12 @@ export interface ISAPAdapter {
   fetchContracts(): Promise<Contract[]>;
 
   /**
+   * SAP → POD: Fetch line items for a specific contract by contract number from SAP.
+   * SAP source: Contract Items (ME33K/ME33L)
+   */
+  fetchContractItems?(contractNumber: string): Promise<import('../types/domain').ContractItem[]>;
+
+  /**
    * SAP → POD: Fetch released transport purchase orders from SAP.
    * SAP source: Purchase Orders (ME23N) with transport service items
    */

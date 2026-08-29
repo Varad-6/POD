@@ -28,6 +28,21 @@ export interface User {
 // SAP MASTER DATA (synced FROM SAP S/4HANA)
 // ──────────────────────────────────────────────
 
+export interface ContractItem {
+  itemNumber: string;
+  materialNumber: string;
+  materialDescription: string;
+  targetQuantity: number;
+  orderUnit: string;
+  netPrice: number;
+  currency?: string;
+  priceUnit?: number;
+  plant?: string;
+  materialGroup?: string;
+  storageLocation?: string;
+  status?: string;
+}
+
 export interface Contract {
   contractNumber: string;          // SAP Outline Agreement / Contract number
   qualityType: string;             // Material / Quality type description
@@ -41,7 +56,25 @@ export interface Contract {
   currency: string;                // ZAR
   fromLocation: string;            // Loading site
   toLocation: string;              // Delivery destination
+  items?: ContractItem[];          // S21 Contract Line Items collection
   sapSyncStatus?: SAPSyncStatus;
+}
+
+export interface PurchaseOrderItem {
+  itemNumber: string;
+  materialNumber: string;
+  materialDescription: string;
+  orderedQuantity: number;
+  deliveredQuantity?: number;
+  remainingQuantity?: number;
+  unit: string;
+  netPrice: number;
+  currency?: string;
+  priceUnit?: number;
+  plant?: string;
+  storageLocation?: string;
+  deliveryDate?: string;
+  status?: string;
 }
 
 export interface PurchaseOrder {
@@ -65,6 +98,7 @@ export interface PurchaseOrder {
   consignorName?: string;
   consigneeName?: string;
   declaredValue?: number;
+  items?: PurchaseOrderItem[];     // S21 PO Line Items collection
   sapSyncStatus?: SAPSyncStatus;
 }
 

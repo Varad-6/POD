@@ -41,15 +41,46 @@ CREATE TABLE IF NOT EXISTS contracts (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   sap_contract_no TEXT UNIQUE NOT NULL,
   customer_id     INTEGER NOT NULL REFERENCES customers(id),
+  contract_type   TEXT DEFAULT 'WK',
+  supplier_no     TEXT DEFAULT '1402',
+  supplier_name   TEXT DEFAULT 'ABC Enterprises',
+  agreement_date  TEXT DEFAULT '2026-08-12',
   start_date      TEXT NOT NULL,
   end_date        TEXT NOT NULL,
+  currency        TEXT DEFAULT 'INR',
+  purchasing_org  TEXT DEFAULT '1000',
+  plant           TEXT DEFAULT 'MON1 Plant',
   pdf_url         TEXT,
   status          TEXT NOT NULL CHECK(status IN ('ACTIVE', 'EXPIRED', 'TERMINATED')) DEFAULT 'ACTIVE'
 );
 
+CREATE TABLE IF NOT EXISTS contract_items (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  contract_id         INTEGER NOT NULL REFERENCES contracts(id) ON DELETE CASCADE,
+  item_no             TEXT NOT NULL, -- e.g. '10', '20', '30', etc.
+  material_no         TEXT NOT NULL,
+  material_desc       TEXT NOT NULL,
+  target_qty          REAL NOT NULL,
+  ordered_qty         REAL NOT NULL DEFAULT 0,
+  remaining_qty       REAL NOT NULL,
+  uom                 TEXT NOT NULL,
+  net_price           REAL NOT NULL,
+  currency            TEXT NOT NULL DEFAULT 'INR',
+  price_unit          REAL NOT NULL DEFAULT 1,
+  material_group      TEXT,
+  plant               TEXT DEFAULT 'MON1 Plant',
+  storage_loc         TEXT,
+  item_status         TEXT DEFAULT 'ACTIVE',
+  expected_s21_count  INTEGER DEFAULT 7,
+  UNIQUE(contract_id, item_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_contract_items_contract ON contract_items(contract_id);
+
 CREATE TABLE IF NOT EXISTS purchase_orders (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   contract_id     INTEGER NOT NULL REFERENCES contracts(id),
+  contract_item_id INTEGER REFERENCES contract_items(id),
   sap_po_no       TEXT UNIQUE NOT NULL,
   material        TEXT NOT NULL,
   uom             TEXT NOT NULL,
@@ -61,6 +92,29 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   detention_rate_per_hour REAL DEFAULT 150.00,
   status          TEXT NOT NULL CHECK(status IN ('OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')) DEFAULT 'OPEN'
 );
+
+CREATE TABLE IF NOT EXISTS po_items (
+  id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+  po_id               INTEGER NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
+  contract_item_id    INTEGER REFERENCES contract_items(id),
+  item_no             TEXT NOT NULL, -- e.g. '10', '20', '30'
+  material_no         TEXT NOT NULL,
+  material_desc       TEXT NOT NULL,
+  ordered_qty         REAL NOT NULL,
+  delivered_qty       REAL NOT NULL DEFAULT 0,
+  remaining_qty       REAL NOT NULL,
+  uom                 TEXT NOT NULL,
+  net_price           REAL NOT NULL,
+  currency            TEXT NOT NULL DEFAULT 'INR',
+  price_unit          REAL NOT NULL DEFAULT 1,
+  plant               TEXT DEFAULT 'MON1 Plant',
+  storage_loc         TEXT,
+  delivery_date       TEXT,
+  item_status         TEXT DEFAULT 'OPEN',
+  UNIQUE(po_id, item_no)
+);
+
+CREATE INDEX IF NOT EXISTS idx_po_items_po ON po_items(po_id);
 
 -- ── 2. JOB CONFIGS & TRANSPORT ASSIGNMENTS ───────────────────
 CREATE TABLE IF NOT EXISTS job_configs (

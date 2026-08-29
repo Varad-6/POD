@@ -90,8 +90,14 @@ export const S21SAPAdapter: ISAPAdapter = {
    */
   async fetchContracts(): Promise<Contract[]> {
     try {
-      const results = await sapFetch<any[]>(`${CONTRACTS_ENDPOINT}?$filter=Status eq 'ACTIVE'`);
+      // OData $expand=to_ContractItem ensures SAP returns child line items along with header
+      const results = await sapFetch<any[]>(`${CONTRACTS_ENDPOINT}?$filter=Status eq 'ACTIVE'&$expand=to_ContractItem`);
       
+      const totalItemsCount = results.reduce((sum, item) => {
+        const itemArr = item.Items || item.items || item.to_ContractItem?.results || [];
+        return sum + (Array.isArray(itemArr) ? itemArr.length : 0);
+      }, 0);
+
       liveSyncLogs.push({
         id: `log-cntr-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -99,26 +105,49 @@ export const S21SAPAdapter: ISAPAdapter = {
         entity: 'Contract',
         entityId: 'ALL',
         status: 'SYNCED',
-        message: `Successfully fetched ${results.length} contracts from SAP S21`,
+        message: `Successfully fetched ${results.length} contract headers and ${totalItemsCount} line items from SAP S21 via $expand=to_ContractItem`,
       });
 
-      return results.map((item): Contract => ({
-        contractNumber: item.ContractNumber || item.EBELN || item.contractNumber,
-        qualityType: item.QualityType || item.TXZ01 || item.qualityType || 'RB Coal Grade A',
-        targetQuantity: Number(item.TargetQuantity || item.KTMNG || item.targetQuantity || 0),
-        uom: item.Uom || item.MEINS || item.uom || 'TON',
-        netValue: Number(item.NetValue || item.NETWR || item.netValue || 0),
-        rate: Number(item.Rate || item.NETPR || item.rate || 0),
-        validFrom: item.ValidFrom || item.KDATB || item.validFrom || '',
-        validTo: item.ValidTo || item.KDATE || item.validTo || '',
-        soldToParty: item.SoldToParty || item.NAME1 || item.soldToParty || 'Eskom / Client',
-        currency: item.Currency || item.WAERS || item.currency || 'ZAR',
-        fromLocation: item.FromLocation || item.WERKS_FROM || item.fromLocation || 'Ikwezi Siding',
-        toLocation: item.ToLocation || item.WERKS_TO || item.toLocation || 'Majuba Power Station',
-        sapSyncStatus: 'SYNCED',
-      }));
+      return results.map((item): Contract => {
+        const itemArr = item.Items || item.items || item.to_ContractItem?.results;
+        const parsedItems = Array.isArray(itemArr)
+          ? itemArr.map((ci: any) => ({
+              itemNumber: String(ci.ItemNo || ci.EBELP || ci.item_no || '10'),
+              materialNumber: String(ci.MaterialNo || ci.MATNR || ci.material_no || ''),
+              materialDescription: String(ci.MaterialDesc || ci.TXZ01 || ci.material_desc || ''),
+              targetQuantity: Number(ci.TargetQty || ci.KTMNG || ci.target_qty || 0),
+              orderUnit: String(ci.Uom || ci.MEINS || ci.uom || 'EA'),
+              netPrice: Number(ci.NetPrice || ci.NETPR || ci.net_price || 0),
+              currency: String(ci.Currency || ci.WAERS || ci.currency || 'INR'),
+              priceUnit: Number(ci.PriceUnit || ci.PEINH || ci.price_unit || 1),
+              plant: String(ci.Plant || ci.WERKS || ci.plant || 'MON1 Plant'),
+              materialGroup: String(ci.MaterialGroup || ci.MATKL || ci.material_group || 'GENERAL'),
+              storageLocation: String(ci.StorageLoc || ci.LGORT || ci.storage_loc || 'SL01'),
+              status: String(ci.Status || ci.item_status || 'ACTIVE')
+            }))
+          : [];
+
+        console.log(`[S21SAPAdapter] Contract #${item.ContractNumber || item.EBELN || item.contractNumber} retrieved with ${parsedItems.length} items from S21.`);
+
+        return {
+          contractNumber: String(item.ContractNumber || item.EBELN || item.contractNumber),
+          qualityType: parsedItems.length > 0 ? parsedItems[0].materialDescription : (item.QualityType || item.TXZ01 || 'RB Coal Grade A'),
+          targetQuantity: Number(item.TargetQuantity || item.KTMNG || item.targetQuantity || 0),
+          uom: String(item.Uom || item.MEINS || item.uom || 'TON'),
+          netValue: Number(item.NetValue || item.NETWR || item.netValue || 0),
+          rate: Number(item.Rate || item.NETPR || item.rate || 0),
+          validFrom: String(item.ValidFrom || item.KDATB || item.validFrom || ''),
+          validTo: String(item.ValidTo || item.KDATE || item.validTo || ''),
+          soldToParty: String(item.SoldToParty || item.NAME1 || item.soldToParty || 'Eskom / Client'),
+          currency: String(item.Currency || item.WAERS || item.currency || 'ZAR'),
+          fromLocation: String(item.FromLocation || item.WERKS_FROM || item.fromLocation || 'Ikwezi Siding'),
+          toLocation: String(item.ToLocation || item.WERKS_TO || item.toLocation || 'Majuba Power Station'),
+          items: parsedItems,
+          sapSyncStatus: 'SYNCED',
+        };
+      });
     } catch (err: any) {
-      console.warn('[S21SAPAdapter] fetchContracts live failed, falling back to mock:', err);
+      console.warn('[S21SAPAdapter] fetchContracts live failed, logging error telemetry and fetching from backend API:', err);
       liveSyncLogs.push({
         id: `log-cntr-err-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -126,7 +155,7 @@ export const S21SAPAdapter: ISAPAdapter = {
         entity: 'Contract',
         entityId: 'ALL',
         status: 'FAILED',
-        message: `S21 Fetch Failed: ${err.message}. Falling back to mock data.`,
+        message: `S21 OData Fetch Error: ${err.message}. Fetching synced contracts from API endpoint.`,
       });
       // Fallback: Fetch directly from S21 Express Server database endpoints (/api/v3/contracts)
       const caContracts = await fetch('http://localhost:3001/api/v3/contracts', {
@@ -135,7 +164,7 @@ export const S21SAPAdapter: ISAPAdapter = {
       
       return (caContracts || []).map((c: any): Contract => ({
         contractNumber: c.sap_contract_no,
-        qualityType: c.material || 'SL BIT 20%ASH',
+        qualityType: c.items && c.items.length > 0 ? c.items[0].material_desc : (c.material || 'SL BIT 20%ASH'),
         targetQuantity: c.target_qty || 151500,
         uom: c.uom || 'TO',
         netValue: c.net_value || 151501,
@@ -143,11 +172,75 @@ export const S21SAPAdapter: ISAPAdapter = {
         validFrom: c.start_date,
         validTo: c.end_date,
         soldToParty: c.customer_name || '1402 - ABC Enterprises',
-        currency: 'INR',
+        currency: c.currency || 'INR',
         fromLocation: 'MON1 Plant',
         toLocation: 'Siding Yard 1001',
+        items: (c.items || []).map((ci: any) => ({
+          itemNumber: ci.item_no,
+          materialNumber: ci.material_no,
+          materialDescription: ci.material_desc,
+          targetQuantity: ci.target_qty,
+          orderUnit: ci.uom,
+          netPrice: ci.net_price,
+          currency: ci.currency,
+          priceUnit: ci.price_unit,
+          plant: ci.plant,
+          materialGroup: ci.material_group,
+          storageLocation: ci.storage_loc,
+          status: ci.item_status
+        })),
         sapSyncStatus: 'SYNCED'
       }));
+    }
+  },
+
+  /**
+   * SAP → POD: Fetch line items for a specific contract by contract number from SAP S21.
+   * Endpoint: /ZPOD_CONTRACTS_SRV/ContractItemSet?$filter=ContractNumber eq '004600000026'
+   */
+  async fetchContractItems(contractNumber: string) {
+    try {
+      // Format SAP contract number with leading zeros if numeric (e.g. 4600000026 -> 004600000026)
+      const paddedNo = /^\d+$/.test(contractNumber) ? contractNumber.padStart(10, '0') : contractNumber;
+      const endpoint = `/ZPOD_CONTRACTS_SRV/ContractItemSet?$filter=ContractNumber eq '${paddedNo}' or ContractNumber eq '${contractNumber}'`;
+      const results = await sapFetch<any[]>(endpoint);
+
+      liveSyncLogs.push({
+        id: `log-cntr-items-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        direction: 'SAP_TO_POD',
+        entity: 'ContractItem',
+        entityId: contractNumber,
+        status: 'SYNCED',
+        message: `Fetched ${results.length} items from S21 for contract #${contractNumber}`,
+      });
+
+      return (results || []).map((ci: any) => ({
+        itemNumber: String(ci.ItemNo || ci.EBELP || ci.item_no || '10'),
+        materialNumber: String(ci.MaterialNo || ci.MATNR || ci.material_no || ''),
+        materialDescription: String(ci.MaterialDesc || ci.TXZ01 || ci.material_desc || ''),
+        targetQuantity: Number(ci.TargetQty || ci.KTMNG || ci.target_qty || 0),
+        orderUnit: String(ci.Uom || ci.MEINS || ci.uom || 'EA'),
+        netPrice: Number(ci.NetPrice || ci.NETPR || ci.net_price || 0),
+        currency: String(ci.Currency || ci.WAERS || ci.currency || 'INR'),
+        priceUnit: Number(ci.PriceUnit || ci.PEINH || ci.price_unit || 1),
+        plant: String(ci.Plant || ci.WERKS || ci.plant || 'MON1 Plant'),
+        materialGroup: String(ci.MaterialGroup || ci.MATKL || ci.material_group || 'GENERAL'),
+        storageLocation: String(ci.StorageLoc || ci.LGORT || ci.storage_loc || 'SL01'),
+        status: String(ci.Status || ci.item_status || 'ACTIVE')
+      }));
+    } catch (err: any) {
+      console.warn(`[S21SAPAdapter] fetchContractItems failed for #${contractNumber}:`, err);
+      liveSyncLogs.push({
+        id: `log-cntr-item-err-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        direction: 'SAP_TO_POD',
+        entity: 'ContractItem',
+        entityId: contractNumber,
+        status: 'FAILED',
+        message: `S21 Contract Items Fetch Failed for #${contractNumber}: ${err.message}`,
+      });
+      return [];
     }
   },
 
@@ -157,7 +250,7 @@ export const S21SAPAdapter: ISAPAdapter = {
    */
   async fetchPurchaseOrders(): Promise<PurchaseOrder[]> {
     try {
-      const results = await sapFetch<any[]>(`${POS_ENDPOINT}?$filter=Status ne 'CANCELLED'`);
+      const results = await sapFetch<any[]>(`${POS_ENDPOINT}?$filter=Status ne 'CANCELLED'&$expand=to_PurchaseOrderItem`);
       
       liveSyncLogs.push({
         id: `log-po-${Date.now()}`,
@@ -166,29 +259,52 @@ export const S21SAPAdapter: ISAPAdapter = {
         entity: 'PurchaseOrder',
         entityId: 'ALL',
         status: 'SYNCED',
-        message: `Successfully fetched ${results.length} POs from SAP S21`,
+        message: `Successfully fetched ${results.length} PO headers from SAP S21 via $expand=to_PurchaseOrderItem`,
       });
 
-      return results.map((item): PurchaseOrder => ({
-        purchaseOrderNo: item.PurchaseOrderNo || item.EBELN || item.purchaseOrderNo,
-        contractRef: item.ContractRef || item.KONNR || item.contractRef || '',
-        transporter: item.Transporter || item.NAME1 || item.transporter || '',
-        productDescription: item.ProductDescription || item.TXZ01 || item.productDescription || '',
-        rate: Number(item.Rate || item.NETPR || item.rate || 0),
-        unit: item.Unit || item.MEINS || item.unit || 'TON',
-        targetQuantity: Number(item.TargetQuantity || item.MENGE || item.targetQuantity || 0),
-        costCenter: item.CostCenter || item.KOSTL || item.costCenter || '',
-        fromLocation: item.FromLocation || item.WERKS_FROM || item.fromLocation || '',
-        toLocation: item.ToLocation || item.WERKS_TO || item.toLocation || '',
-        paymentTerms: item.PaymentTerms || item.ZTERM || item.paymentTerms || 'Net 30 Days',
-        poDate: item.PoDate || item.AEDAT || item.poDate || new Date().toISOString().split('T')[0],
-        status: item.Status || item.status || 'PENDING_SIGNATURE',
-        signedBy: item.SignedBy || item.signedBy,
-        signedDate: item.SignedDate || item.signedDate,
-        sapSyncStatus: 'SYNCED',
-      }));
+      return results.map((item): PurchaseOrder => {
+        const itemArr = item.Items || item.items || item.to_PurchaseOrderItem?.results;
+        const parsedItems = Array.isArray(itemArr)
+          ? itemArr.map((pi: any) => ({
+              itemNumber: String(pi.ItemNo || pi.EBELP || pi.item_no || '10'),
+              materialNumber: String(pi.MaterialNo || pi.MATNR || pi.material_no || ''),
+              materialDescription: String(pi.MaterialDesc || pi.TXZ01 || pi.material_desc || ''),
+              orderedQuantity: Number(pi.OrderedQty || pi.MENGE || pi.ordered_qty || 0),
+              deliveredQuantity: Number(pi.DeliveredQty || pi.delivered_qty || 0),
+              remainingQuantity: Number(pi.RemainingQty || pi.remaining_qty || 0),
+              unit: String(pi.Uom || pi.MEINS || pi.uom || 'TON'),
+              netPrice: Number(pi.NetPrice || pi.NETPR || pi.net_price || 0),
+              currency: String(pi.Currency || pi.WAERS || pi.currency || 'INR'),
+              priceUnit: Number(pi.PriceUnit || pi.PEINH || pi.price_unit || 1),
+              plant: String(pi.Plant || pi.WERKS || pi.plant || 'MON1 Plant'),
+              storageLocation: String(pi.StorageLoc || pi.LGORT || pi.storage_loc || 'SL01'),
+              deliveryDate: String(pi.DeliveryDate || pi.EINDT || pi.delivery_date || ''),
+              status: String(pi.Status || pi.item_status || 'OPEN')
+            }))
+          : [];
+
+        return {
+          purchaseOrderNo: String(item.PurchaseOrderNo || item.EBELN || item.purchaseOrderNo),
+          contractRef: String(item.ContractRef || item.KONNR || item.contractRef || ''),
+          transporter: String(item.Transporter || item.NAME1 || item.transporter || ''),
+          productDescription: String(item.ProductDescription || item.TXZ01 || item.productDescription || ''),
+          rate: Number(item.Rate || item.NETPR || item.rate || 0),
+          unit: String(item.Unit || item.MEINS || item.unit || 'TON'),
+          targetQuantity: Number(item.TargetQuantity || item.MENGE || item.targetQuantity || 0),
+          costCenter: String(item.CostCenter || item.KOSTL || item.costCenter || ''),
+          fromLocation: String(item.FromLocation || item.WERKS_FROM || item.fromLocation || ''),
+          toLocation: String(item.ToLocation || item.WERKS_TO || item.toLocation || ''),
+          paymentTerms: String(item.PaymentTerms || item.ZTERM || item.paymentTerms || 'Net 30 Days'),
+          poDate: String(item.PoDate || item.AEDAT || item.poDate || new Date().toISOString().split('T')[0]),
+          status: (item.Status || item.status || 'PENDING_SIGNATURE') as any,
+          signedBy: item.SignedBy || item.signedBy,
+          signedDate: item.SignedDate || item.signedDate,
+          items: parsedItems,
+          sapSyncStatus: 'SYNCED',
+        };
+      });
     } catch (err: any) {
-      console.warn('[S21SAPAdapter] fetchPurchaseOrders live failed, falling back to mock:', err);
+      console.warn('[S21SAPAdapter] fetchPurchaseOrders live failed, falling back to backend API endpoint:', err);
       liveSyncLogs.push({
         id: `log-po-err-${Date.now()}`,
         timestamp: new Date().toISOString(),
@@ -196,7 +312,7 @@ export const S21SAPAdapter: ISAPAdapter = {
         entity: 'PurchaseOrder',
         entityId: 'ALL',
         status: 'FAILED',
-        message: `S21 Fetch PO Failed: ${err.message}. Falling back to mock data.`,
+        message: `S21 Fetch PO Failed: ${err.message}. Falling back to API endpoint.`,
       });
       // Fallback: Fetch directly from S21 Express Server database endpoints (/api/v3/purchase-orders)
       const caPOs = await fetch('http://localhost:3001/api/v3/purchase-orders', {

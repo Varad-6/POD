@@ -57,6 +57,14 @@ export function initDb(): Database.Database {
   addColumnIfNotExists('transport_assignments', 'dispatch_user_agent', 'TEXT');
   addColumnIfNotExists('purchase_orders', 'allowed_queue_time_mins', 'INTEGER DEFAULT 60');
   addColumnIfNotExists('purchase_orders', 'detention_rate_per_hour', 'REAL DEFAULT 150.00');
+  addColumnIfNotExists('purchase_orders', 'contract_item_id', 'INTEGER');
+  addColumnIfNotExists('contracts', 'contract_type', "TEXT DEFAULT 'WK'");
+  addColumnIfNotExists('contracts', 'supplier_no', "TEXT DEFAULT '1402'");
+  addColumnIfNotExists('contracts', 'supplier_name', "TEXT DEFAULT 'ABC Enterprises'");
+  addColumnIfNotExists('contracts', 'agreement_date', "TEXT DEFAULT '2026-08-12'");
+  addColumnIfNotExists('contracts', 'currency', "TEXT DEFAULT 'INR'");
+  addColumnIfNotExists('contracts', 'purchasing_org', "TEXT DEFAULT '1000'");
+  addColumnIfNotExists('contracts', 'plant', "TEXT DEFAULT 'MON1 Plant'");
 
   // Ensure job_config_pos junction table exists
   instance.exec(`
@@ -72,20 +80,18 @@ export function initDb(): Database.Database {
   `);
 
 
-  // Check if seeded
+  // Always ensure bcrypt password hash for Demo@1234 is set for all demo users
+  const DEMO_PASSWORD = 'Demo@1234';
+  const hash = bcrypt.hashSync(DEMO_PASSWORD, 10);
+
   const userCount = (instance.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }).c;
   if (userCount === 0) {
     const seed = readFileSync(SEED_PATH, 'utf8');
     instance.exec(seed);
-
-    // Hash passwords properly
-    const DEMO_PASSWORD = 'Demo@1234';
-    const hash = bcrypt.hashSync(DEMO_PASSWORD, 10);
-    instance.prepare('UPDATE users SET password_hash = ?').run(hash);
-    console.log('[DB V3] Seed data applied. All users set to password: Demo@1234');
-  } else {
-    console.log(`[DB V3] Database already has ${userCount} users, skipping seed.`);
   }
+  
+  instance.prepare('UPDATE users SET password_hash = ?').run(hash);
+  console.log('[DB V3] User authentication hashes updated for password: Demo@1234');
 
   return instance;
 }

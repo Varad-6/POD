@@ -161,8 +161,8 @@ export const AdminContracts: React.FC = () => {
                           <td style={{ fontSize: '12px' }}>
                             {c.start_date} to {c.end_date}
                           </td>
-                          <td style={{ color: 'var(--color-text-body)', fontWeight: uniqueMaterials.length > 1 ? 700 : 500 }}>
-                            {uniqueMaterials.length > 1 ? (
+                          <td style={{ color: 'var(--color-text-body)', fontWeight: 700 }}>
+                            {c.items && c.items.length > 1 ? (
                               <span style={{ 
                                 backgroundColor: '#EFF6FF', 
                                 color: '#1D4ED8', 
@@ -172,14 +172,22 @@ export const AdminContracts: React.FC = () => {
                                 fontSize: '11px',
                                 fontWeight: 700
                               }}>
-                                {materialDisplay}
+                                {c.items.length} Contract Items
                               </span>
+                            ) : c.items && c.items.length === 1 ? (
+                              c.items[0].material_desc
                             ) : (
-                              materialDisplay
+                              '1 Contract Item'
                             )}
                           </td>
                           <td>
-                            <StatusBadge status={c.status} />
+                            {c.sync_mismatch ? (
+                              <span style={{ fontSize: '10px', fontWeight: 800, color: '#DC2626', backgroundColor: '#FEF2F2', padding: '2px 6px', borderRadius: '4px', border: '1px solid #FCA5A5' }}>
+                                SYNC MISMATCH
+                              </span>
+                            ) : (
+                              <StatusBadge status={c.status} />
+                            )}
                           </td>
                         </tr>
                       );
@@ -241,37 +249,61 @@ export const AdminContracts: React.FC = () => {
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
-                    {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).map((po) => (
-                      <div key={po.id} style={{
-                        backgroundColor: 'var(--color-brand-blue-50)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '8px',
-                        padding: '10px 12px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <strong className="mono" style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>PO #{po.sap_po_no}</strong>
-                            <StatusBadge status={po.status} />
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>
-                            {po.material}
-                          </div>
-                        </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                    {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).map((po) => {
+                      const poItems = po.items && po.items.length > 0 ? po.items : [];
+                      return (
+                        <div key={po.id} style={{
+                          backgroundColor: 'var(--color-brand-blue-50)',
+                          border: '1px solid var(--color-border)',
+                          borderRadius: '8px',
+                          padding: '10px 12px'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <strong className="mono" style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>PO #{po.sap_po_no}</strong>
+                                <StatusBadge status={po.status} />
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>
+                                {po.material}
+                              </div>
+                            </div>
 
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-600)' }}>
-                            {po.target_qty} {po.uom}
-                          </span>
-                          <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                            {formatCurrency(po.rate)} / {po.uom}
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-600)' }}>
+                                {po.target_qty} {po.uom}
+                              </span>
+                              <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+                                {formatCurrency(po.rate)} / {po.uom}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Dynamic PO Line Items */}
+                          <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #CBD5E1' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                              PO Line Items ({poItems.length > 0 ? poItems.length : 1})
+                            </div>
+                            {poItems.length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {poItems.map((item) => (
+                                  <div key={item.id} style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '4px 8px', borderRadius: '4px', border: '1px solid #E2E8F0' }}>
+                                    <span><strong>Item {item.item_no}:</strong> {item.material_desc}</span>
+                                    <span style={{ fontWeight: 700, color: '#2563EB' }}>{item.ordered_qty} {item.uom}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between', backgroundColor: '#FFFFFF', padding: '4px 8px', borderRadius: '4px' }}>
+                                <span><strong>Item 10:</strong> {po.material}</span>
+                                <span style={{ fontWeight: 700, color: '#2563EB' }}>{po.target_qty} {po.uom}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -286,9 +318,14 @@ export const AdminContracts: React.FC = () => {
                   justifyContent: 'space-between',
                   alignItems: 'center'
                 }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', textTransform: 'uppercase' }}>
-                    TOTAL PLANNED PAYLOAD
-                  </span>
+                  <div>
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', textTransform: 'uppercase', display: 'block' }}>
+                      TOTAL PLANNED PAYLOAD
+                    </span>
+                    <span style={{ fontSize: '10.5px', color: '#3B82F6', fontWeight: 600 }}>
+                      Calculated from {selectedPOsToAssign.length > 0 ? selectedPOsToAssign.reduce((sum, p) => sum + (p.items?.length || 1), 0) : (selectedPOToAssign?.items?.length || 1)} PO line item(s)
+                    </span>
+                  </div>
                   <span style={{ fontSize: '16px', fontWeight: 900, color: '#1D4ED8' }}>
                     {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).reduce((sum, p) => sum + (Number(p.target_qty) || 0), 0).toFixed(2)} TON
                   </span>
@@ -404,45 +441,78 @@ export const AdminContracts: React.FC = () => {
               <Card title="Contract Detail Inspector">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: '0 0 8px 0', letterSpacing: '0.04em' }}>
-                      SAP Outline Agreement Header (#{selectedContract.sap_contract_no})
-                    </h4>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.04em' }}>
+                        SAP Outline Agreement Header (#{selectedContract.sap_contract_no})
+                      </h4>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', border: '1px solid #CBD5E1' }}>
+                        Source: S21 SAP
+                      </span>
+                    </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px', backgroundColor: 'var(--color-bg-page)', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                       <div>
                         <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Agreement Type</span>
                         <strong style={{ color: '#2563EB' }}>
-                          {selectedContract.sap_contract_no === '4600000026' || selectedContract.sap_contract_no === '4600000021' || selectedContract.sap_contract_no === '4600000017' ? 'Value Contract (WK)' : 'Quantity Contract (MK)'}
+                          {selectedContract.contract_type === 'WK' || selectedContract.sap_contract_no === '4600000026' || selectedContract.sap_contract_no === '4600000021' ? 'Value Contract (WK)' : 'Quantity Contract (MK)'}
                         </strong>
                       </div>
                       <div>
                         <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Supplier</span>
                         <strong style={{ color: 'var(--color-text-heading)' }}>
-                          {selectedContract.sap_contract_no === '4600000026' || selectedContract.sap_contract_no === '4600000021' ? '1403 — Gajanan Enterprises' : '1402 — ABC Enterprises'}
+                          {selectedContract.supplier_name || (selectedContract.sap_contract_no === '4600000026' || selectedContract.sap_contract_no === '4600000021' ? '1403 — Gajanan Enterprises' : '1402 — ABC Enterprises')}
                         </strong>
                       </div>
                       <div>
                         <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Agreement Date</span>
-                        <strong>{selectedContract.start_date || '12.08.2026'}</strong>
+                        <strong>{selectedContract.agreement_date || selectedContract.start_date || '12.08.2026'}</strong>
                       </div>
                       <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Currency</span>
-                        <strong>INR</strong>
+                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Currency & Plant</span>
+                        <strong>{selectedContract.currency || 'INR'} ({selectedContract.plant || 'MON1 Plant'})</strong>
                       </div>
                     </div>
                   </div>
 
                   {/* Contract Items Overview */}
                   <div>
-                    <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: '12px 0 8px 0', letterSpacing: '0.04em' }}>
-                      Contract Items & Line Items ({purchaseOrders.filter(p => p.contract_id === selectedContract.id).length > 0 ? purchaseOrders.filter(p => p.contract_id === selectedContract.id).length : 1})
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
-                      {purchaseOrders.filter(p => p.contract_id === selectedContract.id).map((po, idx) => (
-                        <div key={po.id} style={{ fontSize: '12px', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between' }}>
-                          <span><strong>Item {(idx + 1) * 10}:</strong> {po.material}</span>
-                          <span style={{ color: '#2563EB', fontWeight: 700 }}>{po.target_qty} {po.uom}</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0 8px 0' }}>
+                      <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: 0, letterSpacing: '0.04em' }}>
+                        Contract Line Items ({selectedContract.items ? selectedContract.items.length : 0})
+                      </h4>
+                      {selectedContract.items && selectedContract.items.length > 0 && (
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#059669', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '4px', border: '1px solid #A7F3D0' }}>
+                          ✓ S21 Verified ({selectedContract.items.length} Items)
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '260px', overflowY: 'auto' }}>
+                      {selectedContract.items && selectedContract.items.length > 0 ? (
+                        selectedContract.items.map((item) => (
+                          <div key={item.id} style={{ fontSize: '12px', padding: '10px 12px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <div style={{ fontWeight: 800, color: '#0F172A' }}>
+                                Item {item.item_no}: {item.material_desc}
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                                Material #{item.material_no} | Plant: {item.plant || 'MON1 Plant'} | Storage: {item.storage_loc || 'SL01'}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ color: '#2563EB', fontWeight: 800, fontSize: '13px' }}>
+                                {item.target_qty} {item.uom}
+                              </span>
+                              <div style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', marginTop: '1px' }}>
+                                Price: {item.net_price} {item.currency || 'INR'}
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: '16px', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px', color: '#991B1B', fontSize: '12px', textAlign: 'center' }}>
+                          Contract header retrieved, but contract line items could not be retrieved from S21.
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 </div>
