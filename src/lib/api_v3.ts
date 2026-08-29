@@ -116,10 +116,19 @@ export const caApi = {
 export const taApi = {
   getJobConfigs: (status: 'PENDING' | 'ASSIGNED' = 'PENDING') =>
     request<JobConfigV3[]>(`/job-configs?status=${status}`),
-  assignJob: (id: number, data: { driver_id: number; vehicle_id: number; license_no: string; gstin: string; scheduled_date: string; location?: string }) =>
-    request<{ id: number; message: string }>(`/job-configs/${id}/assign`, { method: 'POST', body: JSON.stringify(data) }),
+  assignJob: (id: number, data: MultiTruckAssignPayload | SingleAssignPayload) =>
+    request<{ id?: number; ids?: number[]; truck_count: number; message: string }>(`/job-configs/${id}/assign`, { method: 'POST', body: JSON.stringify(data) }),
   createDeliveryInvoice: (data: { assignment_id: number; invoice_no: string; file_url: string }) =>
     request<{ id: number; message: string }>('/delivery-invoices', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ─── TRANSPORTERS ENDPOINTS ───────────────────────────────────
+export const transportersApi = {
+  list: () => request<Transporter[]>('/transporters'),
+  drivers: (transporterId: number) => request<Driver[]>(`/transporters/${transporterId}/drivers`),
+  vehicles: (transporterId: number) => request<Vehicle[]>(`/transporters/${transporterId}/vehicles`),
+  compatibleVehicles: (transporterId: number, qty: number, material: string) =>
+    request<VehicleCompatibility>(`/vehicles/compatible?transporter_id=${transporterId}&qty=${qty}&material=${encodeURIComponent(material)}`),
 };
 
 // ─── SR ENDPOINTS ────────────────────────────────────────────
@@ -176,15 +185,8 @@ export const invoicesApi = {
     request<{ id: number; sap_invoice_no: string; status: string }>('/miro', { method: 'POST', body: JSON.stringify(data) }),
   postMiro: (id: number) =>
     request<{ message: string }>((`/miro/${id}/post`), { method: 'POST' }),
-  clearMiro: (id: number, payment_ref?: string) =>
-    request<{ message: string }>((`/miro/${id}/clear`), { method: 'POST', body: JSON.stringify({ payment_ref }) }),
-};
-
-// ─── TRANSPORTERS ENDPOINTS ───────────────────────────────────
-export const transportersApi = {
-  list: () => request<Transporter[]>('/transporters'),
-  drivers: (transporterId: number) => request<Driver[]>(`/transporters/${transporterId}/drivers`),
-  vehicles: (transporterId: number) => request<Vehicle[]>(`/transporters/${transporterId}/vehicles`),
+  clearMiro: (id: number, payment_ref?: string, payment_type?: 'FULL' | 'PARTIAL', percent?: number) =>
+    request<{ message: string }>((`/miro/${id}/clear`), { method: 'POST', body: JSON.stringify({ payment_ref, payment_type, percent }) }),
 };
 
 // ─── TYPES ───────────────────────────────────────────────────
@@ -213,6 +215,7 @@ export interface PurchaseOrderV3 {
   id: number;
   contract_id: number;
   sap_po_no: string;
+  po_item_no: number;
   material: string;
   uom: string;
   target_qty: number;
@@ -222,6 +225,19 @@ export interface PurchaseOrderV3 {
   status: string;
 }
 
+/** A single PO item within a job config (from job_config_pos) */
+export interface PoItemV3 {
+  po_id: number;
+  sap_po_no: string;
+  po_item_no: number;
+  material: string;
+  planned_qty: number;
+  uom: string;
+  rate: number;
+  body_type: string;
+  body_icon: string;
+}
+
 export interface JobConfigV3 {
   id: number;
   po_id: number;
@@ -229,11 +245,64 @@ export interface JobConfigV3 {
   availability_window: string;
   timebound: string;
   status: 'PENDING' | 'ASSIGNED' | 'EXPIRED';
+  // Primary PO (backward compat)
   sap_po_no?: string;
+  po_item_no?: number;
   material?: string;
   target_qty?: number;
   rate?: number;
+  // Multi-item aggregation (new)
+  po_items?: PoItemV3[];
+  item_count?: number;
+  total_planned_qty?: number;
 }
+
+/** One truck slot in a multi-truck assignment */
+export interface AssignSlot {
+  driver_id: number;
+  vehicle_id: number;
+  license_no: string;
+  gstin: string;
+  assigned_qty: number;
+}
+
+/** Multi-truck dispatch payload */
+export interface MultiTruckAssignPayload {
+  assignments: AssignSlot[];
+  scheduled_date: string;
+  location?: string;
+}
+
+/** Single-truck dispatch payload (legacy) */
+export interface SingleAssignPayload {
+  driver_id: number;
+  vehicle_id: number;
+  license_no: string;
+  gstin: string;
+  scheduled_date: string;
+  location?: string;
+}
+
+/** Response from GET /vehicles/compatible */
+export interface VehicleCompatibility {
+  can_single_truck: boolean;
+  min_trucks_needed: number;
+  recommended_body_type: string;
+  required_qty: number;
+  vehicles: VehicleEnriched[];
+}
+
+export interface VehicleEnriched extends Vehicle {
+  body_type: string;
+  body_icon: string;
+  material_match: boolean;
+  can_handle_alone: boolean;
+  is_busy: boolean;
+  status: 'AVAILABLE' | 'BUSY';
+  capacity_vs_required: string | null;
+  transporter_name?: string;
+}
+
 
 export interface TransportAssignmentV3 {
   id: number;
@@ -246,6 +315,7 @@ export interface TransportAssignmentV3 {
   scheduled_date: string;
   status: string;
   sap_po_no?: string;
+  po_item_no?: number;
   material?: string;
   from_location?: string;
   to_location?: string;
@@ -266,6 +336,8 @@ export interface TransportAssignmentV3 {
   po_target_qty?: number;
   po_uom?: string;
   tolerance_pct?: number;
+  rejection_reason?: string;
+  vehicle_capacity?: number;
 }
 
 export interface ReviewQueueItemV3 {
@@ -278,6 +350,7 @@ export interface ReviewQueueItemV3 {
   blocks_miro_bool: number;
   created_at: string;
   sap_po_no?: string;
+  po_item_no?: number;
   material?: string;
   driver_name?: string;
   vehicle_reg?: string;
@@ -298,6 +371,7 @@ export interface DeliveryInvoiceV3 {
   total_value: number;
   status: 'DRAFT' | 'SENT_TO_CA';
   sap_po_no?: string;
+  po_item_no?: number;
   material?: string;
   driver_name?: string;
   scheduled_date?: string;
@@ -311,8 +385,10 @@ export interface MiroInvoice {
   posted_date?: string;
   sap_ref?: string;
   total_value?: number;
+  paid_amount?: number;
   accepted_payload_kg?: number;
   sap_po_no?: string;
+  po_item_no?: number;
   material?: string;
   transporter_name?: string;
 }

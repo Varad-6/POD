@@ -55,8 +55,11 @@ export function initDb(): Database.Database {
   addColumnIfNotExists('transport_assignments', 'penalty_amount', 'REAL');
   addColumnIfNotExists('transport_assignments', 'dispatch_ip', 'TEXT');
   addColumnIfNotExists('transport_assignments', 'dispatch_user_agent', 'TEXT');
+  addColumnIfNotExists('transport_assignments', 'assigned_qty', 'REAL DEFAULT NULL');
   addColumnIfNotExists('purchase_orders', 'allowed_queue_time_mins', 'INTEGER DEFAULT 60');
   addColumnIfNotExists('purchase_orders', 'detention_rate_per_hour', 'REAL DEFAULT 150.00');
+  addColumnIfNotExists('purchase_orders', 'po_item_no', 'INTEGER DEFAULT 10');
+  addColumnIfNotExists('miro_invoices', 'paid_amount', 'REAL DEFAULT 0.0');
 
   // Ensure job_config_pos junction table exists
   instance.exec(`

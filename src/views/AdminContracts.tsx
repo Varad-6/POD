@@ -254,7 +254,7 @@ export const AdminContracts: React.FC = () => {
                       }}>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <strong className="mono" style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>PO #{po.sap_po_no}</strong>
+                            <strong className="mono" style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>PO #{po.sap_po_no} / {po.po_item_no}</strong>
                             <StatusBadge status={po.status} />
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>
@@ -437,9 +437,9 @@ export const AdminContracts: React.FC = () => {
                       Contract Items & Line Items ({purchaseOrders.filter(p => p.contract_id === selectedContract.id).length > 0 ? purchaseOrders.filter(p => p.contract_id === selectedContract.id).length : 1})
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
-                      {purchaseOrders.filter(p => p.contract_id === selectedContract.id).map((po, idx) => (
+                      {purchaseOrders.filter(p => p.contract_id === selectedContract.id).map((po) => (
                         <div key={po.id} style={{ fontSize: '12px', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between' }}>
-                          <span><strong>Item {(idx + 1) * 10}:</strong> {po.material}</span>
+                          <span><strong>Item {po.po_item_no}:</strong> {po.material}</span>
                           <span style={{ color: '#2563EB', fontWeight: 700 }}>{po.target_qty} {po.uom}</span>
                         </div>
                       ))}

@@ -57,6 +57,7 @@ export const TransporterPODs: React.FC = () => {
       case 'CLEARED':
         return 'APPROVED';
       case 'GATE_DENIED':
+      case 'REJECTED':
         return 'REJECTED';
       default:
         return 'PENDING_POD';
@@ -70,9 +71,10 @@ export const TransporterPODs: React.FC = () => {
       waybillNo: a.ocr_waybill_extracted || `WB-${a.id}`,
       productDescription: a.material || 'Coal Grade A',
       horseRegNo: a.vehicle_reg || 'TEMP-REG',
-      poRef: a.sap_po_no || 'PO-TEMP',
+      poRef: a.sap_po_no ? `${a.sap_po_no} / ${a.po_item_no}` : 'PO-TEMP',
       offloadDate: a.scheduled_date || new Date().toISOString(),
-      netWeightKg: a.ocr_weight_extracted ? a.ocr_weight_extracted * 1000 : 34000
+      netWeightKg: (a.dest_gross_kg && a.dest_tare_kg) ? (a.dest_gross_kg - a.dest_tare_kg) : (a.ocr_weight_extracted ? a.ocr_weight_extracted * 1000 : null),
+      rejectionReason: a.rejection_reason || 'Flagged for quality audit by Company Admin.'
     }))
     .filter((rec) => {
       if (activeFilter === 'PENDING') return rec.podStatus === 'PENDING_POD';
@@ -204,7 +206,7 @@ export const TransporterPODs: React.FC = () => {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--color-border)', paddingTop: '8px', marginTop: '4px' }}>
                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 750 }}>Delivered Payload:</span>
-                  <strong style={{ color: 'var(--color-brand-blue-600)', fontSize: '14.5px' }}>{((rec.netWeightKg || 34000) / 1000.0).toFixed(2)} Tons</strong>
+                  <strong style={{ color: rec.netWeightKg !== null ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)', fontSize: '14.5px' }}>{rec.netWeightKg !== null ? `${(rec.netWeightKg / 1000.0).toFixed(2)} Tons` : 'N.A.'}</strong>
                 </div>
               </div>
 

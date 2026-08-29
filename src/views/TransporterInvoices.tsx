@@ -29,8 +29,7 @@ export const TransporterInvoices: React.FC = () => {
   }, []);
 
   const totalPaidSum = ledgerList
-    .filter((inv) => inv.status === 'CLEARED' || inv.status === 'PAID')
-    .reduce((sum, inv) => sum + inv.amount, 0);
+    .reduce((sum, inv) => sum + (inv.paid_amount || (inv.status === 'CLEARED' ? inv.amount : 0)), 0);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -73,10 +72,20 @@ export const TransporterInvoices: React.FC = () => {
                       <td className="mono" style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>#{inv.waybill_no || `WB-${inv.assignment_id}`}</td>
                       <td>{formatDate(new Date())}</td>
                       <td className="mono" style={{ textAlign: 'right', fontWeight: 800, fontSize: '14.5px', color: 'var(--color-text-heading)' }}>
-                        {formatCurrency(inv.amount)}
+                        <div>{formatCurrency(inv.amount)}</div>
+                        {(inv.paid_amount || 0) > 0 && inv.status !== 'CLEARED' && (
+                          <div style={{ fontSize: '11px', color: '#D97706', fontWeight: 700, marginTop: '3px' }}>
+                            Paid: {formatCurrency(inv.paid_amount)} ({Math.round((inv.paid_amount / inv.amount) * 100)}%)
+                          </div>
+                        )}
                       </td>
                       <td>
                         <StatusBadge status={inv.status} />
+                        {inv.status === 'POSTED' && (inv.paid_amount || 0) > 0 && (
+                          <div style={{ fontSize: '10px', color: '#D97706', fontWeight: 700, marginTop: '3px', textTransform: 'uppercase' }}>
+                            Partially Paid
+                          </div>
+                        )}
                       </td>
                       <td>
                         {inv.posted_date ? formatDate(inv.posted_date) : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}

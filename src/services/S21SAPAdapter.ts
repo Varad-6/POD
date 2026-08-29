@@ -130,7 +130,7 @@ export const S21SAPAdapter: ISAPAdapter = {
       });
       // Fallback: Fetch directly from S21 Express Server database endpoints (/api/v3/contracts)
       const caContracts = await fetch('http://localhost:3001/api/v3/contracts', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('ikwezi_token_v3') || ''}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
       }).then(r => r.json());
       
       return (caContracts || []).map((c: any): Contract => ({
@@ -182,10 +182,11 @@ export const S21SAPAdapter: ISAPAdapter = {
         toLocation: item.ToLocation || item.WERKS_TO || item.toLocation || '',
         paymentTerms: item.PaymentTerms || item.ZTERM || item.paymentTerms || 'Net 30 Days',
         poDate: item.PoDate || item.AEDAT || item.poDate || new Date().toISOString().split('T')[0],
-        status: item.Status || item.status || 'PENDING_SIGNATURE',
+        status: item.Status || item.status || 'OPEN',
         signedBy: item.SignedBy || item.signedBy,
         signedDate: item.SignedDate || item.signedDate,
         sapSyncStatus: 'SYNCED',
+        po_item_no: Number(item.PoItemNo || item.EBELP || item.PO_Item || item.po_item_no || 10),
       }));
     } catch (err: any) {
       console.warn('[S21SAPAdapter] fetchPurchaseOrders live failed, falling back to mock:', err);
@@ -200,7 +201,7 @@ export const S21SAPAdapter: ISAPAdapter = {
       });
       // Fallback: Fetch directly from S21 Express Server database endpoints (/api/v3/purchase-orders)
       const caPOs = await fetch('http://localhost:3001/api/v3/purchase-orders', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('ikwezi_token_v3') || ''}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
       }).then(r => r.json());
 
       return (caPOs || []).map((po: any): PurchaseOrder => ({

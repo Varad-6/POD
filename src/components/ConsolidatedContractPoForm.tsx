@@ -56,7 +56,7 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
   const togglePoSelection = (po: PurchaseOrderV3) => {
     if (readOnly) return;
     if (po.status !== 'OPEN' && !selectedIds.includes(po.id)) {
-      alert(`PO #${po.sap_po_no} is currently ${po.status} and cannot be assigned.`);
+      alert(`PO #${po.sap_po_no} / ${po.po_item_no} is currently ${po.status} and cannot be assigned.`);
       return;
     }
 
@@ -215,7 +215,7 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
                 fontWeight: 600,
                 color: '#1E3A8A'
               }}>
-                <span>PO #{po.sap_po_no} ({po.target_qty} {po.uom})</span>
+                <span>PO #{po.sap_po_no} / {po.po_item_no} ({po.target_qty} {po.uom})</span>
                 {!readOnly && (
                   <button
                     type="button"
@@ -372,7 +372,7 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span className="mono" style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>
-                        PO #{po.sap_po_no}
+                        PO #{po.sap_po_no} / {po.po_item_no}
                       </span>
                       <StatusBadge status={po.status} />
                     </div>

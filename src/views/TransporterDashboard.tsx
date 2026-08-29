@@ -103,7 +103,7 @@ export const TransporterDashboard: React.FC = () => {
   const pendingPO = jobConfigs.filter(j => j.status === 'PENDING');
   const pendingDriverAssign = jobConfigs.filter(j => j.status === 'PENDING' && (!j.driver_id || !j.vehicle_id));
   const activeTransports = assignments.filter(a => a.status === 'DISPATCHED' || a.status === 'IN_TRANSIT' || a.status === 'ACCEPTED');
-  const podPending = assignments.filter(a => a.status === 'DELIVERED' && !a.pod_file_url);
+  const podPending = assignments.filter(a => (a.status === 'DELIVERED' && !a.pod_file_url) || a.status === 'REJECTED');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>

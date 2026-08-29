@@ -7,9 +7,19 @@ import { PodzoLogo } from '../components/branding/PodzoLogo';
 const DEMO_USERS = [
   { username: 'ca_thandiwe', role: 'Company Admin',     color: '#2F5FE0' },
   { username: 'ta_sipho',    role: 'Transporter Admin', color: '#475569' },
-  { username: 'dr_zweli',    role: 'Driver',            color: '#12B76A' },
   { username: 'cr_mining',   role: 'Customer',          color: '#F79009' },
   { username: 'sr_gate01',   role: 'Supervisor',        color: '#F04438' },
+];
+
+const DRIVER_USERS = [
+  { username: 'dr_rajesh', name: 'Pappu Singh', color: '#12B76A' },
+  { username: 'dr_amit',   name: 'Raju Yadav',  color: '#12B76A' },
+  { username: 'dr_sunil',  name: 'Sanjay Kumar',  color: '#12B76A' },
+  { username: 'dr_vikram', name: 'Ramesh Lal (Exp)', color: '#F04438' },
+  { username: 'dr_suresh', name: 'Sunil Kumar', color: '#12B76A' },
+  { username: 'dr_anil',   name: 'Anil Kumar',   color: '#12B76A' },
+  { username: 'dr_ramesh', name: 'Vijay Singh', color: '#12B76A' },
+  { username: 'dr_vijay',  name: 'Ajay Prasad',  color: '#12B76A' },
 ];
 
 export default function LoginPage() {
@@ -114,23 +124,42 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="lp-divider">
+          <div className="lp-divider" style={{ margin: '16px 0 8px 0' }}>
             <span>Quick demo access</span>
           </div>
 
-          <div className="lp-demo-users">
+          <div className="lp-demo-users" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
             {DEMO_USERS.map(u => (
               <button
                 key={u.username}
                 className="lp-demo-btn"
                 onClick={() => quickLogin(u.username)}
                 disabled={loading}
-                style={{ '--lp-dot': u.color } as React.CSSProperties}
+                style={{ padding: '8px 10px', borderRadius: '10px' }}
               >
                 <span className="lp-demo-dot" style={{ background: u.color }} />
                 <div className="lp-demo-info">
-                  <span className="lp-demo-role">{u.role}</span>
-                  <span className="lp-demo-user">{u.username}</span>
+                  <span className="lp-demo-role" style={{ fontSize: '11px', fontWeight: 700 }}>{u.role}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="lp-divider" style={{ margin: '12px 0 8px 0' }}>
+            <span>Indian Driver Personas</span>
+          </div>
+
+          <div className="lp-drivers-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px', marginBottom: '12px' }}>
+            {DRIVER_USERS.map(u => (
+              <button
+                key={u.username}
+                className="lp-demo-btn"
+                onClick={() => quickLogin(u.username)}
+                disabled={loading}
+                style={{ padding: '6px 10px', borderRadius: '8px', borderLeft: `3px solid ${u.color}` }}
+              >
+                <div className="lp-demo-info" style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span className="lp-demo-role" style={{ fontSize: '11px', fontWeight: 700 }}>{u.name}</span>
                 </div>
               </button>
             ))}

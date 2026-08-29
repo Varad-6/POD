@@ -80,7 +80,7 @@ export const ContractPoSelector: React.FC = () => {
           <option value="ALL">All POs ({filteredPOs.length})</option>
           {filteredPOs.map((po: PurchaseOrderV3) => (
             <option key={po.id} value={po.id}>
-              {po.sap_po_no} — {po.material} ({po.target_qty} TON)
+              {po.sap_po_no} / {po.po_item_no} — {po.material} ({po.target_qty} TON)
             </option>
           ))}
         </select>

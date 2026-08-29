@@ -173,7 +173,7 @@ export const AdminApprovals: React.FC = () => {
                         }}
                       >
                         <td className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>
-                          {r.sap_po_no || `#PO-${r.assignment_id}`}
+                          {r.sap_po_no ? `${r.sap_po_no} / ${r.po_item_no}` : `#PO-${r.assignment_id}`}
                         </td>
                         <td>
                           <div style={{ fontWeight: 600 }}>{r.transporter_name || 'ABC Transport'}</div>
@@ -206,8 +206,8 @@ export const AdminApprovals: React.FC = () => {
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', fontSize: '13px', backgroundColor: 'var(--color-brand-blue-50)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>PO Number</span>
-                      <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{selectedReview.sap_po_no}</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>PO Number / Item</span>
+                      <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{selectedReview.sap_po_no} / {selectedReview.po_item_no}</strong>
                     </div>
                     <div>
                       <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Contract</span>

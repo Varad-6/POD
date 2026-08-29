@@ -201,10 +201,11 @@ router.get('/assignments', requireAuth, requireRole('CA', 'TA', 'SR'), (req: Req
   const db = getDb();
   const status = req.query.status;
   let query = `
-    SELECT ta.*, d.name as driver_name, d.phone as driver_phone, v.reg_no as vehicle_reg, po.sap_po_no, po.material, po.tolerance_pct,
+    SELECT ta.*, d.name as driver_name, d.phone as driver_phone, v.reg_no as vehicle_reg, v.capacity as vehicle_capacity, po.sap_po_no, po.po_item_no, po.material, po.tolerance_pct,
            po.target_qty as po_target_qty, po.uom as po_uom,
            jc.requested_pickup_datetime,
            pd.pod_file_url, pd.ocr_waybill_extracted, pd.ocr_weight_extracted, pd.ocr_confidence_pct, pd.match_status as pod_match_status,
+           cv.notes as rejection_reason,
            (SELECT COUNT(*) FROM supervisor_stamp ss WHERE ss.assignment_id = ta.id) as supervisor_stamped_count,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
@@ -218,6 +219,7 @@ router.get('/assignments', requireAuth, requireRole('CA', 'TA', 'SR'), (req: Req
     JOIN vehicles v ON v.id = ta.vehicle_id
     LEFT JOIN pod_documents pd ON pd.assignment_id = ta.id
     LEFT JOIN bilty_uploads bu ON bu.assignment_id = ta.id
+    LEFT JOIN ca_verification cv ON cv.assignment_id = ta.id AND cv.verified_bool = 0
   `;
   const params: any[] = [];
   if (status) {
@@ -247,9 +249,9 @@ function syncS21ContractsAndPOs(db: any, s21ContractsPayload?: any[]) {
   `);
 
   const insertPO = db.prepare(`
-    INSERT INTO purchase_orders (contract_id, sap_po_no, material, uom, target_qty, rate, tolerance_pct, cost_center, status)
-    VALUES (?, ?, ?, ?, ?, ?, 0.5, ?, 'OPEN')
-    ON CONFLICT(sap_po_no) DO UPDATE SET
+    INSERT INTO purchase_orders (contract_id, sap_po_no, po_item_no, material, uom, target_qty, rate, tolerance_pct, cost_center, status)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 0.5, ?, 'OPEN')
+    ON CONFLICT(sap_po_no, po_item_no) DO UPDATE SET
       material = excluded.material,
       target_qty = excluded.target_qty,
       rate = excluded.rate
@@ -279,6 +281,7 @@ function syncS21ContractsAndPOs(db: any, s21ContractsPayload?: any[]) {
         insertPO.run(
           contractRow.id,
           po.sap_po_no,
+          po.po_item_no || 10,
           po.material || 'Washed Coal Grade A',
           po.uom || 'TO',
           po.target_qty || 34.0,
@@ -502,7 +505,7 @@ router.get('/review-queue', requireAuth, requireRole('CA', 'SR'), (req: Request,
   const db = getDb();
   const status = req.query.status || 'OPEN';
   const reviews = db.prepare(`
-    SELECT rq.*, ta.scheduled_date, d.name as driver_name, v.reg_no as vehicle_reg, po.sap_po_no, po.material, po.target_qty as po_target_qty, t.name as transporter_name,
+    SELECT rq.*, ta.scheduled_date, d.name as driver_name, v.reg_no as vehicle_reg, po.sap_po_no, po.po_item_no, po.material, po.target_qty as po_target_qty, t.name as transporter_name,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_GROSS' LIMIT 1) as dest_gross_kg,
@@ -711,6 +714,7 @@ router.get('/delivery-invoices', requireAuth, requireRole('CA', 'TA'), (req: Req
         ta.scheduled_date,
         d.name as driver_name,
         po.sap_po_no,
+        po.po_item_no,
         po.material,
         ssm.waybill_no
       FROM sap_s4_mirror ssm
@@ -737,9 +741,11 @@ router.get('/delivery-invoices', requireAuth, requireRole('CA', 'TA'), (req: Req
         COALESCE(mi.status, di.status) AS status,
         mi.posted_date,
         mi.sap_ref AS payment_ref,
+        mi.paid_amount,
         ta.scheduled_date,
         d.name as driver_name,
         po.sap_po_no,
+        po.po_item_no,
         po.material
       FROM delivery_invoices di
       JOIN transport_assignments ta ON ta.id = di.assignment_id
@@ -753,7 +759,7 @@ router.get('/delivery-invoices', requireAuth, requireRole('CA', 'TA'), (req: Req
     return res.json(list);
   } else {
     const invoices = db.prepare(`
-      SELECT di.*, di.total_value AS amount, ta.scheduled_date, d.name as driver_name, po.sap_po_no, po.material
+      SELECT di.*, di.total_value AS amount, ta.scheduled_date, d.name as driver_name, po.sap_po_no, po.po_item_no, po.material
       FROM delivery_invoices di
       JOIN transport_assignments ta ON ta.id = di.assignment_id
       JOIN job_configs jc ON jc.id = ta.job_config_id
@@ -933,10 +939,10 @@ router.post('/miro/:id/post', requireAuth, requireRole('CA'), (req: Request, res
 router.post('/miro/:id/clear', requireAuth, requireRole('CA'), (req: Request, res: Response) => {
   const db = getDb();
   const miroId = req.params.id;
-  const { payment_ref } = req.body;
+  const { payment_ref, payment_type, percent } = req.body;
 
   const miro = db.prepare(`
-    SELECT mi.*, di.assignment_id
+    SELECT mi.*, di.assignment_id, di.total_value
     FROM miro_invoices mi
     JOIN main_invoices mai ON mai.id = mi.main_invoice_id
     JOIN delivery_invoices di ON di.id = mai.delivery_invoice_id
@@ -945,52 +951,285 @@ router.post('/miro/:id/clear', requireAuth, requireRole('CA'), (req: Request, re
 
   if (!miro) return res.status(404).json({ error: 'Miro invoice not found' });
 
+  const totalValue = miro.total_value || 0.0;
+  const currentPaid = miro.paid_amount || 0.0;
+
+  let paymentAmount = 0.0;
+  if (payment_type === 'PARTIAL') {
+    const pct = Number(percent) || 25;
+    paymentAmount = (pct / 100.0) * totalValue;
+  } else {
+    paymentAmount = totalValue - currentPaid;
+  }
+
+  const newPaidAmount = currentPaid + paymentAmount;
+  const isFullyPaid = newPaidAmount >= (totalValue - 0.5); // Float tolerance check
+
+  const updatedStatus = isFullyPaid ? 'CLEARED' : 'POSTED'; // Remain posted until fully paid
+
   db.prepare(`
     UPDATE miro_invoices
-    SET status = 'CLEARED', posted_date = datetime('now'), sap_ref = ?
+    SET status = ?, posted_date = datetime('now'), sap_ref = ?, paid_amount = ?
     WHERE id = ?
-  `).run(payment_ref ?? 'PMT-CLEARED', miroId);
+  `).run(updatedStatus, payment_ref ?? 'PMT-CLEARED', newPaidAmount, miroId);
 
-  db.prepare("UPDATE transport_assignments SET status = 'CLEARED' WHERE id = ?").run(miro.assignment_id);
+  if (isFullyPaid) {
+    db.prepare("UPDATE transport_assignments SET status = 'CLEARED' WHERE id = ?").run(miro.assignment_id);
+  }
 
-  return res.json({ message: 'MIRO invoice payment cleared' });
+  // Write sync log OUT
+  db.prepare(`
+    INSERT INTO sap_sync_log (entity_type, sap_ref, direction, payload_json)
+    VALUES ('MIRO_PAYMENT', ?, 'OUT', ?)
+  `).run(payment_ref ?? 'PMT-CLEARED', JSON.stringify({
+    miro_id: miroId,
+    payment_type,
+    amount_paid: paymentAmount,
+    accumulated_paid: newPaidAmount,
+    total_value: totalValue,
+    is_fully_paid: isFullyPaid
+  }));
+
+  return res.json({
+    message: isFullyPaid ? 'MIRO cleared successfully (fully paid)' : `Partial payment of ZAR ${paymentAmount.toLocaleString()} processed successfully.`,
+    is_fully_paid: isFullyPaid,
+    paid_amount: newPaidAmount,
+    total_amount: totalValue
+  });
 });
 
 // ─── TA ENDPOINTS ────────────────────────────────────────────
 
+// Material → Body type compatibility mapping
+const MATERIAL_BODY_MAP: { keywords: string[]; bodyType: string; icon: string; suitableUom: string[] }[] = [
+  { keywords: ['coal', 'washed', 'raw', 'ore', 'aggregate', 'sand', 'gravel', 'bulk'], bodyType: 'Side Tipper / End Tipper',     icon: '🚛', suitableUom: ['TO', 'KG', 'MT'] },
+  { keywords: ['spare', 'parts', 'box', 'container', 'pallet', 'packaged', 'crate'],   bodyType: 'Flatbed / Curtainsider',        icon: '📦', suitableUom: ['EA', 'PC', 'TO'] },
+  { keywords: ['steel', 'pipe', 'rebar', 'beam', 'rod', 'shaft', 'body', 'wheel'],     bodyType: 'Flatbed with Bolsters',         icon: '🏗️', suitableUom: ['EA', 'PC', 'TO', 'M'] },
+  { keywords: ['oil', 'fuel', 'chemical', 'liquid', 'acid', 'solvent'],               bodyType: 'Tanker / Pressure Vessel',      icon: '🛢️', suitableUom: ['M3', 'KG', 'L'] },
+];
+
+function getBodyType(material: string): { bodyType: string; icon: string } {
+  const m = (material || '').toLowerCase();
+  for (const entry of MATERIAL_BODY_MAP) {
+    if (entry.keywords.some(kw => m.includes(kw))) {
+      return { bodyType: entry.bodyType, icon: entry.icon };
+    }
+  }
+  return { bodyType: 'General Cargo / Flatbed', icon: '🚚' };
+}
+
+function isMaterialMatch(material: string, bodyType: string): boolean {
+  const m = (material || '').toLowerCase();
+  for (const entry of MATERIAL_BODY_MAP) {
+    if (entry.bodyType === bodyType && entry.keywords.some(kw => m.includes(kw))) return true;
+  }
+  return false;
+}
+
 // GET /api/v3/job-configs
+// Returns each job config with all linked PO items aggregated as po_items array
 router.get('/job-configs', requireAuth, requireRole('TA', 'CA'), (req: Request, res: Response) => {
   const db = getDb();
   const status = req.query.status || 'PENDING';
+
   const configs = db.prepare(`
-    SELECT jc.*, po.sap_po_no, po.material, po.target_qty, po.rate
+    SELECT
+      jc.*,
+      COUNT(jcp.id)         AS item_count,
+      SUM(jcp.planned_qty)  AS total_planned_qty,
+      GROUP_CONCAT(
+        jcp.po_id || '|' || po.sap_po_no || '|' || po.po_item_no || '|' ||
+        po.material || '|' || jcp.planned_qty || '|' || po.uom || '|' || po.rate,
+        ';;'
+      ) AS po_items_raw,
+      po.sap_po_no,
+      po.po_item_no,
+      po.material,
+      po.target_qty,
+      po.rate
     FROM job_configs jc
-    JOIN purchase_orders po ON po.id = jc.po_id
+    LEFT JOIN job_config_pos jcp ON jcp.job_config_id = jc.id
+    LEFT JOIN purchase_orders po ON po.id = jcp.po_id
     WHERE jc.status = ?
-  `).all(status);
-  return res.json(configs);
+    GROUP BY jc.id
+    ORDER BY jc.id DESC
+  `).all(status) as any[];
+
+  // Parse the concatenated po_items_raw into a proper array
+  const result = configs.map((jc: any) => {
+    const po_items = (jc.po_items_raw || '').split(';;').filter(Boolean).map((raw: string) => {
+      const [po_id, sap_po_no, po_item_no, material, planned_qty, uom, rate] = raw.split('|');
+      return {
+        po_id: Number(po_id),
+        sap_po_no,
+        po_item_no: Number(po_item_no),
+        material,
+        planned_qty: Number(planned_qty),
+        uom,
+        rate: Number(rate),
+        body_type: getBodyType(material).bodyType,
+        body_icon: getBodyType(material).icon,
+      };
+    });
+    const { po_items_raw, ...rest } = jc;
+    return { ...rest, po_items, total_planned_qty: Number(jc.total_planned_qty || 0) };
+  });
+
+  return res.json(result);
+});
+
+// GET /api/v3/vehicles/compatible
+// Smart truck matching: returns vehicles with material compatibility and split-load analysis
+router.get('/vehicles/compatible', requireAuth, requireRole('TA', 'CA'), (req: Request, res: Response) => {
+  const db = getDb();
+  const { transporter_id, qty, material } = req.query as Record<string, string>;
+  const requiredQty = Number(qty) || 0;
+
+  const vehicles = db.prepare(`
+    SELECT v.*, t.name as transporter_name
+    FROM vehicles v
+    JOIN transporters t ON t.id = v.transporter_id
+    WHERE (? = '' OR v.transporter_id = ?)
+    ORDER BY v.capacity DESC
+  `).all(transporter_id || '', transporter_id || '') as any[];
+
+  // Get active assignments to flag busy vehicles
+  const busyVehicleIds = new Set(
+    (db.prepare(`
+      SELECT vehicle_id FROM transport_assignments
+      WHERE status NOT IN ('DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED')
+    `).all() as any[]).map((r: any) => r.vehicle_id)
+  );
+
+  const { bodyType: recommendedBodyType } = getBodyType(material || '');
+
+  const enrichedVehicles = vehicles.map((v: any) => ({
+    ...v,
+    body_type: getBodyType(v.reg_no + ' ' + (material || '')).bodyType, // Use material for match
+    body_icon: getBodyType(material || '').icon,
+    material_match: isMaterialMatch(material || '', recommendedBodyType),
+    can_handle_alone: requiredQty > 0 ? v.capacity >= requiredQty : true,
+    is_busy: busyVehicleIds.has(v.id),
+    status: busyVehicleIds.has(v.id) ? 'BUSY' : 'AVAILABLE',
+    capacity_vs_required: requiredQty > 0 ? `${v.capacity}T of ${requiredQty}T required` : null,
+  }));
+
+  // Split-load analysis
+  const availableVehicles = enrichedVehicles.filter((v: any) => !v.is_busy);
+  const maxSingleCapacity = availableVehicles.reduce((max: number, v: any) => Math.max(max, v.capacity), 0);
+  const canSingleTruck = requiredQty > 0 ? maxSingleCapacity >= requiredQty : true;
+
+  let minTrucksNeeded = 1;
+  if (requiredQty > 0 && !canSingleTruck) {
+    // Greedy: sort by capacity desc, fill until qty met
+    let remaining = requiredQty;
+    let truckCount = 0;
+    for (const v of [...availableVehicles].sort((a: any, b: any) => b.capacity - a.capacity)) {
+      if (remaining <= 0) break;
+      remaining -= v.capacity;
+      truckCount++;
+    }
+    minTrucksNeeded = remaining > 0 ? -1 : truckCount; // -1 = cannot fulfill even with all trucks
+  }
+
+  return res.json({
+    can_single_truck: canSingleTruck,
+    min_trucks_needed: minTrucksNeeded,
+    recommended_body_type: recommendedBodyType,
+    required_qty: requiredQty,
+    vehicles: enrichedVehicles,
+  });
 });
 
 // POST /api/v3/job-configs/:id/assign
+// Supports both single (legacy) and multi-truck (assignments array) dispatch
 router.post('/job-configs/:id/assign', requireAuth, requireRole('TA'), (req: Request, res: Response) => {
   const db = getDb();
   const configId = req.params.id;
-  const { driver_id, vehicle_id, license_no, gstin, scheduled_date, location } = req.body;
 
-  if (!driver_id || !vehicle_id || !license_no || !gstin || !scheduled_date) {
-    return res.status(400).json({ error: 'driver_id, vehicle_id, license_no, gstin, and scheduled_date required' });
+  // Fetch the job config and its total planned qty for validation
+  const jobConfig = db.prepare('SELECT * FROM job_configs WHERE id = ?').get(configId) as any;
+  if (!jobConfig) return res.status(404).json({ error: 'Job configuration not found' });
+
+  const totalQtyRow = db.prepare(`
+    SELECT COALESCE(SUM(planned_qty), 0) as total_qty FROM job_config_pos WHERE job_config_id = ?
+  `).get(configId) as any;
+  const totalPlanQty = Number(totalQtyRow?.total_qty || 0);
+
+  // ── MULTI-TRUCK PATH (assignments array) ──────────────────────
+  if (Array.isArray(req.body.assignments) && req.body.assignments.length > 0) {
+    const { assignments, scheduled_date, location } = req.body;
+
+    if (!scheduled_date) return res.status(400).json({ error: 'scheduled_date is required' });
+
+    // Validate each slot
+    const sumAssignedQty = assignments.reduce((s: number, a: any) => s + Number(a.assigned_qty || 0), 0);
+    if (totalPlanQty > 0 && Math.abs(sumAssignedQty - totalPlanQty) > 0.5) {
+      return res.status(400).json({
+        error: `Sum of assigned quantities (${sumAssignedQty.toFixed(2)}) must equal total planned quantity (${totalPlanQty.toFixed(2)}).`
+      });
+    }
+
+    const insertAssignment = db.prepare(`
+      INSERT INTO transport_assignments
+        (job_config_id, driver_id, vehicle_id, location, license_no, gstin, scheduled_date, assigned_qty, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ASSIGNED')
+    `);
+
+    const insertedIds: number[] = [];
+
+    const tx = db.transaction(() => {
+      for (const slot of assignments) {
+        const { driver_id, vehicle_id, license_no, gstin, assigned_qty } = slot;
+        if (!driver_id || !vehicle_id) throw new Error('Each assignment slot requires driver_id and vehicle_id');
+
+        // Check vehicle capacity vs this slot's qty
+        const vehicle = db.prepare('SELECT capacity FROM vehicles WHERE id = ?').get(vehicle_id) as any;
+        if (vehicle && Number(assigned_qty) > vehicle.capacity + 0.01) {
+          throw new Error(`Vehicle ${vehicle_id} capacity (${vehicle.capacity}T) is less than assigned quantity (${assigned_qty}T)`);
+        }
+
+        const result = insertAssignment.run(
+          configId, driver_id, vehicle_id,
+          location ?? 'Mine Siding',
+          license_no || 'DL-TEMP',
+          gstin || '27AABCS0001A1Z1',
+          scheduled_date,
+          Number(assigned_qty) || null
+        );
+        insertedIds.push(Number(result.lastInsertRowid));
+      }
+      db.prepare("UPDATE job_configs SET status = 'ASSIGNED' WHERE id = ?").run(configId);
+    });
+
+    try {
+      tx();
+      return res.status(201).json({
+        ids: insertedIds,
+        truck_count: insertedIds.length,
+        message: `${insertedIds.length} truck${insertedIds.length > 1 ? 's' : ''} assigned successfully to Job #${configId}`
+      });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
   }
 
-  // Create transport assignment
+  // ── SINGLE-TRUCK PATH (legacy, backward compatible) ───────────
+  const { driver_id, vehicle_id, license_no, gstin, scheduled_date, location } = req.body;
+  if (!driver_id || !vehicle_id || !scheduled_date) {
+    return res.status(400).json({ error: 'driver_id, vehicle_id, and scheduled_date required' });
+  }
+
   const result = db.prepare(`
     INSERT INTO transport_assignments (job_config_id, driver_id, vehicle_id, location, license_no, gstin, scheduled_date, status)
     VALUES (?, ?, ?, ?, ?, ?, ?, 'ASSIGNED')
-  `).run(configId, driver_id, vehicle_id, location ?? 'Mine Siding', license_no, gstin, scheduled_date);
+  `).run(configId, driver_id, vehicle_id, location ?? 'Mine Siding', license_no || 'DL-TEMP', gstin || '27AABCS0001A1Z1', scheduled_date);
 
   db.prepare("UPDATE job_configs SET status = 'ASSIGNED' WHERE id = ?").run(configId);
 
-  return res.status(201).json({ id: result.lastInsertRowid, message: 'Transport assignment configured' });
+  return res.status(201).json({ id: result.lastInsertRowid, ids: [result.lastInsertRowid], truck_count: 1, message: 'Transport assignment configured' });
 });
+
 
 // ─── SUPERVISOR (SR) ENDPOINTS ────────────────────────────────
 
@@ -1134,7 +1373,7 @@ router.post('/assignments/:id/stamp', requireAuth, requireRole('SR'), (req: Requ
 router.get('/assignments/mine', requireAuth, requireRole('DR'), (req: Request, res: Response) => {
   const db = getDb();
   const list = db.prepare(`
-    SELECT ta.*, po.sap_po_no, po.material, 
+    SELECT ta.*, po.sap_po_no, po.po_item_no, po.material, 
            'Emoyeni Mine Siding' AS from_location, 
            'Duvha Power Station' AS to_location,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
@@ -1250,6 +1489,36 @@ router.post('/assignments/:id/weight-log', requireAuth, (req: Request, res: Resp
     }
     if (Number(weight_kg) < Number(mineTare.weight_kg)) {
       return res.status(400).json({ error: `Loaded vehicle weight (${weight_kg} kg) cannot be less than empty vehicle weight (${mineTare.weight_kg} kg).` });
+    }
+  }
+
+  // Vehicle capacity validation for gross weights
+  if (stage === 'MINE_GROSS' || stage === 'DEST_GROSS') {
+    const tareStage = stage === 'MINE_GROSS' ? 'MINE_TARE' : 'DEST_TARE';
+    let tareLog = db.prepare('SELECT weight_kg FROM weight_logs WHERE assignment_id = ? AND stage = ?').get(assignmentId, tareStage) as any;
+    if (!tareLog && stage === 'DEST_GROSS') {
+      // Fallback to MINE_TARE tare weight for validation
+      tareLog = db.prepare("SELECT weight_kg FROM weight_logs WHERE assignment_id = ? AND stage = 'MINE_TARE'").get(assignmentId) as any;
+    }
+    const tareWeightKg = tareLog ? Number(tareLog.weight_kg) : 0;
+
+    if (tareWeightKg > 0) {
+      const assignmentVehicle = db.prepare(`
+        SELECT v.capacity, v.reg_no
+        FROM transport_assignments ta
+        JOIN vehicles v ON v.id = ta.vehicle_id
+        WHERE ta.id = ?
+      `).get(assignmentId) as any;
+
+      if (assignmentVehicle) {
+        const netPayloadKg = Number(weight_kg) - tareWeightKg;
+        const capacityKg = assignmentVehicle.capacity * 1000;
+        if (netPayloadKg > capacityKg) {
+          return res.status(400).json({ 
+            error: `Weight Check Rejected: Loaded Net Payload (${(netPayloadKg/1000).toFixed(2)} Tons) exceeds the registered truck capacity (${assignmentVehicle.capacity}.00 Tons) for vehicle ${assignmentVehicle.reg_no}.` 
+          });
+        }
+      }
     }
   }
 
@@ -1571,7 +1840,7 @@ router.get('/assignments/incoming', requireAuth, requireRole('CR'), (req: Reques
   const customerId = req.user!.entityId || 1;
 
   const incoming = db.prepare(`
-    SELECT ta.*, po.sap_po_no, po.material, 
+    SELECT ta.*, po.sap_po_no, po.po_item_no, po.material, 
            'Emoyeni Mine Siding' AS from_location, 
            'Duvha Power Station' AS to_location, 
            d.name as driver_name, v.reg_no as vehicle_reg,
@@ -1588,7 +1857,7 @@ router.get('/assignments/incoming', requireAuth, requireRole('CR'), (req: Reques
     JOIN drivers d ON d.id = ta.driver_id
     JOIN vehicles v ON v.id = ta.vehicle_id
     LEFT JOIN bilty_uploads bu ON bu.assignment_id = ta.id
-    WHERE ta.status IN ('DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED')
+    WHERE ta.status IN ('DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED')
   `).all();
 
   return res.json(incoming);

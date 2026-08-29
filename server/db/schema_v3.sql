@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS contracts (
 CREATE TABLE IF NOT EXISTS purchase_orders (
   id              INTEGER PRIMARY KEY AUTOINCREMENT,
   contract_id     INTEGER NOT NULL REFERENCES contracts(id),
-  sap_po_no       TEXT UNIQUE NOT NULL,
+  sap_po_no       TEXT NOT NULL,
+  po_item_no      INTEGER NOT NULL DEFAULT 10,
   material        TEXT NOT NULL,
   uom             TEXT NOT NULL,
   target_qty      REAL NOT NULL,
@@ -59,7 +60,8 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   cost_center     TEXT,
   allowed_queue_time_mins INTEGER DEFAULT 60,
   detention_rate_per_hour REAL DEFAULT 150.00,
-  status          TEXT NOT NULL CHECK(status IN ('OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')) DEFAULT 'OPEN'
+  status          TEXT NOT NULL CHECK(status IN ('OPEN', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED')) DEFAULT 'OPEN',
+  UNIQUE(sap_po_no, po_item_no)
 );
 
 -- ── 2. JOB CONFIGS & TRANSPORT ASSIGNMENTS ───────────────────
@@ -306,7 +308,8 @@ CREATE TABLE IF NOT EXISTS miro_invoices (
   sap_invoice_no  TEXT UNIQUE,
   status          TEXT NOT NULL CHECK(status IN ('PARKED', 'POSTED', 'CLEARED')) DEFAULT 'PARKED',
   posted_date     TEXT,
-  sap_ref         TEXT
+  sap_ref         TEXT,
+  paid_amount     REAL DEFAULT 0.0
 );
 
 CREATE TABLE IF NOT EXISTS sap_sync_log (

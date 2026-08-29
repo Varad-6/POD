@@ -92,17 +92,20 @@ export const DriverDashboard: React.FC = () => {
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [mockScenario, setMockScenario] = useState<'MATCH' | 'MISMATCH' | 'BLURRY'>('MATCH');
 
-  const loadAssignments = async () => {
-    setLoading(true);
+  const loadAssignments = async (quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const data = await drApi.getMineAssignments();
       setAssignments(data);
-      const activeTrip = data.find(a => !['DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status)) || data[0] || null;
-      setSelectedAssignment(activeTrip);
+      setSelectedAssignment(prev => {
+        if (!prev) return data.find(a => !['DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status)) || data[0] || null;
+        const updated = data.find(a => a.id === prev.id);
+        return updated || data.find(a => !['DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status)) || data[0] || null;
+      });
     } catch (err) {
       console.error('Failed to load driver assignments:', err);
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   };
 
@@ -173,11 +176,11 @@ export const DriverDashboard: React.FC = () => {
   };
 
   const handleConfirmArrival = async () => {
-    if (!s) return;
+    if (!s || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await drApi.logTransitEvent(s.id, { status: 'ARRIVED', gps_lat: -25.7670, gps_lng: 29.4630 });
-      await loadAssignments();
+      await drApi.confirmArrival(s.id, { gps_lat: -25.7670, gps_lng: 29.4630 });
+      await loadAssignments(true);
     } catch (err: any) {
       alert('Arrival Confirmation failed: ' + (err.message || 'Please check coordinates'));
     } finally {
@@ -328,7 +331,7 @@ export const DriverDashboard: React.FC = () => {
               {completedTrips.map(ct => (
                 <div key={ct.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '12px', backgroundColor: 'var(--color-bg-page)', border: '1px solid var(--color-border)' }}>
                   <div>
-                    <div className="mono" style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-text-heading)' }}>PO #{ct.sap_po_no}</div>
+                    <div className="mono" style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-text-heading)' }}>PO #{ct.sap_po_no} / {ct.po_item_no}</div>
                     <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>{ct.material} • Truck: {ct.vehicle_reg}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -353,8 +356,8 @@ export const DriverDashboard: React.FC = () => {
             boxShadow: 'var(--shadow-card)'
           }}>
             <div style={{ flex: 1, minWidth: '160px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Purchase Order</div>
-              <div className="mono" style={{ fontSize: '20px', fontWeight: 900, color: 'var(--color-text-primary)' }}>PO #{s.sap_po_no}</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Purchase Order / Item</div>
+              <div className="mono" style={{ fontSize: '20px', fontWeight: 900, color: 'var(--color-text-primary)' }}>PO #{s.sap_po_no} / {s.po_item_no}</div>
             </div>
             <div style={{ flex: 1, minWidth: '120px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cargo</div>

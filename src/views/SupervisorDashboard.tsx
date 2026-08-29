@@ -132,6 +132,18 @@ export const SupervisorDashboard: React.FC = () => {
   const handleLogWeight = async () => {
     if (!selectedAssignment) return;
     const currentStage = selectedAssignment.mine_tare_kg ? 'MINE_GROSS' : 'MINE_TARE';
+
+    if (currentStage === 'MINE_GROSS') {
+      const tare = selectedAssignment.mine_tare_kg || 0;
+      const gross = parseFloat(weightKg) || 0;
+      const netPayload = gross - tare;
+      const capacityTons = selectedAssignment.vehicle_capacity || 70;
+      if (netPayload > capacityTons * 1000) {
+        alert(`Weight Check Rejected: Loaded Net Payload (${(netPayload/1000).toFixed(2)} Tons) exceeds the registered truck capacity (${capacityTons}.00 Tons).`);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     try {
       await drApi.logWeight(selectedAssignment.id, {
@@ -175,8 +187,7 @@ export const SupervisorDashboard: React.FC = () => {
     if (!selectedAssignment) return;
     setIsSubmitting(true);
     try {
-      const res = await srApi.authorizeJourney(selectedAssignment.id);
-      alert(`Journey Authorized!\nAllowed Queue Time: 60 mins\nActual Queue Time: ${res.queue_time_mins} mins\nPenalty Applicable: ${res.penalty_amount > 0 ? `Yes (ZAR ${res.penalty_amount})` : 'No'}`);
+      await srApi.authorizeJourney(selectedAssignment.id);
       const updatedList = await assignmentsApi.list();
       const updated = updatedList.find(a => a.id === selectedAssignment.id);
       if (updated) setSelectedAssignment(updated);
@@ -223,7 +234,7 @@ export const SupervisorDashboard: React.FC = () => {
             <ArrowLeft size={14} /> All Trucks
           </button>
           <span style={{ color: 'var(--color-border)' }}>›</span>
-          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>PO #{a.sap_po_no}</span>
+          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>PO #{a.sap_po_no} / {a.po_item_no}</span>
           <span style={{ marginLeft: 'auto' }}><StatusBadge status={a.status} /></span>
         </div>
 
@@ -688,7 +699,7 @@ export const SupervisorDashboard: React.FC = () => {
                 {/* Upper row: PO / Contract / Status */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <span className="mono" style={{ fontSize: '15px', fontWeight: 900, color: 'var(--color-text-primary)' }}>PO #{a.sap_po_no}</span>
+                    <span className="mono" style={{ fontSize: '15px', fontWeight: 900, color: 'var(--color-text-primary)' }}>PO #{a.sap_po_no} / {a.po_item_no}</span>
                     <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--color-border)' }}></span>
                     <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-secondary)' }}>Contract: C-2026-001</span>
                   </div>

@@ -22,6 +22,8 @@ export const AdminInvoices: React.FC = () => {
   const [paymentRefInput, setPaymentRefInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [paymentType, setPaymentType] = useState<'FULL' | 'PARTIAL'>('FULL');
+  const [partialPercent, setPartialPercent] = useState<number>(25);
 
   const loadData = async () => {
     setLoading(true);
@@ -93,11 +95,21 @@ export const AdminInvoices: React.FC = () => {
     setIsSubmitting(true);
     setErrorMsg('');
     try {
-      await invoicesApi.clearMiro(selectedMiro.id, paymentRefInput);
-      loadData();
+      await invoicesApi.clearMiro(selectedMiro.id, paymentRefInput, paymentType, partialPercent);
+      const miros = await invoicesApi.listMiro();
+      setMiroList(miros);
+      const deliveryInvoices = await caApi.getDeliveryInvoices('SENT_TO_CA');
+      setUnparkedInvoices(deliveryInvoices);
+
+      const updatedItem = miros.find(m => m.id === selectedMiro.id);
       setShowClearConfirm(false);
       setSelectedMiro(null);
-      setActiveTab('CLEARED');
+      
+      if (updatedItem && updatedItem.status === 'CLEARED') {
+        setActiveTab('CLEARED');
+      } else {
+        setActiveTab('POSTED');
+      }
     } catch (err: any) {
       console.error('Failed to clear MIRO:', err);
       const msg = err.message || '';
@@ -183,7 +195,7 @@ export const AdminInvoices: React.FC = () => {
                   (activeList as DeliveryInvoiceV3[]).map(inv => (
                     <tr key={inv.id}>
                       <td className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)' }}>#INV-DEL-{inv.id}</td>
-                      <td className="mono">{inv.sap_po_no}</td>
+                      <td className="mono">{inv.sap_po_no} / {inv.po_item_no}</td>
                       <td style={{ fontWeight: 600 }}>{inv.driver_name || 'STS Carrier'}</td>
                       <td style={{ textAlign: 'right' }}>{(inv.accepted_payload / 1000).toFixed(2)} Tons</td>
                       <td className="mono" style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-text-heading)' }}>{formatCurrency(inv.total_value)}</td>
@@ -198,14 +210,21 @@ export const AdminInvoices: React.FC = () => {
                       </td>
                     </tr>
                   ))
-                ) : (
+                 ) : (
                   (activeList as MiroInvoice[]).map(miro => (
                     <tr key={miro.id}>
                       <td className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)' }}>{miro.sap_invoice_no || `Pending (#${miro.id})`}</td>
-                      <td className="mono">{miro.sap_po_no}</td>
+                      <td className="mono">{miro.sap_po_no} / {miro.po_item_no}</td>
                       <td style={{ fontWeight: 600 }}>{miro.transporter_name || 'Carrier'}</td>
                       <td style={{ textAlign: 'right' }}>{((miro.accepted_payload_kg || 34000) / 1000).toFixed(2)} Tons</td>
-                      <td className="mono" style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-text-heading)' }}>{formatCurrency(miro.total_value || 0)}</td>
+                      <td className="mono" style={{ textAlign: 'right', fontWeight: 800, color: 'var(--color-text-heading)' }}>
+                        <div>{formatCurrency(miro.total_value || 0)}</div>
+                        {(miro.paid_amount || 0) > 0 && (
+                          <div style={{ fontSize: '11px', color: (miro.paid_amount || 0) >= (miro.total_value || 0) ? '#059669' : '#D97706', fontWeight: 700, marginTop: '3px' }}>
+                            Paid: {formatCurrency(miro.paid_amount || 0)} ({Math.round(((miro.paid_amount || 0) / (miro.total_value || 1)) * 100)}%)
+                          </div>
+                        )}
+                      </td>
                       <td style={{ textAlign: 'center' }}>
                         {miro.status === 'PARKED' && (
                           <button 
@@ -225,14 +244,23 @@ export const AdminInvoices: React.FC = () => {
                             onClick={() => {
                               setSelectedMiro(miro);
                               setPaymentRefInput(`PMT-${Date.now()}`);
+                              setPaymentType('FULL');
+                              setPartialPercent(25);
                               setShowClearConfirm(true);
                             }}
                           >
-                            Log Payment Clear
+                            {(miro.paid_amount || 0) > 0 ? 'Pay Remaining' : 'Log Payment Clear'}
                           </button>
                         )}
                          {miro.status === 'CLEARED' && (
-                           <span className="badge badge-green">CLEARED</span>
+                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                             <span className="badge badge-green">CLEARED</span>
+                             {miro.paid_amount && (
+                               <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontWeight: 600, marginTop: '2px' }}>
+                                 Paid: {formatCurrency(miro.paid_amount)}
+                               </span>
+                             )}
+                           </div>
                          )}
                        </td>
                      </tr>
@@ -243,7 +271,7 @@ export const AdminInvoices: React.FC = () => {
            </div>
          </Card>
        )}
-  
+   
        {/* Post Modal */}
        <Modal isOpen={showPostConfirm} onClose={() => setShowPostConfirm(false)} title="Confirm SAP LIV Posting">
          <div style={{ padding: '8px 0' }}>
@@ -256,11 +284,85 @@ export const AdminInvoices: React.FC = () => {
            </div>
          </div>
        </Modal>
-  
+   
        {/* Clear Modal */}
        <Modal isOpen={showClearConfirm} onClose={() => setShowClearConfirm(false)} title="Log Payment Clearing">
-         <div style={{ padding: '8px 0' }}>
-           <div style={{ marginBottom: '16px' }}>
+         <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+           
+           {selectedMiro && (() => {
+             const totalVal = selectedMiro.total_value || 0;
+             const alreadyPaid = selectedMiro.paid_amount || 0;
+             const currentDue = totalVal - alreadyPaid;
+             
+             let payingNow = currentDue;
+             if (paymentType === 'PARTIAL') {
+               payingNow = (partialPercent / 100.0) * totalVal;
+               if (payingNow > currentDue) payingNow = currentDue;
+             }
+             const remainingDue = currentDue - payingNow;
+
+             return (
+               <div style={{ padding: '14px', backgroundColor: 'var(--color-brand-blue-50)', borderRadius: '12px', border: '1px solid var(--color-border)', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Total Bill Value:</span>
+                   <strong style={{ color: 'var(--color-text-heading)' }}>{formatCurrency(totalVal)}</strong>
+                 </div>
+                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Already Paid:</span>
+                   <strong style={{ color: '#059669' }}>{formatCurrency(alreadyPaid)}</strong>
+                 </div>
+                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--color-border)', paddingTop: '8px' }}>
+                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 800 }}>Paying Now:</span>
+                   <strong style={{ color: 'var(--color-brand-blue-600)', fontSize: '15px' }}>{formatCurrency(payingNow)}</strong>
+                 </div>
+                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Remaining Balance:</span>
+                   <strong style={{ color: remainingDue > 0 ? '#D97706' : 'var(--color-text-muted)' }}>{formatCurrency(remainingDue)}</strong>
+                 </div>
+               </div>
+             );
+           })()}
+
+           <div>
+             <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '8px' }}>Payment Mode</label>
+             <div style={{ display: 'flex', gap: '20px' }}>
+               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 600, color: 'var(--color-text-heading)', cursor: 'pointer' }}>
+                 <input type="radio" name="paymentType" checked={paymentType === 'FULL'} onChange={() => setPaymentType('FULL')} />
+                 <span>Full Payment (Clear Remaining)</span>
+               </label>
+               <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 600, color: 'var(--color-text-heading)', cursor: 'pointer' }}>
+                 <input type="radio" name="paymentType" checked={paymentType === 'PARTIAL'} onChange={() => setPaymentType('PARTIAL')} />
+                 <span>Partial Payment</span>
+               </label>
+             </div>
+           </div>
+
+           {paymentType === 'PARTIAL' && (
+             <div>
+               <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Select Percentage</label>
+               <div style={{ display: 'flex', gap: '10px' }}>
+                 {[25, 50, 75].map(pct => (
+                   <button
+                     key={pct}
+                     type="button"
+                     onClick={() => setPartialPercent(pct)}
+                     className="btn"
+                     style={{
+                       flex: 1, padding: '10px',
+                       backgroundColor: partialPercent === pct ? 'var(--color-brand-blue-600)' : 'var(--color-bg-page)',
+                       color: partialPercent === pct ? '#fff' : 'var(--color-text-primary)',
+                       border: '1.5px solid var(--color-border)',
+                       fontWeight: 700, borderRadius: '8px'
+                     }}
+                   >
+                     {pct}%
+                   </button>
+                 ))}
+               </div>
+             </div>
+           )}
+
+           <div>
              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '6px' }}>Payment Reference</label>
              <input 
                type="text" 
@@ -269,13 +371,14 @@ export const AdminInvoices: React.FC = () => {
                style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--color-border)', borderRadius: '10px', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
              />
            </div>
-           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+           
+           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
              <button className="btn btn-secondary" onClick={() => setShowClearConfirm(false)}>Cancel</button>
              <button className="btn btn-primary" onClick={handleClearMiro} disabled={isSubmitting}>Log Clearing</button>
            </div>
          </div>
        </Modal>
- 
+  
      </div>
    );
  };
