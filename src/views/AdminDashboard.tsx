@@ -55,52 +55,47 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Top Banner (V3 Royal Blue Theme) */}
+      {/* Top Banner (SAP Fiori Executive Header) */}
       <div 
         style={{ 
-          background: 'linear-gradient(135deg, var(--color-brand-blue-600) 0%, var(--color-brand-blue-700) 100%)', 
-          borderRadius: '16px', 
-          padding: '28px 32px', 
-          color: '#ffffff', 
+          backgroundColor: 'var(--color-bg-card)', 
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-card)', 
+          padding: '16px 20px', 
+          color: 'var(--color-text-primary)', 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
           boxShadow: 'var(--shadow-card)',
-          position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        <div style={{ zIndex: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <span className="pulse-dot pulse-dot--active" style={{ backgroundColor: '#FFFFFF', boxShadow: '0 0 8px #FFFFFF' }} />
-            <span style={{ fontSize: '11px', color: 'var(--color-brand-blue-50)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span className="pulse-dot pulse-dot--active" />
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
               Company Admin • Action & Verification Control
             </span>
           </div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', margin: 0 }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--color-text-heading)', margin: 0 }}>
             Fleet Logistics Command Desk
           </h2>
-          <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '4px', maxWidth: '640px', margin: '4px 0 0 0', lineHeight: 1.5 }}>
+          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px', maxWidth: '700px', margin: '2px 0 0 0' }}>
             Real-time tracking of outline agreement usage, weight logs, geofence validations, OCR checks, and SAP MIRO invoice automated parking.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', zIndex: 2 }}>
+        <div style={{ display: 'flex', gap: '10px' }}>
           <button 
             onClick={() => navigate('/admin/approvals')} 
-            className="btn btn-primary" 
-            style={{ backgroundColor: '#ffffff', color: 'var(--color-brand-blue-600)', borderColor: '#ffffff', fontWeight: 700 }}
+            className="btn btn-primary btn-sm"
           >
-            Inspect POD Queue ({openReviews.length}) <ArrowRight size={14} />
+            Inspect POD Queue ({openReviews.length}) <ArrowRight size={13} />
           </button>
           <button 
             onClick={() => navigate('/admin/invoices')} 
-            className="btn btn-secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.4)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = '#FFFFFF'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
+            className="btn btn-ghost btn-sm"
           >
-            MIRO Console ({pendingPodVerify.length})
+            MIRO Invoices ({pendingMiro.length})
           </button>
         </div>
       </div>

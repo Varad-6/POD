@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ContractV3, PurchaseOrderV3 } from '../lib/api_v3';
 import { StatusBadge } from './StatusBadge';
-import { FileText, Package, Search, Filter, CheckCircle2, ArrowRight, Layers, CheckSquare, Square, Trash2, X } from 'lucide-react';
+import { FileText, Package, Search, Filter, CheckCircle2, ArrowRight, CheckSquare, Square, X } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 
 interface ConsolidatedContractPoFormProps {
@@ -72,171 +72,87 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
     }
   };
 
-  const handleRemovePo = (poId: number) => {
-    const updated = selectedIds.filter(id => id !== poId);
-    setSelectedIds(updated);
-    if (onSelectPosChange) {
-      onSelectPosChange(contractPOs.filter(p => updated.includes(p.id)));
-    }
-  };
-
   return (
     <div style={{
       backgroundColor: '#FFFFFF',
-      borderRadius: '16px',
-      border: '1.5px solid #E2E8F0',
-      padding: '24px',
-      boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+      borderRadius: 'var(--radius-card)',
+      border: '1px solid var(--color-border)',
+      padding: '16px 20px',
+      boxShadow: 'var(--shadow-card)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '20px'
+      gap: '16px'
     }}>
-      {/* ── 1. CONTRACT HEADER ── */}
+      {/* ── 1. SAP FIORI CONTRACT OBJECT HEADER ── */}
       <div style={{
-        backgroundColor: '#F8FAFC',
-        borderRadius: '12px',
-        border: '1px solid #E2E8F0',
-        padding: '16px 20px',
+        backgroundColor: '#F4F6F9',
+        borderRadius: 'var(--radius-card)',
+        border: '1px solid var(--color-border)',
+        padding: '14px 18px',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px'
       }}>
+        {/* Top Title Bar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '8px',
-              backgroundColor: '#DBEAFE',
-              color: '#2563EB',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800
-            }}>
-              <FileText size={20} />
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                SAP Outline Agreement / Contract
-              </div>
-              <h3 className="mono" style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0F172A' }}>
-                Contract #{contract.sap_contract_no}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileText size={18} color="var(--color-brand-blue-600)" />
+              <h3 className="mono" style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: 'var(--color-text-heading)' }}>
+                Agreement #{contract.sap_contract_no}
               </h3>
+              {contract.sync_mismatch ? (
+                <span style={{ fontSize: '10px', fontWeight: 800, color: '#DC2626', backgroundColor: '#FEF2F2', padding: '2px 6px', borderRadius: '3px', border: '1px solid #FCA5A5' }}>
+                  SYNC MISMATCH
+                </span>
+              ) : (
+                <StatusBadge status={contract.status} />
+              )}
             </div>
+            <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
+              {contract.customer_name || 'SAP Customer Entity'} — {contract.start_date} to {contract.end_date}
+            </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: 700,
-              backgroundColor: '#F1F5F9',
-              color: '#475569',
-              border: '1px solid #CBD5E1',
-              padding: '4px 10px',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}>
-              {contract.source_indicator || 'Source: S21 SAP | Connection: Live Read-Only'}
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600 }}>Total Contract Line Items</span>
+            <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>
+              {contract.items ? contract.items.length : contract.items_count || 0} Items
             </span>
-
-            {contract.sync_mismatch ? (
-              <span style={{
-                fontSize: '11px',
-                fontWeight: 800,
-                backgroundColor: '#FEF2F2',
-                color: '#DC2626',
-                border: '1px solid #FCA5A5',
-                padding: '4px 10px',
-                borderRadius: '6px'
-              }}>
-                ⚠️ SYNC MISMATCH (Expected: {contract.expected_items_count}, Available: {contract.items_count})
-              </span>
-            ) : (
-              <span style={{
-                fontSize: '11px',
-                fontWeight: 800,
-                backgroundColor: '#ECFDF5',
-                color: '#059669',
-                border: '1px solid #A7F3D0',
-                padding: '4px 10px',
-                borderRadius: '6px'
-              }}>
-                ✓ SAP ITEM COUNT VERIFIED ({contract.items_count || (contract.items ? contract.items.length : 0)} Items)
-              </span>
-            )}
-
-            <StatusBadge status={contract.status} />
           </div>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: '12px',
-          paddingTop: '12px',
-          borderTop: '1px solid #E2E8F0',
-          fontSize: '13px'
-        }}>
-          <div>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>Customer / Yard</span>
-            <strong style={{ color: '#0F172A' }}>{contract.customer_name || 'SAP Client Entity'}</strong>
-          </div>
-          <div>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>Agreement Type & Supplier</span>
-            <span style={{ color: '#334155', fontWeight: 600 }}>
-              {contract.contract_type || 'WK'} — {contract.supplier_name || '1403 - Gajanan Enterprises'} ({contract.supplier_no || '1403'})
-            </span>
-          </div>
-          <div>
-            <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', display: 'block' }}>Validity Period</span>
-            <span style={{ color: '#334155', fontWeight: 600 }}>{contract.start_date} → {contract.end_date}</span>
-          </div>
-        </div>
-
-        {/* ── CONTRACT ITEMS ONE-TO-MANY LIST ── */}
+        {/* Contract Dynamic Items Table */}
         {contract.items && contract.items.length > 0 && (
-          <div style={{ marginTop: '8px', borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#1E293B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Contract Items ({contract.items.length})
-              </span>
-              <span style={{ fontSize: '11px', color: '#64748B', fontWeight: 600 }}>
-                Purchasing Org: {contract.purchasing_org || '1000'} | Plant: {contract.plant || 'MON1 Plant'}
-              </span>
+          <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '10px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+              Contract Line Items ({contract.items.length})
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '8px' }}>
-              {contract.items.map((item) => (
-                <div key={item.id} style={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid #CBD5E1',
-                  borderRadius: '8px',
-                  padding: '8px 12px',
-                  fontSize: '12px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div>
-                    <div style={{ fontWeight: 800, color: '#0F172A' }}>
-                      Item {item.item_no}: {item.material_desc}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748B' }}>
-                      Material #{item.material_no} | {item.material_group || 'GENERAL'}
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, color: '#2563EB' }}>
-                      {item.target_qty} {item.uom}
-                    </div>
-                    <div style={{ fontSize: '10px', color: '#64748B' }}>
-                      {formatCurrency(item.net_price)} / {item.uom}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="table-container" style={{ border: '1px solid var(--color-border)' }}>
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Material Code</th>
+                    <th>Description</th>
+                    <th className="col-numeric">Agreed Qty</th>
+                    <th className="col-numeric">Net Price</th>
+                    <th>Plant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contract.items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="mono" style={{ fontWeight: 600 }}>{item.item_no}</td>
+                      <td className="mono">{item.material_no}</td>
+                      <td style={{ fontWeight: 500 }}>{item.material_desc}</td>
+                      <td className="col-numeric" style={{ fontWeight: 600 }}>{item.target_qty} {item.uom}</td>
+                      <td className="col-numeric">{formatCurrency(item.net_price)} / {item.uom}</td>
+                      <td>{item.plant || 'PL01'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -245,44 +161,45 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
       {/* ── 2. MULTI-PO SELECTION SUMMARY PANEL ── */}
       {selectedPOObjects.length > 0 && (
         <div style={{
-          backgroundColor: '#EFF6FF',
-          border: '1px solid #BFDBFE',
-          borderRadius: '12px',
-          padding: '16px 20px',
+          backgroundColor: 'var(--color-brand-blue-50)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-card)',
+          padding: '12px 16px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '12px'
+          gap: '10px'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CheckCircle2 size={18} color="#2563EB" />
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#1E40AF' }}>
-                SELECTED FOR TRANSPORT EXECUTION ({selectedPOObjects.length} POs)
+              <CheckCircle2 size={16} color="var(--color-brand-blue-600)" />
+              <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                SELECTED FOR TRANSPORT ALLOCATION ({selectedPOObjects.length} POs)
               </h4>
             </div>
-            <div style={{ fontSize: '14px', fontWeight: 800, color: '#1D4ED8' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>
               Total Planned Payload: {totalPlannedQty.toFixed(2)} TON
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {selectedPOObjects.map((po) => {
               const poItems = po.items && po.items.length > 0 ? po.items : [];
               return (
                 <div key={po.id} style={{
                   backgroundColor: '#FFFFFF',
-                  border: '1px solid #93C5FD',
-                  borderRadius: '8px',
-                  padding: '10px 14px'
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-card)',
+                  padding: '8px 12px'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="mono" style={{ fontSize: '13.5px', fontWeight: 800, color: '#1E3A8A' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
                         PO #{po.sap_po_no}
                       </span>
                       <StatusBadge status={po.status} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#2563EB' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>
                         PO Total: {po.target_qty} {po.uom}
                       </span>
                       {!readOnly && (
@@ -292,35 +209,35 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: '#94A3B8',
+                            color: 'var(--color-text-muted)',
                             cursor: 'pointer',
                             padding: '2px'
                           }}
                         >
-                          <X size={16} />
+                          <X size={14} />
                         </button>
                       )}
                     </div>
                   </div>
 
                   {/* PO Line Items Overview */}
-                  <div style={{ borderTop: '1px dashed #E2E8F0', paddingTop: '6px', marginTop: '4px' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  <div style={{ borderTop: '1px dashed var(--color-border)', paddingTop: '4px', marginTop: '4px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
                       PO LINE ITEMS ({poItems.length > 0 ? poItems.length : 1})
                     </div>
                     {poItems.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                         {poItems.map((item) => (
-                          <div key={item.id} style={{ fontSize: '11.5px', display: 'flex', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: '4px 8px', borderRadius: '4px', border: '1px solid #F1F5F9' }}>
+                          <div key={item.id} style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: '3px 6px', borderRadius: '3px', border: '1px solid var(--color-border)' }}>
                             <span><strong>Item {item.item_no}:</strong> {item.material_desc} (Material #{item.material_no})</span>
-                            <span style={{ fontWeight: 700, color: '#059669' }}>{item.ordered_qty} {item.uom} @ {item.net_price} {item.currency || 'INR'}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{item.ordered_qty} {item.uom} @ {item.net_price} {item.currency || 'INR'}</span>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div style={{ fontSize: '11.5px', display: 'flex', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: '4px 8px', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between', backgroundColor: '#F8FAFC', padding: '3px 6px', borderRadius: '3px' }}>
                         <span><strong>Item 10:</strong> {po.material}</span>
-                        <span style={{ fontWeight: 700, color: '#059669' }}>{po.target_qty} {po.uom}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{po.target_qty} {po.uom}</span>
                       </div>
                     )}
                   </div>
@@ -333,23 +250,10 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
               <button
                 type="button"
+                className="btn btn-primary btn-sm"
                 onClick={() => onConfirmTransport(selectedPOObjects)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  backgroundColor: '#2563EB',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 18px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.2)'
-                }}
               >
-                {actionLabel} <ArrowRight size={14} />
+                {actionLabel} <ArrowRight size={13} />
               </button>
             </div>
           )}
@@ -358,25 +262,25 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
 
       {/* ── 3. SEARCH & CONTROLS ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Package size={18} color="#2563EB" />
-          <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#0F172A' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Package size={16} color="var(--color-brand-blue-600)" />
+          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
             Available Purchase Orders ({filteredPOs.length} of {contractPOs.length})
           </h4>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            backgroundColor: '#F8FAFC',
-            border: '1px solid #CBD5E1',
-            borderRadius: '8px',
-            padding: '6px 12px',
-            width: '220px'
+            gap: '6px',
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-input)',
+            padding: '4px 8px',
+            width: '200px'
           }}>
-            <Search size={14} color="#94A3B8" />
+            <Search size={13} color="var(--color-text-muted)" />
             <input
               type="text"
               placeholder="Search PO # or Material..."
@@ -387,8 +291,10 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
                 outline: 'none',
                 background: 'transparent',
                 fontSize: '12px',
-                color: '#0F172A',
-                width: '100%'
+                color: 'var(--color-text-primary)',
+                width: '100%',
+                minHeight: 'auto',
+                padding: 0
               }}
             />
           </div>
@@ -397,12 +303,12 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            backgroundColor: '#F8FAFC',
-            border: '1px solid #CBD5E1',
-            borderRadius: '8px',
-            padding: '6px 10px'
+            backgroundColor: '#FFFFFF',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-input)',
+            padding: '4px 8px'
           }}>
-            <Filter size={14} color="#94A3B8" />
+            <Filter size={13} color="var(--color-text-muted)" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -412,8 +318,10 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
                 background: 'transparent',
                 fontSize: '12px',
                 fontWeight: 600,
-                color: '#0F172A',
-                cursor: 'pointer'
+                color: 'var(--color-text-primary)',
+                cursor: 'pointer',
+                minHeight: 'auto',
+                padding: 0
               }}
             >
               <option value="ALL">All Statuses</option>
@@ -430,17 +338,17 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
       {filteredPOs.length === 0 ? (
         <div style={{
           textAlign: 'center',
-          padding: '32px 16px',
+          padding: '24px 16px',
           backgroundColor: '#F8FAFC',
-          borderRadius: '12px',
-          border: '1px dashed #CBD5E1',
-          color: '#64748B',
-          fontSize: '13px'
+          borderRadius: 'var(--radius-card)',
+          border: '1px dashed var(--color-border)',
+          color: 'var(--color-text-muted)',
+          fontSize: '12px'
         }}>
           No purchase orders found matching your search criteria under <strong>Contract #{contract.sap_contract_no}</strong>.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {filteredPOs.map((po) => {
             const isSelected = selectedIds.includes(po.id);
 
@@ -452,35 +360,34 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '16px 20px',
-                  borderRadius: '12px',
-                  border: isSelected ? '2px solid #2563EB' : '1px solid #E2E8F0',
-                  backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                  padding: '10px 14px',
+                  borderRadius: 'var(--radius-card)',
+                  border: isSelected ? '1px solid var(--color-brand-blue-600)' : '1px solid var(--color-border)',
+                  backgroundColor: isSelected ? 'var(--color-brand-blue-50)' : '#FFFFFF',
                   cursor: po.status === 'OPEN' || isSelected ? 'pointer' : 'not-allowed',
                   transition: 'all 0.15s ease-in-out',
-                  boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.15)' : 'none',
                   flexWrap: 'wrap',
-                  gap: '12px'
+                  gap: '10px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: '1 1 300px' }}>
-                  <div style={{ color: isSelected ? '#2563EB' : '#94A3B8' }}>
-                    {isSelected ? <CheckSquare size={22} color="#2563EB" /> : <Square size={22} color="#CBD5E1" />}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 300px' }}>
+                  <div style={{ color: isSelected ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)' }}>
+                    {isSelected ? <CheckSquare size={18} color="var(--color-brand-blue-600)" /> : <Square size={18} color="var(--color-border-strong)" />}
                   </div>
 
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="mono" style={{ fontWeight: 800, fontSize: '15px', color: '#0F172A' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="mono" style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-text-heading)' }}>
                         PO #{po.sap_po_no}
                       </span>
                       <StatusBadge status={po.status} />
                     </div>
 
-                    <div style={{ fontSize: '13px', color: '#475569', marginTop: '2px' }}>
-                      Product: <strong style={{ color: '#0F172A' }}>{po.material}</strong> | Target: <strong style={{ color: '#2563EB' }}>{po.target_qty} {po.uom}</strong>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>
+                      Material: <strong style={{ color: 'var(--color-text-heading)' }}>{po.material}</strong> | Target Qty: <strong style={{ color: 'var(--color-brand-blue-600)' }}>{po.target_qty} {po.uom}</strong>
                     </div>
 
-                    <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '1px' }}>
                       Rate: {formatCurrency(po.rate)}/{po.uom} | Cost Center: {po.cost_center || 'CC-MINING-01'}
                     </div>
                   </div>
@@ -489,14 +396,15 @@ export const ConsolidatedContractPoForm: React.FC<ConsolidatedContractPoFormProp
                 {!readOnly && (
                   <div>
                     <span style={{
-                      fontSize: '12px',
+                      fontSize: '11px',
                       fontWeight: 600,
-                      color: isSelected ? '#2563EB' : '#64748B',
-                      backgroundColor: isSelected ? '#DBEAFE' : '#F1F5F9',
-                      padding: '6px 12px',
-                      borderRadius: '6px'
+                      color: isSelected ? 'var(--color-brand-blue-600)' : 'var(--color-text-muted)',
+                      backgroundColor: isSelected ? '#FFFFFF' : '#F1F5F9',
+                      border: '1px solid var(--color-border)',
+                      padding: '4px 10px',
+                      borderRadius: 'var(--radius-button)'
                     }}>
-                      {isSelected ? '✓ Selected for Transport' : po.status === 'OPEN' ? '+ Click to Select' : po.status}
+                      {isSelected ? '✓ Selected' : po.status === 'OPEN' ? '+ Click to Select' : po.status}
                     </span>
                   </div>
                 )}

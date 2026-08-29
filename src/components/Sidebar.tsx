@@ -51,9 +51,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
     <>
       <aside 
         style={{
-          width: collapsed ? '72px' : '260px',
+          width: collapsed ? '60px' : '240px',
           backgroundColor: 'var(--color-bg-sidebar)',
-          color: 'var(--color-text-body)',
+          color: '#E2E8F0',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -61,33 +61,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
           position: 'fixed',
           top: 0,
           left: 0,
-          padding: collapsed ? '20px 8px 16px 8px' : '24px 16px 20px 16px',
+          padding: collapsed ? '16px 6px' : '16px 12px',
           zIndex: 1000,
-          borderRight: '1px solid var(--color-border)',
+          borderRight: '1px solid #2B3D4F',
           boxSizing: 'border-box',
           overflowY: 'auto',
-          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+          transition: 'width 0.2s ease, padding 0.2s ease'
         }}
       >
         {/* Top Header & Brand Identity */}
         <div>
-          <div style={{ marginBottom: '24px', paddingLeft: collapsed ? '0' : '4px', paddingRight: collapsed ? '0' : '4px' }}>
+          <div style={{ marginBottom: '20px', paddingLeft: collapsed ? '0' : '4px', paddingRight: collapsed ? '0' : '4px' }}>
             {collapsed ? (
-              <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#FFFFFF', padding: '6px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
-                <PodzoLogo variant="mark" height={28} />
+              <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#FFFFFF', padding: '4px', borderRadius: '6px' }}>
+                <PodzoLogo variant="mark" height={24} />
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)' }}>
-                  <PodzoLogo variant="compact" height={32} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ backgroundColor: '#FFFFFF', padding: '6px 10px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <PodzoLogo variant="compact" height={26} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', marginTop: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center', marginTop: '2px' }}>
                   <span 
                     style={{ 
-                      fontSize: '11px', 
-                      color: 'var(--color-text-muted)', 
-                      fontWeight: 700, 
-                      letterSpacing: '0.05em',
+                      fontSize: '10px', 
+                      color: '#94A3B8', 
+                      fontWeight: 600, 
+                      letterSpacing: '0.06em',
                       textTransform: 'uppercase'
                     }}
                   >
@@ -100,9 +100,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
 
           {/* Section Divider Header */}
           {!collapsed && (
-            <div style={{ paddingLeft: '16px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                MAIN NAVIGATION
+            <div style={{ paddingLeft: '12px', marginBottom: '6px' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                NAVIGATION MENU
               </span>
             </div>
           )}

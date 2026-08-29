@@ -1,9 +1,8 @@
 @import './styles/theme.css';
 
 /* ============================================================
-   PODZO — Global UI System
-   Visual Direction: Railpass / Odama
-   Palette: Warm cream · Forest green · Soft shadows
+   PODZO — SAP Fiori / UI5 Enterprise UI System
+   Visual Direction: SAP Horizon / Quartz Enterprise System
    ============================================================ */
 
 /* ── Reset & Base ─────────────────────────────────────────── */
@@ -21,11 +20,11 @@ html {
 
 body {
   font-family: var(--font-family);
-  font-size: var(--text-base);
+  font-size: var(--text-body-desktop);
   color: var(--color-text-secondary);
   background-color: var(--color-bg-primary);
   min-height: 100vh;
-  line-height: var(--leading-normal);
+  line-height: 1.45;
 }
 
 /* ── Layout Container ─────────────────────────────────────── */
@@ -46,7 +45,7 @@ body {
 
 .content-container {
   flex: 1;
-  padding: var(--space-6) var(--space-8);
+  padding: var(--space-4) var(--space-6);
   max-width: var(--content-max-width);
   width: 100%;
   margin: 0 auto;
@@ -61,50 +60,49 @@ body {
   }
 }
 
-/* ── Sidebar Navigation Item Styling ──────────────────────── */
+/* ── Sidebar Navigation Item Styling (SAP Fiori Shell Navigation) ── */
 .sidebar-nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 16px;
-  color: var(--color-text-body);
+  padding: 10px 14px;
+  color: #A9B7C6;
   background-color: transparent;
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
   text-decoration: none;
-  font-size: 13.5px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  transition: all var(--transition-fast);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all var(--transition-normal);
+  border-radius: 4px;
 }
 
 .sidebar-nav-item:hover {
-  color: var(--color-brand-blue-600);
-  background-color: #F8FAFC;
+  color: #FFFFFF;
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .sidebar-nav-item.active {
-  color: var(--color-brand-blue-600);
-  font-weight: 700;
-  background-color: var(--color-brand-blue-50);
-  border-left-color: var(--color-brand-blue-600);
+  color: #FFFFFF;
+  font-weight: 600;
+  background-color: rgba(10, 110, 209, 0.3);
+  border-left-color: #0A6ED1;
 }
 
 /* ── Typography & Headers ─────────────────────────────────── */
 h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-primary);
-  font-weight: var(--weight-bold);
-  letter-spacing: -0.025em;
-  line-height: var(--leading-tight);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
 }
 
-h1 { font-size: var(--text-3xl); }
-h2 { font-size: var(--text-2xl); }
-h3 { font-size: var(--text-xl); }
-h4 { font-size: var(--text-lg); }
+h1 { font-size: 22px; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+h4 { font-size: 13px; }
 
 .mono {
   font-family: var(--font-mono);
-  letter-spacing: -0.03em;
 }
 
 /* ── Page Header ──────────────────────────────────────────── */
@@ -112,130 +110,128 @@ h4 { font-size: var(--text-lg); }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
+  background: var(--color-bg-card);
+  padding: 12px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
 }
 
 .page-header__title {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 700;
   color: var(--color-text-primary);
-  letter-spacing: -0.03em;
 }
 
 .page-header__subtitle {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-text-muted);
-  margin-top: 4px;
+  margin-top: 2px;
   font-weight: 400;
 }
 
-/* ── Card System — Railpass rounded soft style ────────────── */
+/* ── Card System — SAP Fiori Object / Section Panel ───────── */
 .card {
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-6);
+  border-radius: var(--radius-card);
+  padding: var(--space-4) var(--space-5);
   box-shadow: var(--shadow-card);
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
+  transition: box-shadow var(--transition-normal);
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
 }
 
 .card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-hover);
-  border-color: var(--color-border-strong);
 }
 
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: var(--space-4);
-  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border);
 }
 
 .card-body { flex: 1; }
 
 .card-footer {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
   border-top: 1px solid var(--color-border);
 }
 
-/* Accent top bar on cards */
 .card-accent-top {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 3px;
+  height: 2px;
   background: var(--color-accent-primary);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
 }
 
-/* ── KPI Grid & Metric Cards ──────────────────────────────── */
+/* ── KPI Grid & Metric Cards (SAP Fiori Analytical Tiles) ── */
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-5);
-  margin-bottom: var(--space-6);
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .kpi-card {
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 20px 22px;
+  border-radius: var(--radius-card);
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: var(--shadow-subtle);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: var(--shadow-card);
+  transition: border-color var(--transition-normal);
 }
 
 .kpi-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
+  border-color: var(--color-brand-blue-600);
 }
 
 .kpi-icon-wrapper {
-  width: 46px;
-  height: 46px;
-  border-radius: var(--radius-md);
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-accent-primary-light);
-  color: var(--color-accent-primary);
+  background: var(--color-brand-blue-50);
+  color: var(--color-brand-blue-600);
 }
 
 .kpi-label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   color: var(--color-text-muted);
 }
 
 .kpi-value {
-  font-size: 26px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 700;
   color: var(--color-text-primary);
   margin-top: 2px;
-  letter-spacing: -0.035em;
 }
 
 .kpi-trend {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 3px;
+  margin-top: 2px;
 }
 
 .kpi-trend--up   { color: var(--color-success); }
@@ -243,8 +239,8 @@ h4 { font-size: var(--text-lg); }
 
 /* ── Pulse Status Dots ────────────────────────────────────── */
 .pulse-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   display: inline-block;
   position: relative;
@@ -252,67 +248,50 @@ h4 { font-size: var(--text-lg); }
 
 .pulse-dot--active {
   background-color: var(--color-success);
-  box-shadow: 0 0 0 0 rgba(45, 106, 79, 0.7);
-  animation: pulse-green 2s infinite;
 }
 
 .pulse-dot--warning {
   background-color: var(--color-warning);
-  box-shadow: 0 0 0 0 rgba(180, 83, 9, 0.7);
-  animation: pulse-amber 2s infinite;
 }
 
-@keyframes pulse-green {
-  0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(45, 106, 79, 0.7); }
-  70%  { transform: scale(1);    box-shadow: 0 0 0 6px rgba(45, 106, 79, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(45, 106, 79, 0); }
-}
-
-@keyframes pulse-amber {
-  0%   { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(180, 83, 9, 0.7); }
-  70%  { transform: scale(1);    box-shadow: 0 0 0 6px rgba(180, 83, 9, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(180, 83, 9, 0); }
-}
-
-/* ── Data Grid Pairs ──────────────────────────────────────── */
-.data-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.data-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+/* ── Data Grid Pairs (SAP Fiori Form Header Grouping) ────── */
+.data-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.data-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
 .data-pair__label {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   color: var(--color-text-muted);
 }
 
 .data-pair__value {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--color-text-primary);
-  margin-top: 2px;
+  margin-top: 1px;
 }
 
-/* ── Button System — 3 tiers only ────────────────────────── */
+/* ── Button System — SAP Fiori Action Hierarchy ──────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 9px 18px;
-  font-size: 13.5px;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
   font-family: var(--font-family);
   font-weight: 600;
-  border-radius: var(--radius-full);
-  border: 1.5px solid transparent;
+  border-radius: var(--radius-button);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal);
   white-space: nowrap;
-  letter-spacing: -0.01em;
-  min-height: 40px;
+  min-height: 32px;
 }
 
-/* Primary — Forest green CTA */
+/* Primary Action: SAP Blue Emphasized CTA */
 .btn-primary, .btn-accent, .btn-orange, .btn-dark {
   background-color: var(--color-brand-blue-600);
   color: #FFFFFF;
@@ -321,13 +300,11 @@ h4 { font-size: var(--text-lg); }
 .btn-primary:hover, .btn-accent:hover, .btn-orange:hover, .btn-dark:hover {
   background-color: var(--color-brand-blue-700);
   border-color: var(--color-brand-blue-700);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(47, 95, 224, 0.25);
 }
 
-/* Secondary / Outline */
+/* Secondary / Standard Action */
 .btn-ghost, .btn-secondary {
-  background-color: transparent;
+  background-color: #FFFFFF;
   color: var(--color-text-body);
   border-color: var(--color-border);
 }
@@ -337,44 +314,45 @@ h4 { font-size: var(--text-lg); }
   color: var(--color-brand-blue-600);
 }
 
-/* Destructive */
+/* Destructive / Reject Action */
 .btn-danger, .btn-destructive {
-  background-color: var(--color-error);
-  color: #FFFFFF;
+  background-color: #FFFFFF;
+  color: var(--color-error);
   border-color: var(--color-error);
 }
 .btn-danger:hover, .btn-destructive:hover {
-  background-color: var(--color-error-text);
-  transform: translateY(-1px);
+  background-color: var(--color-error-bg);
+  border-color: var(--color-error);
 }
 
 /* Disabled state */
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
+  background-color: #E2E8F0 !important;
+  color: #94A3B8 !important;
+  border-color: #CBD5E1 !important;
 }
 
 .btn-sm {
-  padding: 6px 13px;
+  padding: 4px 10px;
   font-size: 12px;
-  min-height: 32px;
+  min-height: 28px;
 }
 
 .btn-lg {
-  padding: 14px 28px;
-  font-size: 15px;
-  min-height: 52px;
+  padding: 10px 20px;
+  font-size: 14px;
+  min-height: 40px;
 }
 
-/* ── Table Styling ────────────────────────────────────────── */
+/* ── Table Styling — Enterprise SAP Fiori Table ──────────── */
 .table-container {
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-card);
   overflow: hidden;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: var(--shadow-card);
 }
 
 table.data-table {
@@ -385,18 +363,18 @@ table.data-table {
 }
 
 table.data-table th {
-  background: var(--color-bg-primary);
+  background: #F4F6F9;
   color: var(--color-text-muted);
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 13px 16px;
+  letter-spacing: 0.03em;
+  padding: 9px 12px;
   border-bottom: 1px solid var(--color-border);
 }
 
 table.data-table td {
-  padding: 14px 16px;
+  padding: 10px 12px;
   color: var(--color-text-secondary);
   border-bottom: 1px solid var(--color-border);
   vertical-align: middle;
@@ -407,7 +385,12 @@ table.data-table tr:last-child td {
 }
 
 table.data-table tr:hover td {
-  background-color: var(--color-bg-primary);
+  background-color: #F8FAFC;
+}
+
+table.data-table tr.selected td,
+table.data-table tr.table-row-selected td {
+  background-color: var(--color-brand-blue-50);
 }
 
 /* Numeric columns right-aligned */
@@ -420,53 +403,53 @@ table.data-table .col-numeric {
 /* ── Progress Bars ────────────────────────────────────────── */
 .progress-bar {
   width: 100%;
-  height: 6px;
+  height: 5px;
   background: var(--color-border);
-  border-radius: var(--radius-full);
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: var(--color-accent-primary);
-  border-radius: var(--radius-full);
-  transition: width 0.4s ease;
+  background: var(--color-brand-blue-600);
+  border-radius: 2px;
+  transition: width 0.3s ease;
 }
 
-/* ── Status Badges — Pill style ───────────────────────────── */
+/* ── Status Badges — SAP Fiori Semantic Status Tags ──────── */
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 11px;
-  border-radius: var(--radius-full);
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  border: 1px solid transparent;
 }
 
-.badge-neutral { background: var(--neutral-100);      color: var(--color-text-secondary); }
-.badge-green   { background: var(--color-success-bg); color: var(--color-success-text); }
-.badge-amber   { background: var(--color-warning-bg); color: var(--color-warning-text); }
-.badge-red     { background: var(--color-error-bg);   color: var(--color-error-text); }
-.badge-blue    { background: var(--color-info-bg);    color: var(--color-info-text); }
-.badge-teal    { background: var(--color-teal-bg);    color: var(--color-teal-text); }
+.badge-neutral { background: #F1F5F9; color: #475569; border-color: #CBD5E1; }
+.badge-green   { background: var(--color-success-bg); color: var(--color-success-text); border-color: #C3E6CD; }
+.badge-amber   { background: var(--color-warning-bg); color: var(--color-warning-text); border-color: #FADEC9; }
+.badge-red     { background: var(--color-error-bg);   color: var(--color-error-text);   border-color: #F8C4C4; }
+.badge-blue    { background: var(--color-info-bg);    color: var(--color-info-text);    border-color: #CBE2F7; }
+.badge-teal    { background: var(--color-info-bg);    color: var(--color-info-text);    border-color: #CBE2F7; }
 
-/* ── Form Inputs — Consistent style ──────────────────────── */
+/* ── Form Inputs — SAP UI5 Standard Field Styling ────────── */
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .form-group label,
 .form-label {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
 }
 
 .form-input,
@@ -479,17 +462,16 @@ input[type="date"],
 input[type="time"],
 select,
 textarea {
-  background: var(--color-bg-elevated);
-  border: 1.5px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 10px 14px;
+  background: #FFFFFF;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  padding: 6px 10px;
   color: var(--color-text-primary);
-  font-size: 14px;
+  font-size: 13px;
   font-family: var(--font-family);
-  min-height: 44px;
+  min-height: 34px;
   width: 100%;
-  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
-  appearance: none;
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
 }
 
 .form-input:focus,
@@ -498,72 +480,70 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 3px rgba(47, 95, 224, 0.15);
+  border-color: var(--color-brand-blue-600);
+  box-shadow: 0 0 0 2px rgba(10, 110, 209, 0.2);
 }
 
 .form-input::placeholder,
 input::placeholder {
-  color: var(--color-text-muted);
+  color: #94A3B8;
 }
 
-/* ── Tabs Component ───────────────────────────────────────── */
+/* ── Tabs Component (SAP Fiori Segmented / Icon Tab Bar) ─── */
 .tabs {
   display: flex;
-  gap: 4px;
-  background: var(--color-bg-primary);
+  gap: 2px;
+  background: #EAF0F6;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: 4px;
+  border-radius: 4px;
+  padding: 3px;
   width: fit-content;
 }
 
 .tab-item {
-  padding: 8px 18px;
-  border-radius: var(--radius-md);
-  font-size: 13px;
+  padding: 5px 14px;
+  border-radius: 3px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   color: var(--color-text-muted);
   border: none;
   background: transparent;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-normal);
   white-space: nowrap;
 }
 
 .tab-item:hover {
   color: var(--color-text-primary);
-  background: var(--color-bg-surface);
 }
 
 .tab-item.active {
-  background: var(--color-bg-surface);
-  color: var(--color-accent-primary);
+  background: #FFFFFF;
+  color: var(--color-brand-blue-600);
   font-weight: 700;
-  box-shadow: var(--shadow-subtle);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 /* ── Skeleton Loaders ─────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(90deg,
-    var(--color-border) 25%,
-    var(--color-bg-primary) 50%,
-    var(--color-border) 75%
+    #E2E8F0 25%,
+    #F1F5F9 50%,
+    #E2E8F0 75%
   );
   background-size: 200% 100%;
-  animation: shimmer 1.6s infinite;
-  border-radius: var(--radius-md);
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
 }
 
 .skeleton-text {
-  height: 14px;
-  border-radius: var(--radius-sm);
-  margin-bottom: 8px;
+  height: 12px;
+  margin-bottom: 6px;
 }
 
 .skeleton-card {
-  height: 120px;
-  border-radius: var(--radius-xl);
+  height: 100px;
+  border-radius: var(--radius-card);
 }
 
 @keyframes shimmer {
@@ -577,48 +557,47 @@ input::placeholder {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-12) var(--space-8);
+  padding: var(--space-8) var(--space-6);
   text-align: center;
   color: var(--color-text-muted);
 }
 
 .empty-state__icon {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-xl);
-  background: var(--color-bg-primary);
-  border: 1.5px solid var(--color-border);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #F1F5F9;
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
   color: var(--color-text-muted);
 }
 
 .empty-state__title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .empty-state__desc {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-text-muted);
-  max-width: 300px;
-  line-height: var(--leading-normal);
+  max-width: 320px;
 }
 
 /* ── Mobile Card-List (replaces tables on mobile) ─────────── */
 @media (max-width: 768px) {
   .table-container { display: none; }
-  .card-list       { display: flex; flex-direction: column; gap: 12px; }
+  .card-list       { display: flex; flex-direction: column; gap: 10px; }
   .card-list-item {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 16px;
-    box-shadow: var(--shadow-subtle);
+    border-radius: var(--radius-card);
+    padding: 12px;
+    box-shadow: var(--shadow-card);
   }
 }
 
@@ -626,7 +605,7 @@ input::placeholder {
   .card-list { display: none; }
 }
 
-/* ── Mobile-first Action Bar ──────────────────────────────── */
+/* ── Mobile Action Bar ────────────────────────────────────── */
 .mobile-action-bar {
   display: none;
 }
@@ -634,26 +613,24 @@ input::placeholder {
 @media (max-width: 768px) {
   .mobile-action-bar {
     display: flex;
-    gap: 12px;
+    gap: 8px;
     position: sticky;
     bottom: 0;
-    padding: 12px 16px;
+    padding: 10px 14px;
     background: var(--color-bg-surface);
     border-top: 1px solid var(--color-border);
     z-index: 50;
-    box-shadow: 0 -4px 16px rgba(29, 46, 29, 0.1);
   }
 
   .mobile-action-bar .btn {
     flex: 1;
-    min-height: 52px;
-    font-size: 15px;
-    border-radius: var(--radius-lg);
+    min-height: 44px;
+    font-size: 14px;
   }
 }
 
 /* ── Spinner ──────────────────────────────────────────────── */
-.spin { animation: spin 0.9s linear infinite; }
+.spin { animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ── Utility ──────────────────────────────────────────────── */
@@ -668,13 +645,13 @@ input::placeholder {
 @media (max-width: 768px) {
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
   .data-grid-3 {
     grid-template-columns: 1fr 1fr;
   }
   .content-container {
-    padding: var(--space-4);
+    padding: var(--space-3);
   }
 }
 
@@ -683,3 +660,4 @@ input::placeholder {
     grid-template-columns: 1fr;
   }
 }
+

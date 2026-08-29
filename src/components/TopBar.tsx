@@ -62,29 +62,30 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
     <header 
       style={{
         height: 'var(--topbar-height)',
-        backgroundColor: 'var(--color-bg-card)',
-        borderBottom: '1px solid var(--color-border)',
+        backgroundColor: 'var(--sap-shell-bg)',
+        color: 'var(--sap-shell-text)',
+        borderBottom: '1px solid #2B3D4F',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 32px',
+        padding: '0 20px',
         position: 'sticky',
         top: 0,
         zIndex: 90,
-        boxShadow: 'var(--shadow-card)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
       }}
     >
-      {/* Page Title clearly shown as H1, brand logo skipped to prevent repetition */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-heading)', margin: 0, letterSpacing: '-0.02em' }}>
+      {/* Page Title & Breadcrumb Indicator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <h1 style={{ fontSize: '15px', fontWeight: 600, color: '#FFFFFF', margin: 0, letterSpacing: '0.01em' }}>
           {title}
         </h1>
       </div>
 
       {/* Right User Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         
-        {/* Reset Demo Data Button: styled as small muted text link */}
+        {/* Reset Demo Data Button */}
         <button
           onClick={() => setShowResetConfirm(true)}
           disabled={isResetting}
@@ -92,45 +93,44 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            padding: '6px 12px',
-            backgroundColor: 'transparent',
-            color: 'var(--color-text-muted)',
-            border: 'none',
-            fontSize: '12px',
+            padding: '4px 10px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            color: '#E2E8F0',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            fontSize: '11px',
             fontWeight: 600,
             cursor: isResetting ? 'wait' : 'pointer',
             transition: 'all var(--transition-normal)',
             borderRadius: 'var(--radius-button)'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#F1F5F9';
-            e.currentTarget.style.color = 'var(--color-text-heading)';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+            e.currentTarget.style.color = '#FFFFFF';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = 'var(--color-text-muted)';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.color = '#E2E8F0';
           }}
           title="Resets demo environment data"
         >
-          <RotateCcw size={13} className={isResetting ? 'spin' : ''} />
+          <RotateCcw size={12} className={isResetting ? 'spin' : ''} />
           <span>{isResetting ? 'Resetting...' : 'Reset Demo'}</span>
         </button>
 
         {/* User Info & Persona Pill */}
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-text-heading)', margin: 0 }}>
+          <p style={{ fontWeight: 600, fontSize: '12px', color: '#FFFFFF', margin: 0 }}>
             {currentUser.displayName || currentUser.username}
           </p>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1px' }}>
             <span 
               style={{
-                fontSize: '10px',
+                fontSize: '9px',
                 fontWeight: 700,
-                backgroundColor: 'var(--color-brand-blue-50)',
-                color: 'var(--color-brand-blue-600)',
-                padding: '2px 8px',
+                backgroundColor: '#0A6ED1',
+                color: '#FFFFFF',
+                padding: '1px 6px',
                 borderRadius: 'var(--radius-pill)',
-                border: '1px solid var(--color-border)',
                 textTransform: 'uppercase',
                 letterSpacing: '0.04em',
               }}
@@ -140,21 +140,20 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
           </div>
         </div>
 
-        {/* User Avatar: soft blue bg, brand blue text */}
+        {/* User Avatar */}
         <div 
           style={{
-            width: '38px',
-            height: '38px',
+            width: '30px',
+            height: '30px',
             borderRadius: '50%',
-            backgroundColor: 'var(--color-brand-blue-50)',
-            color: 'var(--color-brand-blue-600)',
+            backgroundColor: '#0A6ED1',
+            color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontWeight: 800,
-            fontSize: '13px',
-            border: '1.5px solid var(--color-border)',
-            boxShadow: 'var(--shadow-card)',
+            fontWeight: 700,
+            fontSize: '11px',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
           }}
         >
           {getInitials()}
@@ -167,24 +166,24 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
             background: 'none',
             border: 'none',
             cursor: 'pointer',
-            color: 'var(--color-text-muted)',
+            color: '#CBD5E1',
             display: 'flex',
             alignItems: 'center',
-            padding: '7px',
+            padding: '5px',
             borderRadius: 'var(--radius-button)',
             transition: 'all var(--transition-normal)'
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = 'var(--color-error-text)';
-            e.currentTarget.style.backgroundColor = 'var(--color-error-bg)';
+            e.currentTarget.style.color = '#FF8A8A';
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = 'var(--color-text-muted)';
+            e.currentTarget.style.color = '#CBD5E1';
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
           title="Sign Out"
         >
-          <LogOut size={18} />
+          <LogOut size={16} />
         </button>
       </div>
 

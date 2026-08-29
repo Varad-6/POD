@@ -1,67 +1,72 @@
 /* ============================================================
-   PODZO — Design System v3.0 (Blue Theme Redesign)
-   Visual Direction: Railpass Commuter Line (Royal Blue & White/Light Gray)
-   Font: Inter (Google Fonts)
+   PODZO — SAP Fiori / SAP UI5 Enterprise Design System
+   Visual Direction: SAP Horizon / Fiori 3 Quartz Enterprise Theme
+   Font: '72', Inter, -apple-system, BlinkMacSystemFont, Arial, sans-serif
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* ── New Blue Design Tokens (Section 2) ────────────────── */
-  --color-brand-blue-600: #2F5FE0;     /* Primary buttons, active nav, key CTAs */
-  --color-brand-blue-700: #2648B8;     /* Hover/pressed state of primary blue */
-  --color-brand-blue-50:  #EEF2FE;     /* Light blue tint — selected row bg, info banners */
+  /* ── SAP Fiori Core Enterprise Palette (SAP Horizon / Quartz) ── */
+  --sap-shell-bg:         #354A5E;     /* SAP Fiori Shell / Top Header Dark Slate Navy */
+  --sap-shell-text:       #FFFFFF;
   
-  --color-bg-page:        #F6F7FB;     /* Main page background, replaces cream */
-  --color-bg-card:        #FFFFFF;     /* All cards, panels, modals */
-  --color-bg-sidebar:     #FFFFFF;     /* Sidebar becomes WHITE */
-  --color-border:         #E4E7EC;     /* Card borders, dividers — soft, barely visible */
+  --color-brand-blue-600: #0A6ED1;     /* SAP Fiori Primary Action Blue (#0A6ED1 / #0070F2) */
+  --color-brand-blue-700: #0854A0;     /* SAP Fiori Active/Hover Blue */
+  --color-brand-blue-50:  #F0F4F8;     /* Light tint surface selection */
   
-  --color-text-heading:   #101828;     /* All headings */
-  --color-text-body:      #344054;     /* Body copy */
-  --color-text-muted:     #667085;     /* Labels, captions, secondary info */
+  --color-bg-page:        #EDF0F5;     /* Enterprise Light Grey Canvas Background */
+  --color-bg-card:        #FFFFFF;     /* Fiori Card & Panel Surface */
+  --color-bg-sidebar:     #1C2D3D;     /* Dark Fiori Side Navigation Surface */
+  --color-border:         #D9E1E8;     /* Clean Fiori Border Tint */
+  --color-border-strong:  #B0C0D0;
+  
+  --color-text-heading:   #1C2D3D;     /* Dark Slate Heading */
+  --color-text-body:      #324553;     /* Main Body Text */
+  --color-text-muted:     #6A7D8B;     /* Subtitles, Table Headers, Captions */
+  --color-text-inverse:   #FFFFFF;
 
-  /* Status colors (Pill colors with contrast text) */
-  --color-success:        #12B76A;     /* Green only for done/cleared/approved */
-  --color-success-bg:     #ECFDF3;
-  --color-success-text:   #027A48;
+  /* SAP Fiori Semantic Colors */
+  --color-success:        #107E3E;     /* SAP Positive / Green */
+  --color-success-bg:     #EBF5EE;
+  --color-success-text:   #107E3E;
   
-  --color-warning:        #F79009;     /* Pending/review states */
-  --color-warning-bg:     #FFFAEB;
-  --color-warning-text:   #B54708;
+  --color-warning:        #E9730C;     /* SAP Critical / Amber-Orange */
+  --color-warning-bg:     #FEF3E7;
+  --color-warning-text:   #E9730C;
   
-  --color-error:          #F04438;     /* Blocked/rejected/mismatch */
-  --color-error-bg:       #FEF3F2;
-  --color-error-text:     #B42318;
+  --color-error:          #BB0000;     /* SAP Negative / Red */
+  --color-error-bg:       #FCEBEB;
+  --color-error-text:     #BB0000;
   
-  --color-info:           #2F5FE0;     /* In-progress/en-route states */
-  --color-info-bg:        #EEF2FE;
-  --color-info-text:      #175CD3;
+  --color-info:           #0A6ED1;     /* SAP Information / Blue */
+  --color-info-bg:        #F0F4F8;
+  --color-info-text:      #0A6ED1;
 
-  /* Card Radius */
-  --radius-card:          16px;
-  --radius-button:        10px;
-  --radius-pill:          999px;
-  --radius-input:         10px;
+  /* SAP Fiori Structural Metrics (Clean Enterprise Compact Radii) */
+  --radius-card:          6px;
+  --radius-button:        4px;
+  --radius-pill:          12px;
+  --radius-input:         4px;
 
-  /* Shadows */
-  --shadow-card:          0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.06);
-  --shadow-card-hover:    0 4px 8px rgba(16,24,40,0.08);
-  --shadow-modal:         0 12px 32px rgba(16,24,40,0.12);
+  /* SAP Fiori Subtle Elevation */
+  --shadow-card:          0 1px 3px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-card-hover:    0 3px 8px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-modal:         0 16px 40px rgba(10, 25, 45, 0.2);
 
-  /* Font */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  /* Typography */
+  --font-family: '72', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
   --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
 
-  /* ── Dynamic Typography variables mapped to :root (Inter font) ── */
-  --text-h1-mobile: 28px;
-  --text-h1-desktop: 36px;
-  --text-h2-mobile: 22px;
-  --text-h2-desktop: 28px;
-  --text-h3-mobile: 18px;
-  --text-h3-desktop: 20px;
-  --text-body-mobile: 15px;
-  --text-body-desktop: 16px;
+  /* Dynamic Typography */
+  --text-h1-mobile: 22px;
+  --text-h1-desktop: 26px;
+  --text-h2-mobile: 18px;
+  --text-h2-desktop: 20px;
+  --text-h3-mobile: 15px;
+  --text-h3-desktop: 16px;
+  --text-body-mobile: 13px;
+  --text-body-desktop: 14px;
 
   /* Spacing Scale */
   --space-1:  4px;
@@ -75,12 +80,12 @@
   --space-12: 48px;
 
   /* Layout Dimensions */
-  --sidebar-width:     260px;
-  --topbar-height:     64px;
-  --content-max-width: 1440px;
-  --transition-normal: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --sidebar-width:     240px;
+  --topbar-height:     48px;
+  --content-max-width: 1600px;
+  --transition-normal: 0.15s ease-in-out;
 
-  /* ── Theme Mapping Aliases (maps to design system components) ── */
+  /* Theme Mapping Aliases */
   --color-bg-primary:   var(--color-bg-page);
   --color-bg-surface:   var(--color-bg-card);
   --color-bg-elevated:  var(--color-bg-card);
@@ -94,13 +99,9 @@
 
   --color-text-primary:   var(--color-text-heading);
   --color-text-secondary: var(--color-text-body);
-  --color-text-muted:     var(--color-text-muted);
-  --color-text-inverse:   #FFFFFF;
-
-  --color-border-strong:  var(--color-border);
   --color-border-focus:   var(--color-brand-blue-600);
 
-  /* ── Legacy Semantic/Variable Aliases to maintain backward compatibility ── */
+  /* Legacy Semantic & Utility Variable Aliases */
   --brand-purple:        var(--color-brand-blue-600);
   --brand-purple-dark:   var(--color-brand-blue-700);
   --brand-purple-light:  var(--color-brand-blue-50);
@@ -166,14 +167,14 @@
   --neutral-secondary: var(--color-text-muted);
   --color-bg:    var(--color-bg-page);
 
-  --radius-sm:   6px;
+  --radius-sm:   3px;
   --radius-md:   var(--radius-input);
   --radius-lg:   var(--radius-button);
   --radius-xl:   var(--radius-card);
-  --radius-2xl:  20px;
+  --radius-2xl:  8px;
   --radius-full: var(--radius-pill);
 
   --shadow-subtle: var(--shadow-card);
-  --shadow-card:   var(--shadow-card);
   --shadow-hover:  var(--shadow-card-hover);
 }
+
