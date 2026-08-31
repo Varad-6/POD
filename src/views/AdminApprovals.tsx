@@ -5,7 +5,7 @@ import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { Tabs } from '../components/Tabs';
-import { Table } from '../components/Table';
+import { Table, Column } from '../components/Table';
 import { Button } from '../components/Button';
 
 export const AdminApprovals: React.FC = () => {
@@ -158,7 +158,7 @@ export const AdminApprovals: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {selectedReview === null ? (
             <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
-              <Table
+              <Table<ReviewQueueItemV3 extends {}>
                 data={reviews}
                 onRowClick={(r) => setSelectedReview(r)}
                 getRowStyle={(r) => ({
@@ -166,7 +166,7 @@ export const AdminApprovals: React.FC = () => {
                 })}
                 renderMobileCard={(r) => {
                   const isSelected = selectedReview?.id === r.id;
-                  const { originNet, destNet, variance } = getReviewWeights(r);
+                  const { dispatchedTons, receivedTons, variancePct } = getReviewWeights(r);
                   return (
                     <div 
                       onClick={() => setSelectedReview(r)}
@@ -186,11 +186,11 @@ export const AdminApprovals: React.FC = () => {
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span>Siding Net: {originNet ? (originNet / 1000).toFixed(2) : '—'}T</span>
-                        <span>Dest Net: {destNet ? (destNet / 1000).toFixed(2) : '—'}T</span>
+                        <span>Siding Net: {dispatchedTons ? dispatchedTons.toFixed(2) : '—'}T</span>
+                        <span>Dest Net: {receivedTons ? receivedTons.toFixed(2) : '—'}T</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                        <span>Variance: {variance ? `${variance.toFixed(2)}%` : '—'}</span>
+                        <span>Variance: {variancePct ? `${variancePct.toFixed(2)}%` : '—'}</span>
                         <span>{r.created_at}</span>
                       </div>
                     </div>
@@ -284,7 +284,7 @@ export const AdminApprovals: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
           <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
-            <Table
+            <Table<ReviewQueueItemV3 extends {}>
               data={reviews}
               onRowClick={(r) => setSelectedReview(r)}
               getRowStyle={(r) => ({
@@ -307,8 +307,8 @@ export const AdminApprovals: React.FC = () => {
                   header: 'Variance',
                   align: 'right',
                   render: (r) => {
-                    const { variance } = getReviewWeights(r);
-                    return <span className="mono" style={{ fontWeight: 700, color: variance > 5 ? 'var(--color-error-text)' : 'var(--color-text-heading)' }}>{variance ? `${variance.toFixed(2)}%` : '—'}</span>;
+                    const { variancePct } = getReviewWeights(r);
+                    return <span className="mono" style={{ fontWeight: 700, color: variancePct > 5 ? 'var(--color-error-text)' : 'var(--color-text-heading)' }}>{variancePct ? `${variancePct.toFixed(2)}%` : '—'}</span>;
                   }
                 },
                 {

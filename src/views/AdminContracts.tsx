@@ -126,7 +126,7 @@ export const AdminContracts: React.FC = () => {
               subtitle={`Showing ${contracts.length} active outline agreements synchronized from SAP S21 master data`}
               style={{ padding: 0 }}
             >
-              <Table
+              <Table<ContractV3 extends {}>
                 data={contracts}
                 onRowClick={(c) => handleContractSelect(c)}
                 getRowStyle={(c) => ({
