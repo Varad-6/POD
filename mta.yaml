@@ -1,0 +1,50 @@
+_schema-version: "3.1"
+ID: PODZ
+version: 1.0.0
+description: "lets make delivery simple"
+
+parameters:
+  enable-parallel-deployments: true
+
+modules:
+  # ── 1. Backend API Service ──────────────────────────────────────────
+  - name: PODZ-srv
+    type: nodejs
+    path: .
+    parameters:
+      buildpack: nodejs_buildpack
+      memory: 256M
+      disk-quota: 512M
+    provides:
+      - name: PODZ-srv-api
+        properties:
+          srv-url: ${default-url}
+    properties:
+      PORT: 3001
+      NODE_ENV: production
+    build-parameters:
+      ignore:
+        - node_modules
+        - dist
+        - e2e_live_test.spec.ts
+
+  # ── 2. Frontend Application (Static HTML Host) ─────────────────────
+  - name: PODZ-ui
+    type: html5
+    path: .
+    build-parameters:
+      builder: custom
+      commands:
+        - npm run build
+      supported-platforms: []
+      target-path: dist
+    parameters:
+      buildpack: staticfile_buildpack
+      memory: 128M
+      disk-quota: 256M
+    requires:
+      - name: PODZ-srv-api
+        group: dest
+        properties:
+          name: srv-api
+          url: ~{srv-url}
