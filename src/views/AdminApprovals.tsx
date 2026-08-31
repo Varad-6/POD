@@ -158,7 +158,7 @@ export const AdminApprovals: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {selectedReview === null ? (
             <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
-              <Table<ReviewQueueItemV3>
+              <Table
                 data={reviews}
                 onRowClick={(r) => setSelectedReview(r)}
                 getRowStyle={(r) => ({
@@ -166,6 +166,7 @@ export const AdminApprovals: React.FC = () => {
                 })}
                 renderMobileCard={(r) => {
                   const isSelected = selectedReview?.id === r.id;
+                  const { originNet, destNet, variance } = getReviewWeights(r);
                   return (
                     <div 
                       onClick={() => setSelectedReview(r)}
@@ -185,17 +186,17 @@ export const AdminApprovals: React.FC = () => {
                         </span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                        <span>Siding Net: {r.origin_net_weight_kg ? (r.origin_net_weight_kg / 1000).toFixed(2) : '—'}T</span>
-                        <span>Dest Net: {r.dest_net_weight_kg ? (r.dest_net_weight_kg / 1000).toFixed(2) : '—'}T</span>
+                        <span>Siding Net: {originNet ? (originNet / 1000).toFixed(2) : '—'}T</span>
+                        <span>Dest Net: {destNet ? (destNet / 1000).toFixed(2) : '—'}T</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                        <span>Variance: {r.variance_percentage ? `${r.variance_percentage.toFixed(2)}%` : '—'}</span>
+                        <span>Variance: {variance ? `${variance.toFixed(2)}%` : '—'}</span>
                         <span>{r.created_at}</span>
                       </div>
                     </div>
                   );
                 }}
-                columns={[]}
+                columns={[] as Column<ReviewQueueItemV3>[]}
               />
             </Card>
           ) : (
@@ -283,7 +284,7 @@ export const AdminApprovals: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
           <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
-            <Table<ReviewQueueItemV3>
+            <Table
               data={reviews}
               onRowClick={(r) => setSelectedReview(r)}
               getRowStyle={(r) => ({
@@ -305,7 +306,10 @@ export const AdminApprovals: React.FC = () => {
                 {
                   header: 'Variance',
                   align: 'right',
-                  render: (r) => <span className="mono" style={{ fontWeight: 700, color: r.variance_percentage > 5 ? 'var(--color-error-text)' : 'var(--color-text-heading)' }}>{r.variance_percentage ? `${r.variance_percentage.toFixed(2)}%` : '—'}</span>
+                  render: (r) => {
+                    const { variance } = getReviewWeights(r);
+                    return <span className="mono" style={{ fontWeight: 700, color: variance > 5 ? 'var(--color-error-text)' : 'var(--color-text-heading)' }}>{variance ? `${variance.toFixed(2)}%` : '—'}</span>;
+                  }
                 },
                 {
                   header: 'Blocker',

@@ -66,6 +66,7 @@ export interface PurchaseOrder {
   consigneeName?: string;
   declaredValue?: number;
   sapSyncStatus?: SAPSyncStatus;
+  po_item_no?: number;
 }
 
 // ──────────────────────────────────────────────
