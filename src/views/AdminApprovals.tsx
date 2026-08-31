@@ -158,7 +158,7 @@ export const AdminApprovals: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {selectedReview === null ? (
             <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
-              <Table<ReviewQueueItemV3 extends {}>
+              <Table<ReviewQueueItemV3,>
                 data={reviews}
                 onRowClick={(r) => setSelectedReview(r)}
                 getRowStyle={(r) => ({
@@ -284,7 +284,7 @@ export const AdminApprovals: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
           <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
-            <Table<ReviewQueueItemV3 extends {}>
+            <Table<ReviewQueueItemV3,>
               data={reviews}
               onRowClick={(r) => setSelectedReview(r)}
               getRowStyle={(r) => ({
