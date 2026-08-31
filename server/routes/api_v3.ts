@@ -843,7 +843,7 @@ router.get('/miro', requireAuth, requireRole('CA'), (req: Request, res: Response
   const db = getDb();
   const list = db.prepare(`
     SELECT mi.*, di.total_value, di.accepted_payload as accepted_payload_kg,
-           po.sap_po_no, po.material, t.name as transporter_name, cu.name as customer_name
+           po.sap_po_no, po.po_item_no, po.material, t.name as transporter_name, cu.name as customer_name
     FROM miro_invoices mi
     JOIN main_invoices mai ON mai.id = mi.main_invoice_id
     JOIN delivery_invoices di ON di.id = mai.delivery_invoice_id

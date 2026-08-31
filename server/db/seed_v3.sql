@@ -8,16 +8,16 @@
 INSERT OR IGNORE INTO users (id, username, password_hash, role, display_name, email, phone, entity_id) VALUES
   (1, 'ca_thandiwe',   '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'CA', 'Thandiwe Nkosi',      'thandiwe@podzo.co.za',     '+27110001001', NULL),
   (2, 'ta_sipho',      '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'TA', 'Sipho Dlamini (STS)', 'sipho@siphotransport.co.za','+27830001002', 1),
-  (3, 'dr_rajesh',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Pappu Singh',        'pappu@driver.in',          '+27720001003', 1),
+  (3, 'dr_rajesh',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Rajesh Kumar',       'rajesh@driver.in',         '+27720001003', 1),
   (4, 'cr_mining',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'CR', 'Yard Receiver',       'recv@podzo.co.za',         '+27110001004', 1),
   (5, 'sr_gate01',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'SR', 'Jan Mokoena',         'jan@podzo.co.za',          '+27110001005', NULL),
-  (6, 'dr_amit',       '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Raju Yadav',          'raju@driver.in',           '+27720001008', 2),
-  (7, 'dr_sunil',      '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Sanjay Kumar',        'sanjay@driver.in',         '+27720001006', 3),
-  (8, 'dr_vikram',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Ramesh Lal',          'ramesh@driver.in',         '+27720001007', 4),
-  (9, 'dr_suresh',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Sunil Kumar',         'sunil@driver.in',          '+27720001010', 5),
+  (6, 'dr_amit',       '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Amit Sharma',        'amit@driver.in',           '+27720001008', 2),
+  (7, 'dr_sunil',      '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Sunil Kumar',        'sunil@driver.in',          '+27720001006', 3),
+  (8, 'dr_vikram',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Vikram Singh',       'vikram@driver.in',         '+27720001007', 4),
+  (9, 'dr_suresh',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Suresh Kumar',       'suresh@driver.in',         '+27720001010', 5),
   (10, 'dr_anil',      '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Anil Kumar',          'anil@driver.in',           '+27720001011', 6),
-  (11, 'dr_ramesh',    '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Vijay Singh',         'vijay@driver.in',          '+27720001012', 7),
-  (12, 'dr_vijay',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Ajay Prasad',         'ajay@driver.in',           '+27720001013', 8);
+  (11, 'dr_ramesh',    '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Ramesh Lal',          'ramesh@driver.in',         '+27720001012', 7),
+  (12, 'dr_vijay',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Vijay Singh',         'vijay@driver.in',          '+27720001013', 8);
 
 -- CUSTOMERS (Mining Yards)
 INSERT OR IGNORE INTO customers (id, name, sap_customer_no, gps_lat, gps_lng, address) VALUES
@@ -31,14 +31,14 @@ INSERT OR IGNORE INTO transporters (id, name, gstin) VALUES
 
 -- DRIVERS
 INSERT OR IGNORE INTO drivers (id, transporter_id, name, license_no, license_expiry, prdp_expiry, phone) VALUES
-  (1, 1, 'Pappu Singh',     'DL-850912-GP', '2027-12-31', '2027-12-31', '+27720001003'),
-  (2, 1, 'Raju Yadav',       'DL-760220-MP', '2027-08-30', '2027-08-30', '+27720001008'),
-  (3, 2, 'Sanjay Kumar',     'DL-780415-WC', '2028-06-15', '2028-06-15', '+27720001006'),
-  (4, 1, 'Ramesh Lal',       'DL-900311-LP', '2024-12-31', '2024-12-31', '+27720001007'), -- EXPIRED
-  (5, 1, 'Sunil Kumar',      'DL-811105-GP', '2028-11-05', '2028-11-05', '+27720001010'),
-  (6, 1, 'Anil Kumar',       'DL-830409-MP', '2027-04-09', '2027-04-09', '+27720001011'),
-  (7, 2, 'Vijay Singh',      'DL-791012-WC', '2029-10-12', '2029-10-12', '+27720001012'),
-  (8, 2, 'Ajay Prasad',      'DL-820516-GP', '2028-05-16', '2028-05-16', '+27720001013');
+  (1, 1, 'Rajesh Kumar',    'DL-850912-GP', '2027-12-31', '2027-12-31', '+27720001003'),
+  (2, 1, 'Amit Sharma',     'DL-760220-MP', '2027-08-30', '2027-08-30', '+27720001008'),
+  (3, 2, 'Sunil Kumar',     'DL-780415-WC', '2028-06-15', '2028-06-15', '+27720001006'),
+  (4, 1, 'Vikram Singh',    'DL-900311-LP', '2024-12-31', '2024-12-31', '+27720001007'), -- EXPIRED
+  (5, 1, 'Suresh Kumar',    'DL-811105-GP', '2028-11-05', '2028-11-05', '+27720001010'),
+  (6, 1, 'Anil Kumar',      'DL-830409-MP', '2027-04-09', '2027-04-09', '+27720001011'),
+  (7, 2, 'Ramesh Lal',      'DL-791012-WC', '2029-10-12', '2029-10-12', '+27720001012'),
+  (8, 2, 'Vijay Singh',     'DL-820516-GP', '2028-05-16', '2028-05-16', '+27720001013');
 
 -- VEHICLES
 INSERT OR IGNORE INTO vehicles (id, transporter_id, reg_no, capacity) VALUES

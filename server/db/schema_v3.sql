@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS transport_assignments (
   license_no    TEXT NOT NULL,
   gstin         TEXT NOT NULL,
   scheduled_date TEXT NOT NULL,
+  assigned_qty REAL,
   queue_entry_time TEXT,
   actual_arrival_time TEXT,
   loading_status TEXT DEFAULT 'PENDING',

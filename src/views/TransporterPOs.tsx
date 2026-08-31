@@ -7,6 +7,9 @@ import {
 import { useAuthV3 } from '../contexts/AuthContextV3';
 import { useContractPo } from '../contexts/ContractPoContext';
 import { taApi, transportersApi, assignmentsApi, JobConfigV3, PoItemV3, Driver, VehicleEnriched, MultiTruckAssignPayload } from '../lib/api_v3';
+import { Card } from '../components/Card';
+import { Button } from '../components/Button';
+import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { Tabs } from '../components/Tabs';
 import { formatCurrency } from '../utils/format';
@@ -72,6 +75,13 @@ export const TransporterPOs: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'PENDING' | 'ASSIGNED'>('ALL');
   const [selectedJC, setSelectedJC] = useState<JobConfigV3 | null>(null);
   const [expandedCards, setExpandedCards] = useState<Set<number>>(new Set());
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [assignmentStep, setAssignmentStep] = useState(1);
   const [scheduledDate, setScheduledDate] = useState(new Date().toISOString().split('T')[0]);
   const [pickupLocation, setPickupLocation] = useState('MON1 Plant / Siding');
@@ -158,7 +168,7 @@ export const TransporterPOs: React.FC = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0', maxWidth: '960px', margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-          <button onClick={handleBack} className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><ArrowLeft size={14} /> Back to All Orders</button>
+          <Button onClick={handleBack} variant="secondary" size="sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><ArrowLeft size={14} /> Back to All Orders</Button>
           <span style={{ color: 'var(--color-border)', fontSize: '13px' }}>›</span>
           <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>PO #{selectedJC.sap_po_no}{isMultiItem ? ` · ${poItems.length} items` : ` / ${selectedJC.po_item_no}`}</span>
         </div>
@@ -189,7 +199,7 @@ export const TransporterPOs: React.FC = () => {
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginBottom: '24px' }}>
-          <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', padding: '24px', border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <Card>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}><Package size={16} color="var(--color-brand-blue-600)" /><span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>Order Details</span></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {isMultiItem ? poItems.map(item => (
@@ -200,8 +210,8 @@ export const TransporterPOs: React.FC = () => {
                 </div>
               )) : (<><InfoRow label="Material / Product" value={selectedJC.material || '—'} /><InfoRow label="Quantity (Target)" value={`${selectedJC.target_qty} Tons`} highlight /><InfoRow label="Rate per Ton" value={formatCurrency(selectedJC.rate || 0)} mono /><InfoRow label="Delivery Window" value={selectedJC.availability_window || '06:00–18:00'} /></>)}
             </div>
-          </div>
-          <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', padding: '24px', border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          </Card>
+          <Card>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}><MapPin size={16} color="var(--color-brand-blue-600)" /><span style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)' }}>Route Information</span></div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <InfoRow label="Loading Point (Origin)" value="MON1 Plant / Siding" />
@@ -209,22 +219,22 @@ export const TransporterPOs: React.FC = () => {
               <InfoRow label="Delivery Deadline" value={selectedJC.timebound || '2026-12-31'} />
               <InfoRow label="Tender Acceptance Limit" value="4 Hours (Standard)" />
             </div>
-          </div>
+          </Card>
         </div>
         {successMsg ? (
-          <div style={{ backgroundColor: 'var(--color-success-bg)', border: '1.5px solid var(--color-success-light)', borderRadius: '16px', padding: '40px 32px', textAlign: 'center', boxShadow: 'var(--shadow-card)' }}>
+          <Card style={{ backgroundColor: 'var(--color-success-bg)', border: '1.5px solid var(--color-success-light)', padding: '40px 32px', textAlign: 'center' }}>
             <CheckCircle2 size={56} color="var(--color-success)" style={{ margin: '0 auto 16px' }} />
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-success-text)', margin: '0 0 8px' }}>Fleet Assigned Successfully!</h2>
             <p style={{ fontSize: '14px', color: 'var(--color-success-text)', margin: '0 0 24px' }}>{successMsg}</p>
-            <button onClick={handleBack} className="btn btn-primary" style={{ minHeight: '44px' }}>Back to All Orders</button>
-          </div>
+            <Button onClick={handleBack} variant="primary" style={{ minHeight: '44px' }}>Back to All Orders</Button>
+          </Card>
         ) : isAssigned ? (
-          <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', padding: '28px', border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-card)' }}>
+          <Card style={{ padding: '28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}><CheckCircle2 size={20} color="var(--color-success)" /><h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: 'var(--color-success-text)' }}>This order is already assigned</h3></div>
             <p style={{ fontSize: '13px', color: 'var(--color-text-body)', margin: 0 }}>Driver(s) and truck(s) have been assigned. Track the delivery from your dashboard.</p>
-          </div>
+          </Card>
         ) : (
-          <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1.5px solid var(--color-border)', boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+          <Card style={{ padding: 0 }}>
             <div style={{ padding: '24px 28px', borderBottom: '1px solid var(--color-border)', display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--color-brand-blue-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Truck size={20} color="#fff" /></div>
               <div style={{ flex: 1 }}>
@@ -280,9 +290,9 @@ export const TransporterPOs: React.FC = () => {
                 )}
                 {assignmentStep === 2 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderRadius: '12px', background: isFullyAllocated ? '#F0FDF4' : '#FFFBEB', border: `1.5px solid ${isFullyAllocated ? '#BBF7D0' : '#FCD34D'}` }}>
+                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '12px', alignItems: isMobile ? 'stretch' : 'center', justifyContent: 'space-between', padding: '14px 20px', borderRadius: '12px', background: isFullyAllocated ? '#F0FDF4' : '#FFFBEB', border: `1.5px solid ${isFullyAllocated ? '#BBF7D0' : '#FCD34D'}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><Layers size={18} color={isFullyAllocated ? '#16A34A' : '#D97706'} /><span style={{ fontWeight: 700, fontSize: '13px', color: isFullyAllocated ? '#15803D' : '#92400E' }}>{isFullyAllocated ? '✅ Fully allocated' : `⚠️ ${remaining.toFixed(1)} Tons still unassigned`}</span></div>
-                      <div style={{ display: 'flex', gap: '20px', fontSize: '12px', fontWeight: 700 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 20px', fontSize: '12px', fontWeight: 700 }}>
                         <span style={{ color: 'var(--color-text-muted)' }}>Required: <strong style={{ color: 'var(--color-text-heading)' }}>{totalPlanQty}T</strong></span>
                         <span style={{ color: 'var(--color-brand-blue-600)' }}>Assigned: <strong>{sumAssigned.toFixed(1)}T</strong></span>
                         {!isFullyAllocated && <span style={{ color: '#D97706' }}>Remaining: <strong>{remaining.toFixed(1)}T</strong></span>}
@@ -297,7 +307,7 @@ export const TransporterPOs: React.FC = () => {
                       const usedDriverIds = new Set(slots.filter((_, j) => j !== i).map(s => s.driverId).filter(Boolean));
                       const usedVehicleIds = new Set(slots.filter((_, j) => j !== i).map(s => s.vehicleId).filter(Boolean));
                       return (
-                        <div key={i} style={{ border: `2px solid ${overCapacity ? '#F87171' : slot.driverId && slot.vehicleId ? 'var(--color-brand-blue-600)' : 'var(--color-border)'}`, borderRadius: '14px', padding: '18px', background: slot.driverId && slot.vehicleId && !overCapacity ? 'var(--color-brand-blue-50)' : '#fff' }}>
+                        <Card key={i} style={{ border: `2px solid ${overCapacity ? '#F87171' : slot.driverId && slot.vehicleId ? 'var(--color-brand-blue-600)' : 'var(--color-border)'}`, borderRadius: '14px', padding: '18px', background: slot.driverId && slot.vehicleId && !overCapacity ? 'var(--color-brand-blue-50)' : '#fff' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--color-brand-blue-600)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 800 }}>{i + 1}</div>
@@ -306,7 +316,7 @@ export const TransporterPOs: React.FC = () => {
                             </div>
                             {slots.length > 1 && (<button type="button" onClick={() => removeSlot(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', padding: '4px' }}><Trash2 size={16} /></button>)}
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '12px' }}>
                             {/* Driver */}
                             <div>
                               <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>Driver</label>
@@ -346,13 +356,13 @@ export const TransporterPOs: React.FC = () => {
                               <input type="number" min="0.1" max={selVehicle?.capacity} step="0.5" value={slot.qty} onChange={e => updateSlot(i, 'qty', e.target.value)} placeholder="" style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${overCapacity ? '#F87171' : 'var(--color-border)'}`, borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }} />
                             </div>
                           </div>
-                        </div>
+                        </Card>
                       );
                     })}
-                    <button type="button" onClick={addSlot} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', borderRadius: '12px', border: '1.5px dashed var(--color-border)', background: 'transparent', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: 'var(--color-brand-blue-600)' }}><Plus size={16} /> Add Another Truck</button>
+                    <Button type="button" onClick={addSlot} variant="secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', width: '100%' }}><Plus size={16} /> Add Another Truck</Button>
                     <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
-                      <button type="button" onClick={() => setAssignmentStep(1)} className="btn btn-secondary" style={{ padding: '12px 20px' }}>← Back</button>
-                      <button type="button" onClick={() => setAssignmentStep(3)} disabled={!allSlotsHaveDriverTruck || !isFullyAllocated} className="btn btn-primary" style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '6px', opacity: (!allSlotsHaveDriverTruck || !isFullyAllocated) ? 0.5 : 1 }}>Next: Review & Confirm <ChevronRight size={16} /></button>
+                      <Button type="button" onClick={() => setAssignmentStep(1)} variant="secondary" style={{ padding: '12px 20px' }}>← Back</Button>
+                      <Button type="button" onClick={() => setAssignmentStep(3)} disabled={!allSlotsHaveDriverTruck || !isFullyAllocated} variant="primary" style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '6px', opacity: (!allSlotsHaveDriverTruck || !isFullyAllocated) ? 0.5 : 1 }}>Next: Review & Confirm <ChevronRight size={16} /></Button>
                     </div>
                   </div>
                 )}
@@ -375,21 +385,37 @@ export const TransporterPOs: React.FC = () => {
                           );
                         })}
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', padding: '10px 16px', background: 'var(--color-brand-blue-600)', borderRadius: '10px', color: '#fff', fontWeight: 800 }}><span>TOTAL DISPATCHING</span><span>{sumAssigned.toFixed(1)} Tons across {slots.length} truck{slots.length > 1 ? 's' : ''}</span></div>
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        justifyContent: 'space-between',
+                        alignItems: isMobile ? 'flex-start' : 'center',
+                        gap: isMobile ? '4px' : '0',
+                        marginTop: '12px',
+                        padding: '12px 16px',
+                        background: 'var(--color-brand-blue-600)',
+                        borderRadius: '10px',
+                        color: '#fff',
+                        fontWeight: 800,
+                        fontSize: isMobile ? '13px' : '14px'
+                      }}>
+                        <span style={{ fontSize: isMobile ? '10px' : '13px', opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.05em' }}>TOTAL ALLOCATION</span>
+                        <span style={{ fontSize: isMobile ? '15px' : '14px' }}>{sumAssigned.toFixed(1)} Tons across {slots.length} truck{slots.length > 1 ? 's' : ''}</span>
+                      </div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '16px' }}>
                       <div><label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Scheduled Date</label><input type="date" value={scheduledDate} onChange={e => setScheduledDate(e.target.value)} style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }} required /></div>
                       <div><label style={{ display: 'block', fontSize: '11.5px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Pickup Siding</label><input type="text" value={pickupLocation} onChange={e => setPickupLocation(e.target.value)} style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }} required /></div>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
-                      <button type="button" onClick={() => setAssignmentStep(2)} className="btn btn-secondary" style={{ padding: '12px 20px' }}>← Back to Fleet</button>
-                      <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ padding: '12px 28px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '15px', fontWeight: 800 }}>{isSubmitting ? 'Dispatching...' : <><CheckCircle2 size={16} /> Confirm & Dispatch {slots.length} Truck{slots.length > 1 ? 's' : ''}</>}</button>
+                    <div style={{ display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', gap: '12px', justifyContent: 'space-between', borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
+                      <Button type="button" onClick={() => setAssignmentStep(2)} variant="secondary" style={{ width: isMobile ? '100%' : 'auto', padding: '12px 20px' }}>← Back to Fleet</Button>
+                      <Button type="submit" disabled={isSubmitting} variant="primary" style={{ width: isMobile ? '100%' : 'auto', padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '15px', fontWeight: 800 }}>{isSubmitting ? 'Dispatching...' : <><CheckCircle2 size={16} /> Confirm & Dispatch {slots.length} Truck{slots.length > 1 ? 's' : ''}</>}</Button>
                     </div>
                   </div>
                 )}
               </div>
             </form>
-          </div>
+          </Card>
         )}
       </div>
     );
@@ -415,8 +441,97 @@ export const TransporterPOs: React.FC = () => {
             const isMulti = (jc.item_count || 0) > 1;
             const isExpanded = expandedCards.has(jc.id);
             const poItems: PoItemV3[] = jc.po_items || [];
+            if (isMobile) {
+              return (
+                <Card key={jc.id} style={{ padding: 0, overflow: 'hidden' }}>
+                  <div onClick={() => handleOpenJC(jc)} style={{ padding: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO Number / Item</div>
+                        <div className="mono" style={{ fontSize: '16px', fontWeight: 900, color: 'var(--color-text-primary)' }}>#{jc.sap_po_no}{!isMulti ? ` / ${jc.po_item_no}` : ''}</div>
+                        {isMulti && <div style={{ marginTop: '4px' }}><span style={{ fontSize: '11px', fontWeight: 700, background: 'var(--color-brand-blue-600)', color: '#fff', padding: '2px 8px', borderRadius: '6px' }}>{jc.item_count} items</span></div>}
+                      </div>
+                      {isPending ? (
+                        <span className="badge badge-amber" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}><AlertCircle size={11} /> Needs Driver</span>
+                      ) : (
+                        <span className="badge badge-green" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}><CheckCircle2 size={11} /> Assigned</span>
+                      )}
+                    </div>
+
+                    <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Product</div>
+                        {isMulti ? (
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+                            {poItems[0]?.material} <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 500 }}>+ {(jc.item_count || 1) - 1} more</span>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{jc.material}</div>
+                        )}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Qty</div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{jc.total_planned_qty || jc.target_qty || 0} Tons</div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <div>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', textTransform: 'uppercase' }}>Rate / Ton</span>
+                        <strong className="mono" style={{ color: 'var(--color-brand-blue-600)', fontSize: '13.5px' }}>{formatCurrency(jc.rate || 0)}</strong>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {isMulti && (
+                          <button 
+                            type="button" 
+                            onClick={e => { 
+                              e.stopPropagation(); 
+                              setExpandedCards(prev => { 
+                                const next = new Set(prev); 
+                                next.has(jc.id) ? next.delete(jc.id) : next.add(jc.id); 
+                                return next; 
+                              }); 
+                            }} 
+                            style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: '6px', cursor: 'pointer', padding: '4px 8px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
+                          >
+                            <span>Items</span> {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                          </button>
+                        )}
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-brand-blue-600)', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          Manage <ChevronRight size={14} />
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {isMulti && isExpanded && (
+                    <div style={{ borderTop: '1px solid var(--color-border)', padding: '12px 16px', background: 'var(--color-bg-page)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {poItems.map(item => (
+                          <div key={item.po_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#fff', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '14px' }}>{item.body_icon}</span>
+                              <div>
+                                <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--color-text-heading)' }}>{item.material}</div>
+                                <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>Item {item.po_item_no} · {item.body_type}</div>
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontWeight: 800, fontSize: '12.5px', color: 'var(--color-brand-blue-600)' }}>{item.planned_qty} {item.uom}</div>
+                              <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{formatCurrency(item.rate)}/T</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </Card>
+              );
+            }
+
             return (
-              <div key={jc.id} style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1px solid var(--color-border)', boxShadow: 'var(--shadow-card)', overflow: 'hidden' }}>
+              <Card key={jc.id} style={{ padding: 0, overflow: 'hidden' }}>
                 <div onClick={() => handleOpenJC(jc)} style={{ padding: '20px 24px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '20px', transition: 'all var(--transition-normal)' }} onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = 'var(--color-bg-page)'; }} onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.backgroundColor = ''; }}>
                   <div style={{ width: '4px', height: isMulti ? '72px' : '56px', borderRadius: '2px', backgroundColor: isPending ? 'var(--color-warning)' : 'var(--color-brand-blue-600)', flexShrink: 0 }} />
                   <div style={{ flexShrink: 0, minWidth: '160px' }}>
@@ -450,7 +565,7 @@ export const TransporterPOs: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>

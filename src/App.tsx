@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { BottomNav } from './components/BottomNav';
 import { ToastContainer } from './components/Toast';
 import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
@@ -55,8 +56,10 @@ const MainApp: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState<boolean>(() => {
-    return localStorage.getItem('podzo_sidebar_collapsed') === 'true';
+    return localStorage.getItem('podzo_sidebar_collapsed') === 'true' || (window.innerWidth >= 768 && window.innerWidth <= 1023);
   });
+  const [mobileOpen, setMobileOpen] = React.useState<boolean>(false);
+  const [isMobile, setIsMobile] = React.useState<boolean>(window.innerWidth < 768);
 
   const toggleSidebar = () => {
     setIsSidebarCollapsed(prev => {
@@ -65,6 +68,22 @@ const MainApp: React.FC = () => {
       return next;
     });
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      if (width >= 768 && width <= 1023) {
+        setIsSidebarCollapsed(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (loading) return;
@@ -121,9 +140,24 @@ const MainApp: React.FC = () => {
       }}
     >
       <div className="app-container">
-        <Sidebar collapsed={isSidebarCollapsed} onToggle={toggleSidebar} />
-        <div className="main-wrapper" style={{ marginLeft: sidebarWidth, transition: 'margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' }}>
-          <TopBar title={getPageTitle(location.pathname, user.role)} onToggleSidebar={toggleSidebar} isSidebarCollapsed={isSidebarCollapsed} />
+        <Sidebar 
+          collapsed={isSidebarCollapsed} 
+          onToggle={toggleSidebar} 
+          mobileOpen={mobileOpen} 
+          onMobileClose={() => setMobileOpen(false)} 
+        />
+        <div 
+          className="main-wrapper" 
+          style={{ 
+            marginLeft: isMobile ? '0px' : sidebarWidth, 
+            transition: 'margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)' 
+          }}
+        >
+          <TopBar 
+            title={getPageTitle(location.pathname, user.role)} 
+            onToggleSidebar={toggleSidebar} 
+            isSidebarCollapsed={isSidebarCollapsed} 
+          />
           <main className="content-container">
             <Routes>
               {/* Transporter Routes */}
@@ -154,9 +188,9 @@ const MainApp: React.FC = () => {
               <Route path="*" element={<Navigate to={getDefaultRoute(user.role)} replace />} />
             </Routes>
           </main>
-          <Footer />
         </div>
       </div>
+      {isMobile && <BottomNav onMenuClick={() => setMobileOpen(true)} />}
     </div>
   );
 };

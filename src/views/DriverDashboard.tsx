@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Card } from '../components/Card';
+import { Button } from '../components/Button';
 import { useAuthV3 } from '../contexts/AuthContextV3';
 import { drApi, TransportAssignmentV3 } from '../lib/api_v3';
 import { StatusBadge } from '../components/StatusBadge';
@@ -45,12 +47,13 @@ const StepConnector: React.FC<{ done: boolean }> = ({ done }) => (
 
 // ─── Section card ─────────────────────────────────────────────────────────────
 const ActionCard: React.FC<{ title: string; subtitle?: string; icon: React.ReactNode; locked?: boolean; children: React.ReactNode; accentColor?: string }> = ({ title, subtitle, icon, locked, children, accentColor = 'var(--color-brand-blue-600)' }) => (
-  <div style={{
-    backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1.5px solid var(--color-border)',
-    overflow: 'hidden', boxShadow: 'var(--shadow-card)',
-    opacity: locked ? 0.45 : 1, transition: 'opacity 0.3s',
-    pointerEvents: locked ? 'none' : 'auto'
-  }}>
+  <Card 
+    style={{
+      opacity: locked ? 0.45 : 1, transition: 'opacity 0.3s',
+      pointerEvents: locked ? 'none' : 'auto',
+      padding: 0
+    }}
+  >
     <div style={{
       padding: '16px 20px', borderBottom: '1px solid var(--color-border)',
       display: 'flex', alignItems: 'center', gap: '12px',
@@ -67,7 +70,7 @@ const ActionCard: React.FC<{ title: string; subtitle?: string; icon: React.React
     <div style={{ padding: '20px' }}>
       {children}
     </div>
-  </div>
+  </Card>
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -77,6 +80,13 @@ export const DriverDashboard: React.FC = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<TransportAssignmentV3 | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // GPS
   const [trackingActive, setTrackingActive] = useState(false);
@@ -285,38 +295,34 @@ export const DriverDashboard: React.FC = () => {
 
       {/* ── Tab Switcher ── */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '2.5px solid var(--color-border)', paddingBottom: '12px' }}>
-        <button
+        <Button
           onClick={() => {
             setActiveTab('ACTIVE');
             if (activeTrips.length > 0) setSelectedAssignment(activeTrips[0]);
           }}
+          variant={activeTab === 'ACTIVE' ? 'primary' : 'secondary'}
           style={{
-            padding: '10px 20px', borderRadius: '10px', border: activeTab === 'ACTIVE' ? 'none' : '1.5px solid var(--color-border)',
-            backgroundColor: activeTab === 'ACTIVE' ? 'var(--color-brand-blue-600)' : 'var(--color-bg-card)',
-            color: activeTab === 'ACTIVE' ? '#fff' : 'var(--color-text-muted)',
-            fontWeight: 700, fontSize: '13.5px', cursor: 'pointer',
+            padding: '10px 20px', borderRadius: '10px',
+            fontWeight: 700, fontSize: '13.5px',
             display: 'flex', alignItems: 'center', gap: '6px',
-            boxShadow: activeTab === 'ACTIVE' ? 'var(--shadow-card-hover)' : 'var(--shadow-card)'
           }}
         >
           🚚 Active Trip
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => {
             setActiveTab('COMPLETED');
             if (completedTrips.length > 0) setSelectedAssignment(completedTrips[0]);
           }}
+          variant={activeTab === 'COMPLETED' ? 'primary' : 'secondary'}
           style={{
-            padding: '10px 20px', borderRadius: '10px', border: activeTab === 'COMPLETED' ? 'none' : '1.5px solid var(--color-border)',
-            backgroundColor: activeTab === 'COMPLETED' ? 'var(--color-brand-blue-600)' : 'var(--color-bg-card)',
-            color: activeTab === 'COMPLETED' ? '#fff' : 'var(--color-text-muted)',
-            fontWeight: 700, fontSize: '13.5px', cursor: 'pointer',
+            padding: '10px 20px', borderRadius: '10px',
+            fontWeight: 700, fontSize: '13.5px',
             display: 'flex', alignItems: 'center', gap: '6px',
-            boxShadow: activeTab === 'COMPLETED' ? 'var(--shadow-card-hover)' : 'var(--shadow-card)'
           }}
         >
           ✅ Completed Trips ({completedTrips.length})
-        </button>
+        </Button>
       </div>
 
       {activeTab === 'COMPLETED' ? (
@@ -390,14 +396,14 @@ export const DriverDashboard: React.FC = () => {
             accentColor="var(--color-brand-blue-600)"
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <button
+              <Button
                 onClick={() => handleGenerateOTP('PICKUP')}
                 disabled={isSubmitting}
-                className="btn btn-primary"
-                style={{ padding: '14px 20px', width: '100%', minHeight: '48px', justifyContent: 'center' }}
+                variant="primary"
+                style={{ padding: '14px 20px', width: '100%', minHeight: '48px' }}
               >
                 <Key size={16} /> Get Pickup Code (OTP)
-              </button>
+              </Button>
 
               {pickupOtp && (
                 <div style={{
@@ -502,18 +508,18 @@ export const DriverDashboard: React.FC = () => {
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {!isArrived ? (
-                <button
+                <Button
                   onClick={handleConfirmArrival}
                   disabled={isSubmitting}
-                  className="btn btn-primary"
+                  variant="primary"
                   style={{
                     width: '100%', padding: '16px 20px', minHeight: '48px',
                     fontSize: '15px', fontWeight: 800,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                    display: 'flex', alignItems: 'center', gap: '10px'
                   }}
                 >
                   <MapPin size={16} /> Confirm Arrival at Customer Yard
-                </button>
+                </Button>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-success-text)', fontWeight: 700, fontSize: '15px', backgroundColor: 'var(--color-success-bg)', padding: '12px', borderRadius: '12px', border: '1px solid var(--color-success-light)' }}>
@@ -559,11 +565,11 @@ export const DriverDashboard: React.FC = () => {
                           setSelectedPodFile('/uploads/pods/waybill_blurry.png');
                         }
                       }}
-                      style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', cursor: 'pointer' }}
-                    >
-                      <option value="MATCH">🟢 MATCH (Clean Scan, 100% Weight Agreement)</option>
-                      <option value="MISMATCH">🔴 MISMATCH (Variance Found, Weight Discrepancy)</option>
-                      <option value="BLURRY">🟡 BLURRY (Low Image Quality, Low OCR Confidence)</option>
+                       style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: isMobile ? '11px' : '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', cursor: 'pointer' }}
+                     >
+                       <option value="MATCH">{isMobile ? '🟢 MATCH (100% Weight Match)' : '🟢 MATCH (Clean Scan, 100% Weight Agreement)'}</option>
+                       <option value="MISMATCH">{isMobile ? '🔴 MISMATCH (Weight Discrepancy)' : '🔴 MISMATCH (Variance Found, Weight Discrepancy)'}</option>
+                       <option value="BLURRY">{isMobile ? '🟡 BLURRY (Low OCR Confidence)' : '🟡 BLURRY (Low Image Quality, Low OCR Confidence)'}</option>
                     </select>
                     {selectedPodFile && (
                       <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--color-brand-blue-700)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -572,17 +578,17 @@ export const DriverDashboard: React.FC = () => {
                     )}
                   </div>
 
-                  <button
+                  <Button
                     onClick={handlePodSubmit}
                     disabled={isSubmitting || !selectedPodFile}
-                    className="btn btn-primary"
+                    variant="primary"
                     style={{
                       padding: '14px 20px', width: '100%', minHeight: '48px',
-                      display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center'
+                      display: 'flex', alignItems: 'center', gap: '8px'
                     }}
                   >
                     <Upload size={16} /> Upload Receipt & Submit for Verification
-                  </button>
+                  </Button>
                 </>
               )}
 

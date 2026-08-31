@@ -77,7 +77,7 @@ export const Login: React.FC = () => {
       </header>
 
       {/* Main Split Body */}
-      <main style={{ flex: 1, display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', maxWidth: '1280px', width: '100%', margin: '0 auto', padding: '40px 32px', gap: '48px', alignItems: 'center' }}>
+      <main className="responsive-split" style={{ flex: 1, gridTemplateColumns: '1.1fr 0.9fr', maxWidth: '1280px', width: '100%', margin: '0 auto', padding: '40px 32px', gap: '48px', alignItems: 'center' }}>
         
         {/* Left Hand Column: Value Proposition & Diagram */}
         <div className="animate-fade-in">

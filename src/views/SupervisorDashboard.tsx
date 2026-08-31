@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Card } from '../components/Card';
+import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { assignmentsApi, srApi, drApi, caApi, TransportAssignmentV3, ReviewQueueItemV3 } from '../lib/api_v3';
 import { useContractPo } from '../contexts/ContractPoContext';
+import { Tabs } from '../components/Tabs';
 import {
   ShieldCheck, Scale, CheckCircle2, FileText, MapPin, Check,
   Truck, AlertCircle, ChevronRight, RefreshCw, ArrowLeft, Package, Clock
@@ -56,6 +59,13 @@ export const SupervisorDashboard: React.FC = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<TransportAssignmentV3 | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Form states
   const [licenseValid, setLicenseValid] = useState(true);
@@ -68,6 +78,7 @@ export const SupervisorDashboard: React.FC = () => {
   const [biltyDate, setBiltyDate] = useState(new Date().toISOString().split('T')[0]);
   const [uploadUrl, setUploadUrl] = useState('/uploads/biltys/bilty_sample.png');
   const [successMsg, setSuccessMsg] = useState('');
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'COMPLETED'>('ACTIVE');
 
   const loadData = async () => {
     setLoading(true);
@@ -99,8 +110,13 @@ export const SupervisorDashboard: React.FC = () => {
 
   const activePoObject = selectedPoId === 'ALL' ? null : purchaseOrders.find(p => p.id === Number(selectedPoId));
 
+  const isActiveStatus = (status: string) => !['DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(status);
+
   const filteredAssignments = assignments.filter(a => {
     if (selectedPoId !== 'ALL' && activePoObject && a.sap_po_no !== activePoObject.sap_po_no) return false;
+    const active = isActiveStatus(a.status);
+    if (activeTab === 'ACTIVE' && !active) return false;
+    if (activeTab === 'COMPLETED' && active) return false;
     return true;
   });
 
@@ -226,32 +242,22 @@ export const SupervisorDashboard: React.FC = () => {
 
         {/* Back + PO Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
+          <Button
             onClick={handleBack}
-            className="btn btn-ghost btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            variant="secondary"
+            size="sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <ArrowLeft size={14} /> All Trucks
-          </button>
+          </Button>
           <span style={{ color: 'var(--color-border)' }}>›</span>
           <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>PO #{a.sap_po_no} / {a.po_item_no}</span>
           <span style={{ marginLeft: 'auto' }}><StatusBadge status={a.status} /></span>
         </div>
 
         {/* Info strip: White card, light blue header */}
-        <div style={{
-          backgroundColor: 'var(--color-bg-card)',
-          borderRadius: '16px',
-          border: '1.5px solid var(--color-border)',
-          overflow: 'hidden',
-          boxShadow: 'var(--shadow-card)'
-        }}>
-          <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '12px 20px', borderBottom: '1px solid var(--color-border)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-700)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Active Run Details
-            </h3>
-          </div>
-          <div style={{ padding: '20px 24px', display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
+        <Card title="Active Run Details" accentColor="var(--color-brand-blue-600)">
+          <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
             <div>
               <div className="data-pair__label">Driver</div>
               <div className="data-pair__value">{a.driver_name || '—'}</div>
@@ -269,7 +275,7 @@ export const SupervisorDashboard: React.FC = () => {
               <div className="data-pair__value">{a.scheduled_date}</div>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* ── Step 1: Gate Verification ── */}
         <StepCard
@@ -321,14 +327,14 @@ export const SupervisorDashboard: React.FC = () => {
                 ))}
               </div>
 
-              <button
+              <Button
                 type="submit"
                 disabled={isSubmitting || !otpCode}
-                className="btn btn-primary"
-                style={{ padding: '14px', width: '100%', justifyContent: 'center' }}
+                variant="primary"
+                style={{ padding: '14px', width: '100%' }}
               >
                 {isSubmitting ? 'Verifying...' : 'Verify Driver Code & Save Safety Checklist'}
-              </button>
+              </Button>
             </form>
           )}
         </StepCard>
@@ -362,14 +368,14 @@ export const SupervisorDashboard: React.FC = () => {
                   style={{ width: '100%', padding: '14px 16px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '20px', fontWeight: 800, textAlign: 'right', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
                 />
               </div>
-              <button
+              <Button
                 onClick={handleLogWeight}
                 disabled={isSubmitting || !weightKg}
-                className="btn btn-primary"
-                style={{ width: '100%', marginTop: '14px', padding: '14px', justifyContent: 'center' }}
+                variant="primary"
+                style={{ width: '100%', marginTop: '14px', padding: '14px' }}
               >
-                {isSubmitting ? 'Capturing...' : 'Capture Empty Weight (MINE_TARE) & Send for Loading'}
-              </button>
+                {isSubmitting ? 'Capturing...' : isMobile ? 'Capture Empty Tare Weight' : 'Capture Empty Weight (MINE_TARE) & Send for Loading'}
+              </Button>
             </div>
           )}
 
@@ -427,14 +433,14 @@ export const SupervisorDashboard: React.FC = () => {
                 </select>
               </div>
 
-              <button
+              <Button
                 onClick={handleBiltyUpload}
                 disabled={isSubmitting}
-                className="btn btn-primary"
-                style={{ padding: '14px', width: '100%', justifyContent: 'center' }}
+                variant="primary"
+                style={{ padding: '14px', width: '100%' }}
               >
-                {isSubmitting ? 'Uploading...' : 'Upload Bilty & Lock Cargo Details'}
-              </button>
+                {isSubmitting ? 'Uploading...' : isMobile ? 'Upload Bilty Document' : 'Upload Bilty & Lock Cargo Details'}
+              </Button>
             </div>
           )}
 
@@ -490,14 +496,14 @@ export const SupervisorDashboard: React.FC = () => {
                     </div>
                   )}
 
-                  <button
+                  <Button
                     onClick={handleLogWeight}
                     disabled={isSubmitting || !weightKg}
-                    className="btn btn-primary"
-                    style={{ width: '100%', marginTop: '14px', padding: '14px', justifyContent: 'center' }}
+                    variant="primary"
+                    style={{ width: '100%', marginTop: '14px', padding: '14px' }}
                   >
-                    {isSubmitting ? 'Capturing...' : 'Capture Loaded Weight (MINE_GROSS) & Finalize Origin Net'}
-                  </button>
+                    {isSubmitting ? 'Capturing...' : isMobile ? 'Capture Loaded Gross Weight' : 'Capture Loaded Weight (MINE_GROSS) & Finalize Origin Net'}
+                  </Button>
                 </div>
               ) : (
                 /* Weights logged, awaiting Journey Authorization */
@@ -506,19 +512,19 @@ export const SupervisorDashboard: React.FC = () => {
                     <div style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-brand-blue-700)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <Check size={14} /> ORIGIN WEIGHBRIDGE COMPLETE
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', textAlign: 'center' }}>
-                      <div style={{ backgroundColor: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '12px', textAlign: 'center' }}>
+                      <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                         <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700 }}>EMPTY / TARE</div>
-                        <div className="mono" style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-text-heading)' }}>{a.mine_tare_kg?.toLocaleString()} kg</div>
+                        <div className="mono" style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-text-heading)', marginTop: '2px' }}>{a.mine_tare_kg?.toLocaleString()} kg</div>
                       </div>
-                      <div style={{ backgroundColor: '#fff', padding: '10px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+                      <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
                         <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700 }}>LOADED / GROSS</div>
-                        <div className="mono" style={{ fontSize: '14px', fontWeight: 800, color: 'var(--color-text-heading)' }}>{a.mine_gross_kg?.toLocaleString()} kg</div>
+                        <div className="mono" style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-text-heading)', marginTop: '2px' }}>{a.mine_gross_kg?.toLocaleString()} kg</div>
                       </div>
-                      <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '10px', borderRadius: '8px', border: '2px solid var(--color-brand-blue-600)' }}>
+                      <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '12px', borderRadius: '8px', border: '2px solid var(--color-brand-blue-600)' }}>
                         <div style={{ fontSize: '10px', color: 'var(--color-brand-blue-600)', fontWeight: 800 }}>NET PAYLOAD</div>
-                        <div className="mono" style={{ fontSize: '14px', fontWeight: 900, color: 'var(--color-brand-blue-600)' }}>{((a.mine_gross_kg || 0) - (a.mine_tare_kg || 0)).toLocaleString()} kg</div>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{(((a.mine_gross_kg || 0) - (a.mine_tare_kg || 0))/1000).toFixed(2)} Tons</div>
+                        <div className="mono" style={{ fontSize: '16px', fontWeight: 950, color: 'var(--color-brand-blue-600)', marginTop: '2px' }}>{((a.mine_gross_kg || 0) - (a.mine_tare_kg || 0)).toLocaleString()} kg</div>
+                        <div style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-brand-blue-600)', marginTop: '2px' }}>{(((a.mine_gross_kg || 0) - (a.mine_tare_kg || 0))/1000).toFixed(2)} Tons</div>
                       </div>
                     </div>
                   </div>
@@ -530,14 +536,14 @@ export const SupervisorDashboard: React.FC = () => {
                     <div style={{ fontSize: '12px', color: 'var(--color-brand-blue-600)' }}>
                       The loaded net payload is finalized. Click below to authorize dispatch and release the driver.
                     </div>
-                    <button
+                    <Button
                       onClick={handleAuthorizeJourney}
                       disabled={isSubmitting}
-                      className="btn btn-primary"
-                      style={{ width: '100%', marginTop: '6px', padding: '14px', justifyContent: 'center' }}
+                      variant="primary"
+                      style={{ width: '100%', marginTop: '6px', padding: '14px' }}
                     >
-                      {isSubmitting ? 'Authorizing...' : 'Authorize Start Journey & Dispatch Vehicle'}
-                    </button>
+                      {isSubmitting ? 'Authorizing...' : isMobile ? 'Authorize Dispatch & Release' : 'Authorize Start Journey & Dispatch Vehicle'}
+                    </Button>
                   </div>
                 </div>
               )}
@@ -581,14 +587,15 @@ export const SupervisorDashboard: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <button
+          <Button
             onClick={loadData}
             disabled={loading}
-            className="btn btn-ghost btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            variant="secondary"
+            size="sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <RefreshCw size={13} /> Refresh
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -668,33 +675,28 @@ export const SupervisorDashboard: React.FC = () => {
         </div>
       )}
 
+      <Tabs
+        tabs={[
+          { id: 'ACTIVE', label: 'Active Siding Queue', count: assignments.filter(a => isActiveStatus(a.status)).length },
+          { id: 'COMPLETED', label: 'Completed Runs', count: assignments.filter(a => !isActiveStatus(a.status)).length }
+        ]}
+        activeTab={activeTab}
+        onChange={(id) => setActiveTab(id as any)}
+      />
+
       {loading ? (
         <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading trucks...</div>
-      ) : assignments.length === 0 ? (
-        <EmptyState icon={<Truck size={48} />} title="No Trucks at Gate" description="No trucks are currently assigned or in transit." />
+      ) : filteredAssignments.length === 0 ? (
+        <EmptyState icon={<Truck size={48} />} title={activeTab === 'ACTIVE' ? "No Trucks at Gate" : "No Completed Runs"} description={activeTab === 'ACTIVE' ? "No trucks are currently assigned or in transit." : "No completed truck runs in history yet."} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {filteredAssignments.map(a => {
             return (
-              <div
+              <Card
                 key={a.id}
                 onClick={() => setSelectedAssignment(a)}
-                style={{
-                  backgroundColor: 'var(--color-bg-card)', borderRadius: '16px',
-                  border: '1px solid var(--color-border)',
-                  padding: '18px 22px', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', gap: '14px',
-                  boxShadow: 'var(--shadow-card)',
-                  transition: 'all var(--transition-normal)'
-                }}
-                onMouseEnter={e => { 
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card-hover)'; 
-                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; 
-                }}
-                onMouseLeave={e => { 
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card)'; 
-                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; 
-                }}
+                hoverEffect
+                style={{ padding: '18px 22px', cursor: 'pointer' }}
               >
                 {/* Upper row: PO / Contract / Status */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -712,7 +714,7 @@ export const SupervisorDashboard: React.FC = () => {
                 </div>
 
                 {/* Details row: Driver, Vehicle, Timing */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 2fr 1.2fr', gap: '16px', fontSize: '12px', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '2fr 1.2fr 2fr 1.2fr', gap: '16px', fontSize: '12px', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
                   <div>
                     <span style={{ color: 'var(--color-text-muted)', fontWeight: 700, display: 'block', textTransform: 'uppercase', fontSize: '9px' }}>Driver / Vehicle</span>
                     <strong style={{ color: 'var(--color-text-primary)' }}>{a.driver_name || '—'}</strong>
@@ -746,7 +748,7 @@ export const SupervisorDashboard: React.FC = () => {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>

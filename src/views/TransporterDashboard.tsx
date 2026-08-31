@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Card } from '../components/Card';
 import { useAuthV3 } from '../contexts/AuthContextV3';
 import { Truck, FileText, ClipboardList, Receipt, ArrowRight, ChevronRight } from 'lucide-react';
 
@@ -14,31 +15,16 @@ const NavCard: React.FC<{
 }> = ({ icon, title, description, route, color, badge }) => {
   const navigate = useNavigate();
   return (
-    <div
+    <Card
       onClick={() => navigate(route)}
+      hoverEffect
       style={{
-        backgroundColor: 'var(--color-bg-card)',
-        borderRadius: '16px',
-        border: '1px solid var(--color-border)',
         padding: '24px 24px 20px',
-        cursor: 'pointer',
         display: 'flex',
         flexDirection: 'column',
         gap: '16px',
-        boxShadow: 'var(--shadow-card)',
-        transition: 'all var(--transition-normal)',
         position: 'relative',
         overflow: 'hidden',
-      }}
-      onMouseEnter={e => {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.boxShadow = 'var(--shadow-card-hover)';
-        el.style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={e => {
-        const el = e.currentTarget as HTMLDivElement;
-        el.style.boxShadow = 'var(--shadow-card)';
-        el.style.transform = 'translateY(0)';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -66,7 +52,7 @@ const NavCard: React.FC<{
         <span>Open Console</span>
         <ChevronRight size={15} />
       </div>
-    </div>
+    </Card>
   );
 };
 
@@ -77,6 +63,14 @@ export const TransporterDashboard: React.FC = () => {
   const [jobConfigs, setJobConfigs] = React.useState<any[]>([]);
   const [assignments, setAssignments] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
+
+  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   React.useEffect(() => {
     async function loadTAStats() {
@@ -201,7 +195,7 @@ export const TransporterDashboard: React.FC = () => {
           How the process works
         </h2>
         <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '24px', boxShadow: 'var(--shadow-card)' }}>
-          <div style={{ display: 'flex', gap: '0', position: 'relative', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '24px' : '0', position: 'relative', flexWrap: 'wrap' }}>
 
             {[
               { num: '1', title: 'Order Arrives', desc: 'Company admin releases a PO. You receive it here.' },
@@ -212,7 +206,7 @@ export const TransporterDashboard: React.FC = () => {
             ].map((step, i, arr) => (
               <div key={step.num} style={{ flex: 1, minWidth: '150px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '10px', position: 'relative', padding: '10px' }}>
                 {/* Connector line */}
-                {i < arr.length - 1 && (
+                {i < arr.length - 1 && !isMobile && (
                   <div style={{
                     position: 'absolute', top: '28px', left: 'calc(50% + 18px)', right: 'calc(-50% + 18px)',
                     height: '2.5px', backgroundColor: 'var(--color-border)', zIndex: 0

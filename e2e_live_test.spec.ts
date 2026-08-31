@@ -61,7 +61,7 @@ test.describe('PODZO End-to-End Live Persona Walkthrough', () => {
     console.log('✔ TA POD Upload Desk loaded');
 
     console.log('--- STEP 3: TRUCK DRIVER (DR) FLOW ---');
-    await loginAs(page, 'dr_zweli');
+    await loginAs(page, 'dr_rajesh');
     
     // Verify Driver Dashboard loads
     await expect(page.locator('body')).toContainText('Driver Haulage Console');

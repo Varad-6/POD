@@ -5,6 +5,8 @@ import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { Tabs } from '../components/Tabs';
+import { Table } from '../components/Table';
+import { Button } from '../components/Button';
 
 export const AdminApprovals: React.FC = () => {
   const [reviews, setReviews] = useState<ReviewQueueItemV3[]>([]);
@@ -14,6 +16,14 @@ export const AdminApprovals: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'OPEN' | 'RESOLVED'>('OPEN');
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const loadReviews = async () => {
     setLoading(true);
@@ -144,66 +154,61 @@ export const AdminApprovals: React.FC = () => {
           title="Review Queue is Clear"
           description={`No dispatch records are currently flagged as ${activeTab.toLowerCase()}. All pipelines operating smoothly.`}
         />
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
-          
-          {/* Left Table List */}
-          <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector">
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>PO Ref</th>
-                    <th>Transporter / Vehicle</th>
-                    <th>Flag Reason</th>
-                    <th>Blocker</th>
-                    <th>Date Flagged</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reviews.map((r) => {
-                    const isSelected = selectedReview?.id === r.id;
-                    return (
-                      <tr 
-                        key={r.id}
-                        onClick={() => setSelectedReview(r)}
-                        style={{
-                          cursor: 'pointer',
-                          backgroundColor: isSelected ? 'var(--color-brand-blue-50)' : 'transparent'
-                        }}
-                      >
-                        <td className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>
+      ) : isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {selectedReview === null ? (
+            <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
+              <Table<ReviewQueueItemV3>
+                data={reviews}
+                onRowClick={(r) => setSelectedReview(r)}
+                getRowStyle={(r) => ({
+                  backgroundColor: selectedReview?.id === r.id ? 'var(--color-brand-blue-50)' : 'transparent'
+                })}
+                renderMobileCard={(r) => {
+                  const isSelected = selectedReview?.id === r.id;
+                  return (
+                    <div 
+                      onClick={() => setSelectedReview(r)}
+                      style={{ 
+                        display: 'flex', flexDirection: 'column', gap: '8px', 
+                        padding: '12px 16px', borderBottom: '1px solid var(--color-border)', 
+                        cursor: 'pointer',
+                        backgroundColor: isSelected ? 'var(--color-brand-blue-50)' : 'transparent'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>
                           {r.sap_po_no ? `${r.sap_po_no} / ${r.po_item_no}` : `#PO-${r.assignment_id}`}
-                        </td>
-                        <td>
-                          <div style={{ fontWeight: 600 }}>{r.transporter_name || 'ABC Transport'}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{r.vehicle_reg || 'KV44RCGP'}</div>
-                        </td>
-                        <td>
-                          <span className={r.flag_reason === 'TOLERANCE_EXCEEDED' ? 'badge badge-red' : 'badge badge-amber'}>
-                            {r.flag_reason.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td style={{ fontWeight: 600, color: r.blocks_miro_bool ? 'var(--color-error-text)' : 'var(--color-text-muted)' }}>
-                          {r.blocks_miro_bool ? 'Blocks MIRO' : 'No Block'}
-                        </td>
-                        <td style={{ fontSize: '12px' }}>
-                          {r.created_at}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          {/* Right Action panel */}
-          <div>
-            {selectedReview ? (
+                        </span>
+                        <span className={r.flag_reason === 'TOLERANCE_EXCEEDED' ? 'badge badge-red' : 'badge badge-amber'}>
+                          {r.flag_reason.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span>Siding Net: {r.origin_net_weight_kg ? (r.origin_net_weight_kg / 1000).toFixed(2) : '—'}T</span>
+                        <span>Dest Net: {r.dest_net_weight_kg ? (r.dest_net_weight_kg / 1000).toFixed(2) : '—'}T</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+                        <span>Variance: {r.variance_percentage ? `${r.variance_percentage.toFixed(2)}%` : '—'}</span>
+                        <span>{r.created_at}</span>
+                      </div>
+                    </div>
+                  );
+                }}
+                columns={[]}
+              />
+            </Card>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <Button 
+                variant="secondary" 
+                style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
+                onClick={() => setSelectedReview(null)}
+              >
+                ← Back to Flagged Queue
+              </Button>
               <Card title="POD VERIFICATION" accentColor="var(--color-brand-blue-600)">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', fontSize: '13px', backgroundColor: 'var(--color-brand-blue-50)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                     <div>
                       <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>PO Number / Item</span>
@@ -218,16 +223,8 @@ export const AdminApprovals: React.FC = () => {
                       <strong style={{ color: 'var(--color-text-heading)' }}>{selectedReview.transporter_name || 'ABC Transport'}</strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Transporter Admin</span>
-                      <strong style={{ color: 'var(--color-text-heading)' }}>Sipho</strong>
-                    </div>
-                    <div>
                       <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Vehicle</span>
                       <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{selectedReview.vehicle_reg || 'KV44RCGP'}</strong>
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Delivery Location</span>
-                      <strong style={{ color: 'var(--color-text-heading)' }}>Duvha Power Station</strong>
                     </div>
                     <div>
                       <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Dispatched Tonnage</span>
@@ -237,18 +234,124 @@ export const AdminApprovals: React.FC = () => {
                       <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Received Tonnage</span>
                       <strong style={{ color: 'var(--color-text-heading)' }}>{receivedTons.toFixed(2)} Tons</strong>
                     </div>
-                    <div style={{ gridColumn: 'span 2' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Net Variance</span>
-                      <strong style={{ 
-                        color: varianceKg === 0 ? 'var(--color-text-heading)' : varianceKg < 0 ? 'var(--color-error-text)' : 'var(--color-success-text)', 
-                        fontSize: '14.5px' 
-                      }}>
-                        {varianceKg > 0 ? '+' : ''}{varianceKg.toLocaleString()} KG ({variancePct > 0 ? '+' : ''}{variancePct.toFixed(2)}%)
-                      </strong>
+                  </div>
+                  <div style={{ border: '1.5px solid var(--color-border)', borderRadius: '12px', padding: '14px', backgroundColor: 'var(--color-bg-card)' }}>
+                    <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>📄 STAMPED DELIVERY RECEIPT (POD)</span>
+                      <a href="/uploads/sample_pod.pdf" target="_blank" rel="noreferrer" style={{ color: 'var(--color-brand-blue-600)', textTransform: 'none', textDecoration: 'underline' }}>[View Document]</a>
+                    </h5>
+                  </div>
+                  {activeTab === 'OPEN' ? (
+                    <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                        SAP Finance Release Override Reason
+                      </label>
+                      <select
+                        value={overrideReason}
+                        onChange={(e) => setOverrideReason(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: '#FFFFFF' }}
+                      >
+                        <option value="MOISTURE_EVAPORATION">Moisture Evaporation / Transit Loss</option>
+                        <option value="SCALE_CALIBRATION">Siding Scale Calibration Variance</option>
+                        <option value="EXCEPTIONAL_ALLOWANCE">Exceptional Commercial Allowance</option>
+                        <option value="RE-WEIGH_ORDERED">Re-weigh Ordered / Manual Adjustment</option>
+                      </select>
+                      <textarea
+                        placeholder="Provide detailed commercial justification..."
+                        value={resolutionNotes}
+                        onChange={(e) => setResolutionNotes(e.target.value)}
+                        rows={3}
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', resize: 'none' }}
+                      />
+                      <Button onClick={handleApprove} disabled={isSubmitting} variant="primary">
+                        {isSubmitting ? 'Overriding...' : '✓ Force Release Block'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div style={{ backgroundColor: 'var(--color-bg-page)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+                      <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px 0' }}>VERIFICATION LOGGED</p>
+                      <p style={{ fontSize: '13px', color: 'var(--color-text-heading)', margin: 0 }}>
+                        {selectedReview.resolution_notes || 'No resolution notes entered'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
+          <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
+            <Table<ReviewQueueItemV3>
+              data={reviews}
+              onRowClick={(r) => setSelectedReview(r)}
+              getRowStyle={(r) => ({
+                backgroundColor: selectedReview?.id === r.id ? 'var(--color-brand-blue-50)' : 'transparent'
+              })}
+              columns={[
+                {
+                  header: 'PO Ref / Item',
+                  render: (r) => <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{r.sap_po_no ? `${r.sap_po_no} / ${r.po_item_no}` : `#PO-${r.assignment_id}`}</span>
+                },
+                {
+                  header: 'Flag Reason',
+                  render: (r) => (
+                    <span className={r.flag_reason === 'TOLERANCE_EXCEEDED' ? 'badge badge-red' : 'badge badge-amber'}>
+                      {r.flag_reason.replace('_', ' ')}
+                    </span>
+                  )
+                },
+                {
+                  header: 'Variance',
+                  align: 'right',
+                  render: (r) => <span className="mono" style={{ fontWeight: 700, color: r.variance_percentage > 5 ? 'var(--color-error-text)' : 'var(--color-text-heading)' }}>{r.variance_percentage ? `${r.variance_percentage.toFixed(2)}%` : '—'}</span>
+                },
+                {
+                  header: 'Blocker',
+                  render: (r) => (
+                    <span style={{ fontWeight: 600, color: r.blocks_miro_bool ? 'var(--color-error-text)' : 'var(--color-text-muted)' }}>
+                      {r.blocks_miro_bool ? 'Blocks MIRO' : 'No Block'}
+                    </span>
+                  )
+                },
+                {
+                  header: 'Date Flagged',
+                  render: (r) => <span style={{ fontSize: '12px' }}>{r.created_at}</span>
+                }
+              ]}
+            />
+          </Card>
+          <div>
+            {selectedReview ? (
+              <Card title="POD VERIFICATION" accentColor="var(--color-brand-blue-600)">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 16px', fontSize: '13px', backgroundColor: 'var(--color-brand-blue-50)', padding: '16px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>PO Number / Item</span>
+                      <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{selectedReview.sap_po_no} / {selectedReview.po_item_no}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Contract</span>
+                      <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>C-2026-001</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Transporter</span>
+                      <strong style={{ color: 'var(--color-text-heading)' }}>{selectedReview.transporter_name || 'ABC Transport'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Vehicle</span>
+                      <strong className="mono" style={{ color: 'var(--color-text-heading)' }}>{selectedReview.vehicle_reg || 'KV44RCGP'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Dispatched Tonnage</span>
+                      <strong style={{ color: 'var(--color-text-heading)' }}>{dispatchedTons.toFixed(2)} Tons</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block', fontWeight: 700, textTransform: 'uppercase' }}>Received Tonnage</span>
+                      <strong style={{ color: 'var(--color-text-heading)' }}>{receivedTons.toFixed(2)} Tons</strong>
                     </div>
                   </div>
-
-                  {/* Document & OCR Split Preview Card */}
                   <div style={{ border: '1.5px solid var(--color-border)', borderRadius: '12px', padding: '14px', backgroundColor: 'var(--color-bg-card)' }}>
                     <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-muted)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
                       <span>📄 STAMPED DELIVERY RECEIPT (POD)</span>
@@ -261,8 +364,6 @@ export const AdminApprovals: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* OCR Verification Results */}
                   <div style={{ border: '1.5px solid var(--color-border)', borderRadius: '12px', padding: '14px', backgroundColor: '#FFFFFF' }}>
                     <h5 style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: 'var(--color-text-heading)', margin: '0 0 10px 0', letterSpacing: '0.04em', display: 'flex', justifyContent: 'space-between' }}>
                       <span>🔍 AI OCR EXTRACTION RESULTS</span>
@@ -274,103 +375,49 @@ export const AdminApprovals: React.FC = () => {
                       </div>
                       <div>
                         <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Confidence:</span>
-                        <strong style={{ 
-                          color: ((selectedReview as any).ocr_confidence_pct || 0) < 50 ? 'var(--color-error)' : 'var(--color-success)' 
-                        }}>
-                          {(selectedReview as any).ocr_confidence_pct ? `${(selectedReview as any).ocr_confidence_pct}%` : '—'}
-                        </strong>
-                      </div>
-                      <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Extracted Weight:</span>
-                        <strong>{(selectedReview as any).ocr_weight_extracted ? `${(selectedReview as any).ocr_weight_extracted} Tons` : '—'}</strong>
-                      </div>
-                      <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Match Status:</span>
-                        <strong style={{ 
-                          color: (selectedReview as any).ocr_match_status === 'MATCH' 
-                            ? 'var(--color-success-text)' 
-                            : (selectedReview as any).ocr_match_status === 'LOW_CONFIDENCE' 
-                              ? 'var(--color-warning-text)' 
-                              : 'var(--color-error-text)' 
-                        }}>
-                          {(selectedReview as any).ocr_match_status || '—'}
+                        <strong style={{ color: ((selectedReview as any).ocr_confidence_pct || 0) < 50 ? 'var(--color-error)' : 'var(--color-success)' }}>
+                          {(selectedReview as any).ocr_confidence_pct ? `${(selectedReview as any).ocr_confidence_pct}%` : '94.2%'}
                         </strong>
                       </div>
                     </div>
                   </div>
-
-                  {activeTab === 'OPEN' ? (
-                    <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      <h4 style={{ fontSize: '13px', fontWeight: 700, margin: 0, color: 'var(--color-text-heading)' }}>Verification Decision</h4>
-                      
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                          Reason Selection
-                        </label>
-                        <select
-                          value={overrideReason}
-                          onChange={e => setOverrideReason(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: '1.5px solid var(--color-border)',
-                            borderRadius: '10px',
-                            fontSize: '13px',
-                            backgroundColor: 'var(--color-bg-elevated)',
-                            color: 'var(--color-text-primary)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          <option value="MOISTURE_EVAPORATION">Moisture Evaporation (Acceptable Transit Loss)</option>
-                          <option value="SCALE_OFFSET_HOPPER_SPILLAGE">Weighbridge Scale Offset / Hopper Spillage</option>
-                          <option value="UNREADABLE_RECEIPT">Unreadable Receipt File / Missing Stamp</option>
-                          <option value="QUANTITY_MISMATCH">Quantity / Bilty Mismatch</option>
-                          <option value="OTHER">Other Reason (Specify below)</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
-                          Verification Audit Notes
-                        </label>
-                        <textarea
-                          value={resolutionNotes}
-                          onChange={e => setResolutionNotes(e.target.value)}
-                          placeholder="Provide explanation or audit notes..."
-                          style={{
-                            width: '100%',
-                            height: '80px',
-                            padding: '10px 12px',
-                            border: '1.5px solid var(--color-border)',
-                            borderRadius: '10px',
-                            fontSize: '13px',
-                            backgroundColor: 'var(--color-bg-elevated)',
-                            color: 'var(--color-text-primary)'
-                          }}
-                        />
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                        <button 
-                          onClick={handleReject}
-                          className="btn btn-ghost"
-                          style={{ color: 'var(--color-error-text)', borderColor: 'var(--color-error-light)', opacity: isSubmitting ? 0.6 : 1 }}
-                          disabled={isSubmitting}
-                        >
-                          {isSubmitting ? 'Rejecting...' : 'Reject POD'}
-                        </button>
-                        <button 
-                          onClick={handleApprove}
-                          className="btn btn-primary"
-                          style={{ backgroundColor: 'var(--color-brand-blue-600)', color: '#FFFFFF', opacity: isSubmitting ? 0.6 : 1 }}
-                          disabled={isSubmitting}
-                        >
-                          {isSubmitting ? 'Approving...' : 'Approve POD'}
-                        </button>
+                  {selectedReview.status === 'OPEN' ? (
+                    <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                        SAP Finance Release Override Reason
+                      </label>
+                      <select
+                        value={overrideReason}
+                        onChange={(e) => setOverrideReason(e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', fontWeight: 600, backgroundColor: '#FFFFFF' }}
+                      >
+                        <option value="MOISTURE_EVAPORATION">Moisture Evaporation / Transit Loss</option>
+                        <option value="SCALE_CALIBRATION">Siding Scale Calibration Variance</option>
+                        <option value="EXCEPTIONAL_ALLOWANCE">Exceptional Commercial Allowance</option>
+                        <option value="RE-WEIGH_ORDERED">Re-weigh Ordered / Manual Adjustment</option>
+                      </select>
+                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                        Resolution Notes (Will be logged in SAP BKPF)
+                      </label>
+                      <textarea
+                        placeholder="Provide detailed commercial justification..."
+                        value={resolutionNotes}
+                        onChange={(e) => setResolutionNotes(e.target.value)}
+                        rows={3}
+                        style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: '13px', resize: 'none' }}
+                      />
+                      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '4px' }}>
+                        <Button onClick={handleApprove} disabled={isSubmitting} variant="primary">
+                          {isSubmitting ? 'Overriding...' : '✓ Force Release Block'}
+                        </Button>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
+                    <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ backgroundColor: 'var(--color-success-bg)', border: '1px solid var(--color-success-light)', padding: '12px 14px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-success-text)' }}>
+                        <CheckCircle2 size={16} />
+                        <strong style={{ fontSize: '13px' }}>Resolved & Released to SAP Invoice Desk</strong>
+                      </div>
                       <div style={{ backgroundColor: 'var(--color-bg-page)', padding: '12px 16px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                         <p style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', margin: '0 0 4px 0' }}>VERIFICATION LOGGED</p>
                         <p style={{ fontSize: '13px', color: 'var(--color-text-heading)', margin: 0 }}>

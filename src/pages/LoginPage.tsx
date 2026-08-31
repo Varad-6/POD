@@ -12,14 +12,14 @@ const DEMO_USERS = [
 ];
 
 const DRIVER_USERS = [
-  { username: 'dr_rajesh', name: 'Pappu Singh', color: '#12B76A' },
-  { username: 'dr_amit',   name: 'Raju Yadav',  color: '#12B76A' },
-  { username: 'dr_sunil',  name: 'Sanjay Kumar',  color: '#12B76A' },
-  { username: 'dr_vikram', name: 'Ramesh Lal (Exp)', color: '#F04438' },
-  { username: 'dr_suresh', name: 'Sunil Kumar', color: '#12B76A' },
+  { username: 'dr_rajesh', name: 'Rajesh Kumar', color: '#12B76A' },
+  { username: 'dr_amit',   name: 'Amit Sharma',  color: '#12B76A' },
+  { username: 'dr_sunil',  name: 'Sunil Kumar',  color: '#12B76A' },
+  { username: 'dr_vikram', name: 'Vikram Singh', color: '#12B76A' },
+  { username: 'dr_suresh', name: 'Suresh Kumar', color: '#12B76A' },
   { username: 'dr_anil',   name: 'Anil Kumar',   color: '#12B76A' },
-  { username: 'dr_ramesh', name: 'Vijay Singh', color: '#12B76A' },
-  { username: 'dr_vijay',  name: 'Ajay Prasad',  color: '#12B76A' },
+  { username: 'dr_ramesh', name: 'Ramesh Lal (Exp)', color: '#F04438' },
+  { username: 'dr_vijay',  name: 'Vijay Singh',  color: '#12B76A' },
 ];
 
 export default function LoginPage() {

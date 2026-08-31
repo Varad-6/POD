@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Card } from '../components/Card';
+import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { crApi, drApi, TransportAssignmentV3 } from '../lib/api_v3';
@@ -23,6 +25,13 @@ export const CustomerDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Form states
   const [destGross, setDestGross] = useState('49850');
@@ -112,7 +121,7 @@ export const CustomerDashboard: React.FC = () => {
 
     if (successDone) {
       return (
-        <div style={{ maxWidth: '640px', margin: '60px auto', textAlign: 'center', padding: '40px', backgroundColor: 'var(--color-success-bg)', borderRadius: '16px', border: '1.5px solid var(--color-success-light)', boxShadow: 'var(--shadow-card)' }}>
+        <Card style={{ maxWidth: '640px', margin: '60px auto', textAlign: 'center', padding: '40px', backgroundColor: 'var(--color-success-bg)', border: '1.5px solid var(--color-success-light)' }}>
           <CheckCircle2 size={56} color="var(--color-success)" style={{ margin: '0 auto 16px' }} />
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-success-text)', margin: '0 0 8px' }}>Truck Unloaded Successfully!</h2>
           <p style={{ fontSize: '14.5px', color: 'var(--color-success-text)', margin: '0 0 8px', fontWeight: 600 }}>
@@ -121,14 +130,14 @@ export const CustomerDashboard: React.FC = () => {
           <p style={{ fontSize: '13.5px', color: 'var(--color-success-text)', opacity: 0.9, margin: '0 0 28px' }}>
             The delivery receipt has been stamped. The driver can now upload the POD document.
           </p>
-          <button
+          <Button
             onClick={handleBack}
-            className="btn btn-primary"
+            variant="primary"
             style={{ minHeight: '44px', padding: '12px 28px' }}
           >
             Back to Trucks Queue
-          </button>
-        </div>
+          </Button>
+        </Card>
       );
     }
 
@@ -137,32 +146,22 @@ export const CustomerDashboard: React.FC = () => {
 
         {/* Back */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
+          <Button
             onClick={handleBack}
-            className="btn btn-ghost btn-sm"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            variant="secondary"
+            size="sm"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <ArrowLeft size={14} /> All Trucks
-          </button>
+          </Button>
           <span style={{ color: 'var(--color-border)' }}>›</span>
           <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>PO #{a.sap_po_no} / {a.po_item_no}</span>
           <span style={{ marginLeft: 'auto' }}><StatusBadge status={a.status} /></span>
         </div>
 
         {/* Header Banner: White card with a light blue tinted header strip */}
-        <div style={{
-          backgroundColor: 'var(--color-bg-card)',
-          borderRadius: '16px',
-          border: '1.5px solid var(--color-border)',
-          overflow: 'hidden',
-          boxShadow: 'var(--shadow-card)'
-        }}>
-          <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '12px 20px', borderBottom: '1px solid var(--color-border)' }}>
-            <h3 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-700)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Incoming Delivery — Unloading Yard
-            </h3>
-          </div>
-          <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <Card title="Incoming Delivery — Unloading Yard" accentColor="var(--color-brand-blue-600)">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
               <InfoBit label="PO Number / Item" value={`PO #${a.sap_po_no} / ${a.po_item_no}`} mono />
               <InfoBit label="Driver" value={a.driver_name || '—'} />
@@ -176,15 +175,11 @@ export const CustomerDashboard: React.FC = () => {
               </span>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* ── ORIGIN WEIGHBRIDGE CERTIFICATE — READ ONLY LOCK ── */}
-        <div style={{
-          backgroundColor: 'var(--color-bg-page)', borderRadius: '16px', border: '1.5px solid var(--color-border)',
-          padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px',
-          boxShadow: 'var(--shadow-card)'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Card>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <h4 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Lock size={14} color="var(--color-text-muted)" />
               <span>ORIGIN WEIGHBRIDGE CERTIFICATE</span>
@@ -215,10 +210,12 @@ export const CustomerDashboard: React.FC = () => {
               </strong>
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* ── Step 1: Record Destination Scale Weights (Gross & Tare) ── */}
-        <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: weighSaved ? '1.5px solid var(--color-border)' : '2.5px solid var(--color-brand-blue-600)', overflow: 'hidden', boxShadow: weighSaved ? 'var(--shadow-card)' : 'var(--shadow-card-hover)' }}>
+        <Card 
+          style={{ border: weighSaved ? '1.5px solid var(--color-border)' : '2.5px solid var(--color-brand-blue-600)', padding: 0 }}
+        >
           <div style={{
             display: 'flex', alignItems: 'center', gap: '12px',
             padding: '16px 20px', borderBottom: '1px solid var(--color-border)',
@@ -327,27 +324,28 @@ export const CustomerDashboard: React.FC = () => {
               </div>
 
               {!weighSaved && (
-                <button
+                <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="btn btn-primary"
-                  style={{ minHeight: '48px', padding: '14px', width: '100%', justifyContent: 'center' }}
+                  variant="primary"
+                  style={{ minHeight: '48px', padding: '14px', width: '100%' }}
                 >
                   {isSubmitting ? 'Saving Receiving Scale Data...' : 'Save Destination Scale & Reconcile'}
-                </button>
+                </Button>
               )}
             </form>
           </div>
-        </div>
+        </Card>
 
         {/* ── Step 2: Confirm Unloading & Close ── */}
-        <div style={{
-          backgroundColor: 'var(--color-bg-card)', borderRadius: '16px',
-          border: '1.5px solid var(--color-border)', overflow: 'hidden',
-          opacity: !weighSaved ? 0.5 : 1,
-          pointerEvents: !weighSaved ? 'none' : 'auto',
-          transition: 'all 0.3s'
-        }}>
+        <Card 
+          style={{
+            opacity: !weighSaved ? 0.5 : 1,
+            pointerEvents: !weighSaved ? 'none' : 'auto',
+            transition: 'all 0.3s',
+            padding: 0
+          }}
+        >
           <div style={{
             display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid var(--color-border)',
             backgroundColor: weighSaved ? 'var(--color-bg-card)' : 'var(--color-bg-card)'
@@ -371,23 +369,20 @@ export const CustomerDashboard: React.FC = () => {
           </div>
 
           <div style={{ padding: '22px' }}>
-            <button
+            <Button
               onClick={handleStampConfirm}
               disabled={isSubmitting || !weighSaved}
-              className="btn btn-primary"
+              variant="primary"
               style={{
                 width: '100%', minHeight: '48px', padding: '16px', fontSize: '15px', fontWeight: 800,
-                backgroundColor: 'var(--color-brand-blue-600)',
-                color: '#fff',
-                justifyContent: 'center',
                 boxShadow: weighSaved ? 'var(--shadow-card-hover)' : 'none',
                 transition: 'all 0.2s'
               }}
             >
               {isSubmitting ? 'Processing...' : <><CheckCircle2 size={18} /> Save Stamp & Close Truck Unloading</>}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -413,9 +408,15 @@ export const CustomerDashboard: React.FC = () => {
             Incoming truck deliveries scheduled for your receiving location.
           </p>
         </div>
-        <button onClick={loadIncoming} disabled={loading} className="btn btn-ghost btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <Button
+          onClick={loadIncoming}
+          disabled={loading}
+          variant="secondary"
+          size="sm"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+        >
           <RefreshCw size={13} /> Refresh
-        </button>
+        </Button>
       </div>
 
       {/* ── Customer Actionable KPI Status Cards ── */}
@@ -483,24 +484,69 @@ export const CustomerDashboard: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {currentList.map(a => {
             const isItemActive = isActiveStatus(a.status);
+            if (isMobile) {
+              return (
+                <Card
+                  key={a.id}
+                  onClick={() => setSelectedAssignment(a)}
+                  hoverEffect
+                  style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px 20px', cursor: 'pointer' }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO / Item</div>
+                      <div className="mono" style={{ fontSize: '16px', fontWeight: 900, color: 'var(--color-text-primary)' }}>#{a.sap_po_no} / {a.po_item_no}</div>
+                    </div>
+                    <StatusBadge status={a.status} />
+                  </div>
+
+                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Driver / Truck</div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.driver_name || 'Driver'}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                        <Truck size={11} /> <span className="mono">{a.vehicle_reg}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Product</div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.material}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+
+                  <div>
+                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Route</div>
+                    <div style={{ fontSize: '12.5px', color: 'var(--color-text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>{a.from_location || 'MON1 Siding'}</span>
+                      <ArrowRight size={12} color="var(--color-border)" />
+                      <span>{a.to_location || 'Emoyeni Siding'}</span>
+                    </div>
+                  </div>
+
+                  <div 
+                    className="btn btn-secondary btn-sm"
+                    style={{
+                      backgroundColor: isItemActive ? 'var(--color-brand-blue-50)' : 'var(--color-success-bg)', 
+                      color: isItemActive ? 'var(--color-brand-blue-600)' : 'var(--color-success-text)',
+                      border: 'none', fontSize: '12px', fontWeight: 700, textAlign: 'center', width: '100%', padding: '10px'
+                    }}
+                  >
+                    {isItemActive ? 'Process Unload →' : 'View Details →'}
+                  </div>
+                </Card>
+              );
+            }
+
             return (
-              <div
+              <Card
                 key={a.id}
                 onClick={() => setSelectedAssignment(a)}
-                style={{
-                  backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1px solid var(--color-border)',
-                  padding: '18px 22px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '18px',
-                  boxShadow: 'var(--shadow-card)', transition: 'all var(--transition-normal)'
-                }}
-                onMouseEnter={e => { 
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card-hover)'; 
-                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)'; 
-                }}
-                onMouseLeave={e => { 
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card)'; 
-                  (e.currentTarget as HTMLDivElement).style.transform = 'translateY(0)'; 
-                }}
+                hoverEffect
+                style={{ display: 'flex', alignItems: 'center', gap: '18px', padding: '18px 22px', cursor: 'pointer' }}
               >
                 {/* Left blue/green indicator depending on tab */}
                 <div style={{ width: '4px', height: '54px', borderRadius: '2px', backgroundColor: isItemActive ? 'var(--color-brand-blue-600)' : 'var(--color-success)', flexShrink: 0 }} />
@@ -546,7 +592,7 @@ export const CustomerDashboard: React.FC = () => {
                 >
                   {isItemActive ? 'Process Unload →' : 'View Details →'}
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>

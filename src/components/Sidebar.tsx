@@ -10,21 +10,35 @@ import {
   LayoutDashboard,
   Activity,
   PanelLeftClose,
-  PanelLeftOpen
+  PanelLeftOpen,
+  X
 } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
 import { Modal } from './Modal';
 import { PodzoLogo } from './branding/PodzoLogo';
 
+const navLabelStyle: React.CSSProperties = {
+  whiteSpace: 'normal',
+  lineHeight: '1.25',
+  fontSize: '13px',
+  display: '-webkit-box',
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: 'vertical',
+  overflow: 'hidden'
+};
+
 interface SidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, mobileOpen = false, onMobileClose }) => {
   const { user: currentUser, logout } = useAuthV3();
   const navigate = useNavigate();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const isEffectiveCollapsed = mobileOpen ? false : collapsed;
 
   if (!currentUser) return null;
 
@@ -49,9 +63,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
 
   return (
     <>
+      {mobileOpen && (
+        <div 
+          onClick={onMobileClose}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(16, 24, 40, 0.55)',
+            zIndex: 999,
+            backdropFilter: 'blur(2px)',
+          }}
+        />
+      )}
       <aside 
+        className={`app-sidebar ${mobileOpen ? 'mobile-open' : ''}`}
         style={{
-          width: collapsed ? '72px' : '260px',
+          width: isEffectiveCollapsed ? '72px' : '260px',
           backgroundColor: 'var(--color-bg-sidebar)',
           color: 'var(--color-text-body)',
           display: 'flex',
@@ -61,25 +88,48 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
           position: 'fixed',
           top: 0,
           left: 0,
-          padding: collapsed ? '20px 8px 16px 8px' : '24px 16px 20px 16px',
+          padding: isEffectiveCollapsed ? '20px 8px 16px 8px' : '24px 16px 20px 16px',
           zIndex: 1000,
           borderRight: '1px solid var(--color-border)',
           boxSizing: 'border-box',
           overflowY: 'auto',
-          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+          transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1), padding 0.25s cubic-bezier(0.4, 0, 0.2, 1), transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
         }}
       >
         {/* Top Header & Brand Identity */}
         <div>
-          <div style={{ marginBottom: '24px', paddingLeft: collapsed ? '0' : '4px', paddingRight: collapsed ? '0' : '4px' }}>
-            {collapsed ? (
+          <div style={{ marginBottom: '24px', paddingLeft: isEffectiveCollapsed ? '0' : '4px', paddingRight: isEffectiveCollapsed ? '0' : '4px' }}>
+            {isEffectiveCollapsed ? (
               <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#FFFFFF', padding: '6px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                 <PodzoLogo variant="mark" height={28} />
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)' }}>
+                <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--color-border)', position: 'relative' }}>
                   <PodzoLogo variant="compact" height={32} />
+                  {mobileOpen && (
+                    <button 
+                      onClick={onMobileClose}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--color-bg-page)'
+                      }}
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center', marginTop: '4px' }}>
                   <span 
@@ -99,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
           </div>
 
           {/* Section Divider Header */}
-          {!collapsed && (
+          {!isEffectiveCollapsed && (
             <div style={{ paddingLeft: '16px', marginBottom: '8px' }}>
               <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 MAIN NAVIGATION
@@ -110,142 +160,142 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
           {/* Navigation Links */}
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {currentUser.role === 'CA' ? (
-              <>
-                <NavLink 
-                  to="/admin/dashboard" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Fleet Logistics Command" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Fleet Logistics Command</span>}
-                </NavLink>
-                
-                <NavLink 
-                  to="/admin/contracts" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Contracts & PO Release" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <FileSignature size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Contracts & PO Release</span>}
-                </NavLink>
-                
-                <NavLink 
-                  to="/admin/approvals" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "POD Verification Desk" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <ClipboardCheck size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>POD Verification Desk</span>}
-                </NavLink>
-                
-                <NavLink 
-                  to="/admin/invoices" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "SAP MIRO Invoices" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <FileClock size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>SAP MIRO Invoices</span>}
-                </NavLink>
-              </>
-            ) : currentUser.role === 'SR' ? (
-              <>
-                <NavLink 
-                  to="/supervisor/dashboard" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Weighbridge Siding Gate" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Weighbridge Siding Gate</span>}
-                </NavLink>
-              </>
-            ) : currentUser.role === 'CR' ? (
-              <>
-                <NavLink 
-                  to="/customer/dashboard" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Yard Receiving Gate" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Yard Receiving Gate</span>}
-                </NavLink>
-              </>
-            ) : currentUser.role === 'DR' ? (
-              <>
-                <NavLink 
-                  to="/driver/dashboard" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Driver Haulage Console" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Driver Haulage Console</span>}
-                </NavLink>
-              </>
-            ) : (
-              <>
-                <NavLink 
-                  to="/transporter/dashboard" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Carrier Control Console" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Carrier Control Console</span>}
-                </NavLink>
-                
-                <NavLink 
-                  to="/transporter/purchase-orders" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Purchase Orders Queue" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <FileSignature size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Purchase Orders Queue</span>}
-                </NavLink>
-                
-                <NavLink 
-                  to="/transporter/pods" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Waybill POD Uploads" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <Receipt size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Waybill POD Uploads</span>}
-                </NavLink>
-                
-                <NavLink 
-                  to="/transporter/invoices" 
-                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                  title={collapsed ? "Freight Delivery Invoices" : undefined}
-                  style={collapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                >
-                  <FileClock size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Freight Delivery Invoices</span>}
-                </NavLink>
-              </>
-            )}
+               <>
+                 <NavLink 
+                   to="/admin/dashboard" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Fleet Logistics Command" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Fleet Logistics Command</span>}
+                 </NavLink>
+                 
+                 <NavLink 
+                   to="/admin/contracts" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Contracts & PO Release" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <FileSignature size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Contracts & PO Release</span>}
+                 </NavLink>
+                 
+                 <NavLink 
+                   to="/admin/approvals" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "POD Verification Desk" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <ClipboardCheck size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>POD Verification Desk</span>}
+                 </NavLink>
+                 
+                 <NavLink 
+                   to="/admin/invoices" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "SAP MIRO Invoices" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <FileClock size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>SAP MIRO Invoices</span>}
+                 </NavLink>
+               </>
+             ) : currentUser.role === 'SR' ? (
+               <>
+                 <NavLink 
+                   to="/supervisor/dashboard" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Weighbridge Siding Gate" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Weighbridge Siding Gate</span>}
+                 </NavLink>
+               </>
+             ) : currentUser.role === 'CR' ? (
+               <>
+                 <NavLink 
+                   to="/customer/dashboard" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Yard Receiving Gate" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Yard Receiving Gate</span>}
+                 </NavLink>
+               </>
+             ) : currentUser.role === 'DR' ? (
+               <>
+                 <NavLink 
+                   to="/driver/dashboard" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Driver Haulage Console" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Driver Haulage Console</span>}
+                 </NavLink>
+               </>
+             ) : (
+               <>
+                 <NavLink 
+                   to="/transporter/dashboard" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Carrier Control Console" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Carrier Control Console</span>}
+                 </NavLink>
+                 
+                 <NavLink 
+                   to="/transporter/purchase-orders" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Purchase Orders Queue" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <FileSignature size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Purchase Orders Queue</span>}
+                 </NavLink>
+                 
+                 <NavLink 
+                   to="/transporter/pods" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Waybill POD Uploads" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <Receipt size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Waybill POD Uploads</span>}
+                 </NavLink>
+                 
+                 <NavLink 
+                   to="/transporter/invoices" 
+                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                   title={isEffectiveCollapsed ? "Freight Delivery Invoices" : undefined}
+                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
+                 >
+                   <FileClock size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
+                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Freight Delivery Invoices</span>}
+                 </NavLink>
+               </>
+             )}
           </nav>
         </div>
 
         {/* Bottom Section: Health Telemetry, Collapse Button & Logout */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
           {/* Sidebar Collapse/Expand Toggle Button */}
-          {onToggle && (
+          {onToggle && !mobileOpen && (
             <button
               onClick={onToggle}
-              title={collapsed ? "Open sidebar" : "Close sidebar"}
+              title={isEffectiveCollapsed ? "Open sidebar" : "Close sidebar"}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: collapsed ? 'center' : 'flex-start',
+                justifyContent: isEffectiveCollapsed ? 'center' : 'flex-start',
                 gap: '12px',
-                padding: collapsed ? '12px 0' : '10px 14px',
+                padding: isEffectiveCollapsed ? '12px 0' : '10px 14px',
                 color: 'var(--color-text-body)',
                 backgroundColor: 'transparent',
                 border: '1.5px solid var(--color-border)',
@@ -268,16 +318,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
                 e.currentTarget.style.color = 'var(--color-text-body)';
               }}
             >
-              {collapsed ? <PanelLeftOpen size={18} style={{ flexShrink: 0 }} /> : <PanelLeftClose size={18} style={{ flexShrink: 0 }} />}
-              {!collapsed && <span>Collapse Sidebar</span>}
+              {isEffectiveCollapsed ? <PanelLeftOpen size={18} style={{ flexShrink: 0 }} /> : <PanelLeftClose size={18} style={{ flexShrink: 0 }} />}
+              {!isEffectiveCollapsed && <span>Collapse Sidebar</span>}
             </button>
           )}
 
           {/* Telemetry Status Card */}
           <div
-            title={collapsed ? "SAP S21 Adapter Online" : undefined}
+            title={isEffectiveCollapsed ? "SAP S21 Adapter Online" : undefined}
             style={{
-              padding: collapsed ? '10px 0' : '10px 14px',
+              padding: isEffectiveCollapsed ? '10px 0' : '10px 14px',
               borderRadius: 'var(--radius-md)',
               background: 'var(--color-bg-card)',
               border: '1px solid var(--color-border)',
@@ -285,7 +335,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
               color: 'var(--color-text-body)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'space-between',
+              justifyContent: isEffectiveCollapsed ? 'center' : 'space-between',
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
@@ -298,21 +348,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
                   backgroundColor: 'var(--color-success)'
                 }} 
               />
-              {!collapsed && <span>SAP S21 Adapter</span>}
+              {!isEffectiveCollapsed && <span>SAP S21 Adapter</span>}
             </span>
-            {!collapsed && <span style={{ fontWeight: 800, color: 'var(--color-success-text)', fontSize: '11px', letterSpacing: '0.04em' }}>ONLINE</span>}
+            {!isEffectiveCollapsed && <span style={{ fontWeight: 800, color: 'var(--color-success-text)', fontSize: '11px', letterSpacing: '0.04em' }}>ONLINE</span>}
           </div>
 
           {/* Log Out Button */}
           <button
             onClick={handleLogoutClick}
-            title={collapsed ? "Sign Out" : undefined}
+            title={isEffectiveCollapsed ? "Sign Out" : undefined}
             style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'flex-start',
+              justifyContent: isEffectiveCollapsed ? 'center' : 'flex-start',
               gap: '12px',
-              padding: collapsed ? '12px 0' : '12px 14px',
+              padding: isEffectiveCollapsed ? '12px 0' : '12px 14px',
               color: 'var(--color-text-muted)',
               backgroundColor: 'transparent',
               border: 'none',
@@ -334,7 +384,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
             }}
           >
             <LogOut size={18} strokeWidth={2} style={{ flexShrink: 0 }} />
-            {!collapsed && <span>Sign Out</span>}
+            {!isEffectiveCollapsed && <span>Sign Out</span>}
           </button>
         </div>
       </aside>
@@ -352,7 +402,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle })
           </p>
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
             <button onClick={() => setShowLogoutConfirm(false)} className="btn btn-secondary">
-              Cancel
+               Cancel
             </button>
             <button onClick={confirmLogout} className="btn btn-danger">
               Sign Out Now

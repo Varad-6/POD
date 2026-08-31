@@ -4,6 +4,7 @@ import { useAuthV3 } from '../contexts/AuthContextV3';
 import { useNavigate } from 'react-router-dom';
 import { searchApi, demoApi } from '../lib/api_v3';
 import { Modal } from './Modal';
+import { Button } from './Button';
 
 interface TopBarProps {
   title: string;
@@ -18,6 +19,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [showMobileDrawer, setShowMobileDrawer] = useState(false);
 
   if (!currentUser) return null;
 
@@ -59,7 +61,8 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
   };
 
   return (
-    <header 
+    <>
+      <header 
       style={{
         height: 'var(--topbar-height)',
         backgroundColor: 'var(--color-bg-card)',
@@ -67,24 +70,41 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 32px',
+        padding: '0 24px',
         position: 'sticky',
         top: 0,
         zIndex: 90,
         boxShadow: 'var(--shadow-card)',
       }}
     >
-      {/* Page Title clearly shown as H1, brand logo skipped to prevent repetition */}
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-heading)', margin: 0, letterSpacing: '-0.02em' }}>
+      {/* Page Title with truncation + tap behavior on mobile */}
+      <div style={{ display: 'flex', alignItems: 'center', overflow: 'hidden', marginRight: '16px' }}>
+        <h1 
+          title={title}
+          onClick={() => {
+            if (window.innerWidth < 768) {
+              alert(title);
+            }
+          }}
+          style={{ 
+            fontSize: '18px', 
+            fontWeight: 800, 
+            color: 'var(--color-text-heading)', 
+            margin: 0, 
+            letterSpacing: '-0.02em',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            cursor: 'pointer'
+          }}
+        >
           {title}
         </h1>
       </div>
 
-      {/* Right User Controls */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        
-        {/* Reset Demo Data Button: styled as small muted text link */}
+      {/* Desktop Controls (hidden on mobile) */}
+      <div className="topbar-desktop-controls" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Reset Demo Data Button */}
         <button
           onClick={() => setShowResetConfirm(true)}
           disabled={isResetting}
@@ -140,7 +160,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
           </div>
         </div>
 
-        {/* User Avatar: soft blue bg, brand blue text */}
+        {/* User Avatar */}
         <div 
           style={{
             width: '38px',
@@ -187,6 +207,107 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
           <LogOut size={18} />
         </button>
       </div>
+
+      {/* Mobile Controls (hidden on desktop) */}
+      <div className="topbar-mobile-controls" style={{ display: 'none', alignItems: 'center' }}>
+        <div 
+          onClick={() => setShowMobileDrawer(true)}
+          style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--color-brand-blue-50)',
+            color: 'var(--color-brand-blue-600)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 800,
+            fontSize: '12px',
+            border: '1.5px solid var(--color-border)',
+            boxShadow: 'var(--shadow-card)',
+            cursor: 'pointer'
+          }}
+        >
+          {getInitials()}
+        </div>
+      </div>
+
+      {/* Mobile Drawer (Bottom Sheet) */}
+      {showMobileDrawer && (
+        <div 
+          onClick={() => setShowMobileDrawer(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            zIndex: 150,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center'
+          }}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'var(--color-bg-card)',
+              width: '100%',
+              borderTopLeftRadius: '16px',
+              borderTopRightRadius: '16px',
+              padding: '24px 24px 96px 24px',
+              boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px'
+            }}
+          >
+            <div style={{ width: '40px', height: '4px', backgroundColor: 'var(--color-border)', borderRadius: '2px', alignSelf: 'center', marginBottom: '8px' }} />
+            <div>
+              <p style={{ fontWeight: 800, fontSize: '16px', color: 'var(--color-text-heading)', margin: '0 0 4px 0' }}>
+                {currentUser.displayName || currentUser.username}
+              </p>
+              <span 
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  backgroundColor: 'var(--color-brand-blue-50)',
+                  color: 'var(--color-brand-blue-600)',
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-pill)',
+                  border: '1px solid var(--color-border)',
+                  textTransform: 'uppercase'
+                }}
+              >
+                {currentUser.role.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
+            <Button 
+              variant="secondary" 
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              onClick={() => {
+                setShowMobileDrawer(false);
+                setShowResetConfirm(true);
+              }}
+            >
+              <RotateCcw size={16} /> Reset Demo Environment
+            </Button>
+            <Button 
+              variant="danger" 
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', border: 'none', color: '#fff' }}
+              onClick={() => {
+                setShowMobileDrawer(false);
+                setShowLogoutConfirm(true);
+              }}
+            >
+              <LogOut size={16} /> Log Out
+            </Button>
+          </div>
+        </div>
+      )}
+    </header>
 
       {/* Confirm Reset Modal */}
       <Modal 
@@ -250,6 +371,6 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
           </div>
         </div>
       </Modal>
-    </header>
+    </>
   );
 };

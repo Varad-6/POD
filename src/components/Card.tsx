@@ -25,6 +25,8 @@ export const Card: React.FC<CardProps> = ({
   style,
   className = '',
 }) => {
+  const hasZeroPadding = style && (style.padding === 0 || style.padding === '0' || style.padding === '0px');
+
   return (
     <div 
       className={`card ${className}`}
@@ -48,7 +50,10 @@ export const Card: React.FC<CardProps> = ({
       )}
 
       {(title || subtitle || action || icon) && (
-        <div className="card-header">
+        <div 
+          className="card-header"
+          style={hasZeroPadding ? { paddingLeft: '24px', paddingRight: '24px', paddingTop: '20px' } : undefined}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {icon && <div>{icon}</div>}
             <div>

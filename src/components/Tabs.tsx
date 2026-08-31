@@ -24,9 +24,12 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
       className={`tabs-nav ${className}`}
       style={{
         display: 'flex',
-        gap: '24px',
+        gap: '20px',
         borderBottom: '2.5px solid var(--color-border)',
         paddingBottom: '0px',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
       }}
     >
       {tabs.map((tab) => {
@@ -48,6 +51,7 @@ export const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onChange, className
               borderBottom: isActive ? '3px solid var(--color-brand-blue-600)' : '3px solid transparent',
               marginBottom: '-2.5px',
               cursor: 'pointer',
+              flexShrink: 0,
               transition: 'all var(--transition-normal)',
             }}
           >
