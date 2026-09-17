@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { caApi, ContractV3, PurchaseOrderV3, transportersApi, Transporter } from '../lib/api_v3';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -10,6 +11,9 @@ import { Send, Clock, Calendar, Check, ShieldCheck, MapPin } from 'lucide-react'
 import { formatDate, formatCurrency } from '../utils/format';
 
 export const AdminContracts: React.FC = () => {
+  const location = useLocation();
+  const targetContractId = (location.state as any)?.contractId;
+
   const [contracts, setContracts] = useState<ContractV3[]>([]);
   const [selectedContract, setSelectedContract] = useState<ContractV3 | null>(null);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderV3[]>([]);
@@ -41,9 +45,16 @@ export const AdminContracts: React.FC = () => {
     try {
       const data = await caApi.getContracts();
       setContracts(data);
-      setSelectedContract(null);
-      setPurchaseOrders([]);
-      setSelectedPOToAssign(null);
+
+      const target = targetContractId ? data.find(c => c.id === targetContractId) : null;
+      if (target) {
+        handleContractSelect(target);
+      } else {
+        setSelectedContract(null);
+        setPurchaseOrders([]);
+        setSelectedPOToAssign(null);
+      }
+
       const transList = await transportersApi.list();
       setTransporters(transList);
       if (transList.length > 0) {
@@ -59,6 +70,15 @@ export const AdminContracts: React.FC = () => {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (targetContractId && contracts.length > 0) {
+      const target = contracts.find(c => c.id === targetContractId);
+      if (target && selectedContract?.id !== target.id) {
+        handleContractSelect(target);
+      }
+    }
+  }, [targetContractId, contracts]);
 
   const [selectedPOsToAssign, setSelectedPOsToAssign] = useState<PurchaseOrderV3[]>([]);
 

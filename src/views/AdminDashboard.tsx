@@ -172,17 +172,35 @@ export const AdminDashboard: React.FC = () => {
 
 
           <div className="responsive-split" style={{ gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-            <Card title="Live Outline Agreements Usage Meter" style={{ padding: 0 }}>
+            <Card 
+              title="Live Outline Agreements Usage Meter" 
+              subtitle="Real-time S/4HANA contract fulfillment"
+              action={
+                <Button 
+                  variant="secondary" 
+                  size="sm"
+                  onClick={() => navigate('/admin/contracts')}
+                  style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--color-brand-blue-600)' }}
+                >
+                  View All ({contracts.length}) <ArrowRight size={13} />
+                </Button>
+              }
+              style={{ padding: 0 }}
+            >
               <Table<ContractV3>
                 data={contracts}
+                onRowClick={(c) => navigate('/admin/contracts', { state: { contractId: c.id } })}
                 renderMobileCard={(c) => {
                   const completedCount = (c as any).completed_count || 0;
                   const totalPos = (c as any).total_pos || 5;
                   const pct = Math.round((completedCount / totalPos) * 100);
                   return (
-                    <div onClick={() => navigate('/admin/contracts')} style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 16px', borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}>
+                    <div 
+                      onClick={() => navigate('/admin/contracts', { state: { contractId: c.id } })} 
+                      style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 16px', borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}
+                    >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{c.sap_contract_no}</span>
+                        <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>{c.sap_contract_no}</span>
                         <StatusBadge status={c.status} />
                       </div>
                       <div style={{ fontWeight: 600, fontSize: '13px' }}>{c.customer_name}</div>
@@ -196,7 +214,20 @@ export const AdminDashboard: React.FC = () => {
                 columns={[
                   {
                     header: 'Contract Ref',
-                    render: (c) => <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{c.sap_contract_no}</span>
+                    render: (c) => (
+                      <span 
+                        className="mono" 
+                        style={{ 
+                          fontWeight: 700, 
+                          color: 'var(--color-brand-blue-600)',
+                          cursor: 'pointer',
+                          textDecoration: 'underline',
+                          textUnderlineOffset: '3px'
+                        }}
+                      >
+                        {c.sap_contract_no}
+                      </span>
+                    )
                   },
                   {
                     header: 'Yard Location',
@@ -235,7 +266,12 @@ export const AdminDashboard: React.FC = () => {
 
             <Card title="System Telemetry Logs">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div 
+                  onClick={() => navigate('/admin/contracts')}
+                  style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px' }}
+                  className="table-row-hover"
+                  title="View Outline Agreements"
+                >
                   <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '6px', borderRadius: '6px', color: 'var(--color-brand-blue-600)' }}>
                     <Activity size={14} />
                   </div>
@@ -245,7 +281,12 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div 
+                  onClick={() => navigate('/admin/approvals')}
+                  style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px' }}
+                  className="table-row-hover"
+                  title="View Flagged Review Queue"
+                >
                   <div style={{ backgroundColor: 'var(--color-error-bg)', padding: '6px', borderRadius: '6px', color: 'var(--color-error-text)' }}>
                     <ClipboardCheck size={14} />
                   </div>
@@ -255,7 +296,12 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                <div 
+                  onClick={() => navigate('/admin/invoices')}
+                  style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px' }}
+                  className="table-row-hover"
+                  title="View SAP MIRO Invoices"
+                >
                   <div style={{ backgroundColor: 'var(--color-success-bg)', padding: '6px', borderRadius: '6px', color: 'var(--color-success-text)' }}>
                     <FileClock size={14} />
                   </div>
