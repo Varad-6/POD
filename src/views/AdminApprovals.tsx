@@ -158,14 +158,15 @@ export const AdminApprovals: React.FC = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {selectedReview === null ? (
             <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
-              <Table<ReviewQueueItemV3,>
+              <Table<ReviewQueueItemV3>
                 data={reviews}
+                columns={[]}
                 onRowClick={(r) => setSelectedReview(r)}
                 getRowStyle={(r) => ({
-                  backgroundColor: selectedReview?.id === r.id ? 'var(--color-brand-blue-50)' : 'transparent'
+                  backgroundColor: (selectedReview as ReviewQueueItemV3 | null)?.id === r.id ? 'var(--color-brand-blue-50)' : 'transparent'
                 })}
-                renderMobileCard={(r) => {
-                  const isSelected = selectedReview?.id === r.id;
+                renderMobileCard={(r: ReviewQueueItemV3) => {
+                  const isSelected = (selectedReview as ReviewQueueItemV3 | null)?.id === r.id;
                   const { dispatchedTons, receivedTons, variancePct } = getReviewWeights(r);
                   return (
                     <div 
@@ -196,7 +197,6 @@ export const AdminApprovals: React.FC = () => {
                     </div>
                   );
                 }}
-                columns={[] as Column<ReviewQueueItemV3>[]}
               />
             </Card>
           ) : (
@@ -284,7 +284,7 @@ export const AdminApprovals: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
           <Card title={`Flagged Items (${reviews.length})`} subtitle="Select an item below to load detailed verification inspector" style={{ padding: 0 }}>
-            <Table<ReviewQueueItemV3,>
+            <Table<ReviewQueueItemV3>
               data={reviews}
               onRowClick={(r) => setSelectedReview(r)}
               getRowStyle={(r) => ({

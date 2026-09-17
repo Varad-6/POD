@@ -126,14 +126,14 @@ export const AdminContracts: React.FC = () => {
               subtitle={`Showing ${contracts.length} active outline agreements synchronized from SAP S21 master data`}
               style={{ padding: 0 }}
             >
-              <Table<ContractV3,>
+              <Table<ContractV3>
                 data={contracts}
                 onRowClick={(c) => handleContractSelect(c)}
                 getRowStyle={(c) => ({
-                  backgroundColor: selectedContract?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent'
+                  backgroundColor: (selectedContract as ContractV3 | null)?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent'
                 })}
-                renderMobileCard={(c) => {
-                  const isSelected = selectedContract?.id === c.id;
+                renderMobileCard={(c: ContractV3) => {
+                  const isSelected = (selectedContract as ContractV3 | null)?.id === c.id;
                   const contractPoMaterials = purchaseOrders
                     .filter(po => po.contract_id === c.id)
                     .map(po => po.material);
@@ -451,10 +451,10 @@ export const AdminContracts: React.FC = () => {
                  data={contracts}
                  onRowClick={(c) => handleContractSelect(c)}
                  getRowStyle={(c) => ({
-                   backgroundColor: selectedContract?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent'
+                   backgroundColor: (selectedContract as ContractV3 | null)?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent'
                  })}
-                 renderMobileCard={(c) => {
-                   const isSelected = selectedContract?.id === c.id;
+                 renderMobileCard={(c: ContractV3) => {
+                   const isSelected = (selectedContract as ContractV3 | null)?.id === c.id;
                    const contractPoMaterials = purchaseOrders
                      .filter(po => po.contract_id === c.id)
                      .map(po => po.material);
