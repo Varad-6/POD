@@ -1,8 +1,3 @@
-// ============================================================
-// POD — Standardized PageHeader Component
-// Title + Subtitle + Right Actions Pattern across all views
-// ============================================================
-
 import React from 'react';
 
 interface PageHeaderProps {
@@ -24,19 +19,19 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: '24px',
+        marginBottom: '20px',
         flexWrap: 'wrap',
-        gap: '16px',
+        gap: '12px',
       }}
     >
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <h1
             style={{
-              fontSize: '24px',
-              fontWeight: 800,
-              color: 'var(--neutral-900)',
-              letterSpacing: '-0.03em',
+              fontSize: '22px',
+              fontWeight: 700,
+              color: 'var(--color-text-heading)',
+              letterSpacing: '-0.02em',
               margin: 0,
             }}
           >
@@ -48,9 +43,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <p
             style={{
               fontSize: '13px',
-              color: 'var(--neutral-500)',
+              color: 'var(--color-text-muted)',
               marginTop: '4px',
               fontWeight: 400,
+              margin: '4px 0 0 0',
             }}
           >
             {subtitle}
@@ -59,7 +55,14 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       </div>
 
       {actions && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexWrap: 'wrap',
+          }}
+        >
           {actions}
         </div>
       )}

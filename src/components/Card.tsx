@@ -21,7 +21,6 @@ export const Card: React.FC<CardProps> = ({
   icon,
   accentColor,
   onClick,
-  hoverEffect = false,
   style,
   className = '',
 }) => {
@@ -32,6 +31,15 @@ export const Card: React.FC<CardProps> = ({
       className={`card ${className}`}
       onClick={onClick}
       style={{
+        backgroundColor: '#FFFFFF',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-card, 6px)',
+        boxShadow: 'var(--shadow-card)',
+        padding: hasZeroPadding ? 0 : '16px 20px',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative',
+        overflow: 'hidden',
         cursor: onClick ? 'pointer' : 'default',
         ...style
       }}
@@ -52,20 +60,31 @@ export const Card: React.FC<CardProps> = ({
       {(title || subtitle || action || icon) && (
         <div 
           className="card-header"
-          style={hasZeroPadding ? { paddingLeft: '24px', paddingRight: '24px', paddingTop: '20px' } : undefined}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: hasZeroPadding ? '14px 20px' : '0 0 14px 0',
+            borderBottom: '1px solid var(--color-border)',
+            marginBottom: hasZeroPadding ? 0 : '14px',
+          }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {icon && <div>{icon}</div>}
+            {icon && <div style={{ color: 'var(--color-brand-blue-600)', display: 'flex' }}>{icon}</div>}
             <div>
-              {title && <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--neutral-900)', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{title}</h3>}
-              {subtitle && <p style={{ fontSize: '12px', color: 'var(--neutral-500)', marginTop: '2px' }}>{subtitle}</p>}
+              {title && (
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-heading)', margin: 0, letterSpacing: '-0.01em' }}>
+                  {title}
+                </h3>
+              )}
+              {subtitle && <p style={{ fontSize: '12px', color: 'var(--color-text-muted)', margin: '2px 0 0 0' }}>{subtitle}</p>}
             </div>
           </div>
           {action && <div>{action}</div>}
         </div>
       )}
 
-      <div className="card-body">
+      <div className="card-body" style={{ flex: 1 }}>
         {children}
       </div>
     </div>

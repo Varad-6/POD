@@ -7,6 +7,8 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { Table, Column } from '../components/Table';
+import { KPISummaryBar } from '../components/KPISummaryBar';
+import { PageHeader } from '../components/PageHeader';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -57,118 +59,68 @@ export const AdminDashboard: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* Top Banner (V3 Royal Blue Theme) */}
-      <div 
-        className="hero-banner"
-        style={{ 
-          background: 'linear-gradient(135deg, var(--color-brand-blue-600) 0%, var(--color-brand-blue-700) 100%)', 
-          borderRadius: '16px', 
-          padding: '28px 32px', 
-          color: '#ffffff', 
-          boxShadow: 'var(--shadow-card)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <div className="hero-banner-content" style={{ zIndex: 2 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-            <span className="pulse-dot pulse-dot--active" style={{ backgroundColor: '#FFFFFF', boxShadow: '0 0 8px #FFFFFF' }} />
-            <span style={{ fontSize: '11px', color: 'var(--color-brand-blue-50)', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-              Company Admin • Action & Verification Control
-            </span>
-          </div>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.03em', margin: 0 }}>
-            Fleet Logistics Command Desk
-          </h2>
-          <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', marginTop: '4px', maxWidth: '640px', margin: '4px 0 0 0', lineHeight: 1.5 }}>
-            Real-time tracking of outline agreement usage, weight logs, geofence validations, OCR checks, and SAP MIRO invoice automated parking.
-          </p>
-        </div>
-
-        <div className="hero-banner-actions" style={{ zIndex: 2 }}>
-          <Button 
-            onClick={() => navigate('/admin/approvals')} 
-            variant="primary" 
-            style={{ backgroundColor: '#ffffff', color: 'var(--color-brand-blue-600)', borderColor: '#ffffff', fontWeight: 700 }}
-          >
-            Inspect POD Queue ({openReviews.length}) <ArrowRight size={14} style={{ marginLeft: '4px' }} />
-          </Button>
-          <Button 
-            onClick={() => navigate('/admin/invoices')} 
-            variant="secondary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: '#ffffff', borderColor: 'rgba(255, 255, 255, 0.4)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'; e.currentTarget.style.borderColor = '#FFFFFF'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)'; }}
-          >
-            MIRO Console ({pendingPodVerify.length})
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Fleet Logistics Command Desk"
+        subtitle="Real-time tracking of outline agreement usage, weight logs, geofence validations, OCR checks, and SAP MIRO invoice automated parking."
+        actions={
+          <>
+            <Button 
+              onClick={() => navigate('/admin/approvals')} 
+              variant="primary" 
+              size="sm"
+            >
+              Inspect POD Queue ({openReviews.length}) <ArrowRight size={13} style={{ marginLeft: '4px' }} />
+            </Button>
+            <Button 
+              onClick={() => navigate('/admin/invoices')} 
+              variant="secondary"
+              size="sm"
+            >
+              MIRO Console ({pendingPodVerify.length})
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading telemetry...</div>
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13px' }}>Loading telemetry...</div>
       ) : (
         <>
-          {/* KPI Cards Grid — Card Encapsulated & Interactive Redirection */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-            
-            {/* 1. Pending PO Release */}
-            <div className="kpi-card" onClick={() => navigate('/admin/contracts')} style={{ cursor: 'pointer', borderLeft: openPOs.length > 0 ? '4px solid #2563EB' : '1px solid var(--color-border)' }}>
-              <div>
-                <div className="kpi-label">Pending PO Release</div>
-                <div className="kpi-value">{openPOs.length}</div>
-                <div className="kpi-trend kpi-trend--up" style={{ color: openPOs.length > 0 ? '#2563EB' : 'var(--color-text-muted)' }}>
-                  {openPOs.length > 0 ? 'Requires CA Action' : 'All released POs handled'}
-                </div>
-              </div>
-              <div className="kpi-icon-wrapper" style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
-                <FileText size={20} />
-              </div>
-            </div>
-
-            {/* 2. Flagged Reviews */}
-            <div className="kpi-card" onClick={() => navigate('/admin/approvals')} style={{ cursor: 'pointer', borderLeft: openReviews.length > 0 ? '4px solid #DC2626' : '1px solid var(--color-border)' }}>
-              <div>
-                <div className="kpi-label">Flagged Reviews</div>
-                <div className="kpi-value">{openReviews.length}</div>
-                <div className="kpi-trend kpi-trend--down" style={{ color: openReviews.length > 0 ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>
-                  {openReviews.length > 0 ? 'Requires Attention' : 'No reviews require attention'}
-                </div>
-              </div>
-              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)' }}>
-                <ClipboardCheck size={20} />
-              </div>
-            </div>
-
-            {/* 3. Pending POD Verification */}
-            <div className="kpi-card" onClick={() => navigate('/admin/approvals')} style={{ cursor: 'pointer', borderLeft: pendingPodVerify.length > 0 ? '4px solid #D97706' : '1px solid var(--color-border)' }}>
-              <div>
-                <div className="kpi-label">Pending POD Verification</div>
-                <div className="kpi-value">{pendingPodVerify.length}</div>
-                <div className="kpi-trend kpi-trend--up" style={{ color: pendingPodVerify.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)' }}>
-                  {pendingPodVerify.length > 0 ? 'Awaiting Verification' : 'No POD verification pending'}
-                </div>
-              </div>
-              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)' }}>
-                <FileClock size={20} />
-              </div>
-            </div>
-
-            {/* 4. Pending MIRO */}
-            <div className="kpi-card" onClick={() => navigate('/admin/invoices')} style={{ cursor: 'pointer', borderLeft: pendingMiro.length > 0 ? '4px solid #059669' : '1px solid var(--color-border)' }}>
-              <div>
-                <div className="kpi-label">Pending MIRO</div>
-                <div className="kpi-value">{pendingMiro.length}</div>
-                <div className="kpi-trend kpi-trend--up" style={{ color: pendingMiro.length > 0 ? 'var(--color-success-text)' : 'var(--color-text-muted)' }}>
-                  {pendingMiro.length > 0 ? 'Parked Invoices Ready' : 'No MIRO items pending'}
-                </div>
-              </div>
-              <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success-text)' }}>
-                <Server size={20} />
-              </div>
-            </div>
-
-          </div>
+          {/* SAP Enterprise Horizontal KPI Summary Bar (Screenshot 1) */}
+          <KPISummaryBar
+            items={[
+              {
+                id: 'pos',
+                value: openPOs.length,
+                label: 'Pending PO Release',
+                subtitle: openPOs.length > 0 ? 'Requires CA Action' : 'All handled',
+                onClick: () => navigate('/admin/contracts'),
+              },
+              {
+                id: 'reviews',
+                value: openReviews.length,
+                label: 'Flagged Reviews',
+                subtitle: openReviews.length > 0 ? 'Requires Attention' : 'Queue clear',
+                onClick: () => navigate('/admin/approvals'),
+                accentColor: openReviews.length > 0 ? 'var(--color-error)' : undefined,
+              },
+              {
+                id: 'pod',
+                value: pendingPodVerify.length,
+                label: 'Pending POD Verification',
+                subtitle: pendingPodVerify.length > 0 ? 'Awaiting Verification' : 'None pending',
+                onClick: () => navigate('/admin/approvals'),
+                accentColor: pendingPodVerify.length > 0 ? 'var(--color-warning)' : undefined,
+              },
+              {
+                id: 'miro',
+                value: pendingMiro.length,
+                label: 'Pending MIRO',
+                subtitle: pendingMiro.length > 0 ? 'Parked Invoices Ready' : 'None pending',
+                onClick: () => navigate('/admin/invoices'),
+              },
+            ]}
+          />
 
 
           <div className="responsive-split" style={{ gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
@@ -200,7 +152,7 @@ export const AdminDashboard: React.FC = () => {
                       style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px 16px', borderBottom: '1px solid var(--color-border)', cursor: 'pointer' }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)', textDecoration: 'underline', textUnderlineOffset: '2px' }}>{c.sap_contract_no}</span>
+                        <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{c.sap_contract_no}</span>
                         <StatusBadge status={c.status} />
                       </div>
                       <div style={{ fontWeight: 600, fontSize: '13px' }}>{c.customer_name}</div>
@@ -220,9 +172,7 @@ export const AdminDashboard: React.FC = () => {
                         style={{ 
                           fontWeight: 700, 
                           color: 'var(--color-brand-blue-600)',
-                          cursor: 'pointer',
-                          textDecoration: 'underline',
-                          textUnderlineOffset: '3px'
+                          cursor: 'pointer'
                         }}
                       >
                         {c.sap_contract_no}

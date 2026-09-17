@@ -1,57 +1,64 @@
 /* ============================================================
-   PODZO — Design System v3.0 (Blue Theme Redesign)
-   Visual Direction: Railpass Commuter Line (Royal Blue & White/Light Gray)
-   Font: Inter (Google Fonts)
+   PODZO — Design System v3.1 (SAP Business Network & Fiori Inspired)
+   Visual Direction: SAP Business Network / SAP Fiori Enterprise UI
+   Palette: SAP Blue (#0A6ED1) · Clean White · Subtle Gray (#F5F6F7)
+   Font: 72 / Inter / Segoe UI
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&display=swap');
 
 :root {
-  /* ── New Blue Design Tokens (Section 2) ────────────────── */
-  --color-brand-blue-600: #2F5FE0;     /* Primary buttons, active nav, key CTAs */
-  --color-brand-blue-700: #2648B8;     /* Hover/pressed state of primary blue */
-  --color-brand-blue-50:  #EEF2FE;     /* Light blue tint — selected row bg, info banners */
+  /* ── SAP Fiori Color System (Prompt Section 4) ──────────── */
+  --color-brand-blue-600: #0A6ED1;     /* Primary blue: navigation, key actions, links */
+  --color-brand-blue-700: #0854A0;     /* Dark blue: hover / pressed */
+  --color-brand-blue-50:  #EAF3FC;     /* Light blue: active row bg, tabs, selection */
+  --color-brand-blue-100: #D4E7FA;     /* Soft blue border / badge */
   
-  --color-bg-page:        #F6F7FB;     /* Main page background, replaces cream */
-  --color-bg-card:        #FFFFFF;     /* All cards, panels, modals */
-  --color-bg-sidebar:     #FFFFFF;     /* Sidebar becomes WHITE */
-  --color-border:         #E4E7EC;     /* Card borders, dividers — soft, barely visible */
+  --color-bg-page:        #F5F6F7;     /* Application background */
+  --color-bg-card:        #FFFFFF;     /* Surface / table / card background */
+  --color-bg-sidebar:     #FFFFFF;     /* Clean white sidebar */
+  --color-border:         #D9E1E8;     /* Subtle enterprise border */
+  --color-border-subtle:  #E5E7EB;     /* Soft table row divider */
   
-  --color-text-heading:   #101828;     /* All headings */
-  --color-text-body:      #344054;     /* Body copy */
-  --color-text-muted:     #667085;     /* Labels, captions, secondary info */
+  --color-text-heading:   #1D2D3E;     /* Primary enterprise text */
+  --color-text-body:      #1D2D3E;     /* Body copy */
+  --color-text-muted:     #5B738B;     /* Secondary text / column headers / metadata */
 
-  /* Status colors (Pill colors with contrast text) */
-  --color-success:        #12B76A;     /* Green only for done/cleared/approved */
-  --color-success-bg:     #ECFDF3;
-  --color-success-text:   #027A48;
+  /* Semantic Status Colors (Compact & Subtle) */
+  --color-success:        #107E3E;     /* Completed / Approved / Paid */
+  --color-success-bg:     #F1F8F4;
+  --color-success-text:   #107E3E;
+  --color-success-border: #C6E7D2;
   
-  --color-warning:        #F79009;     /* Pending/review states */
-  --color-warning-bg:     #FFFAEB;
-  --color-warning-text:   #B54708;
+  --color-warning:        #E9730C;     /* Warning / Pending / Attention */
+  --color-warning-bg:     #FEF7F1;
+  --color-warning-text:   #E9730C;
+  --color-warning-border: #FAD8B7;
   
-  --color-error:          #F04438;     /* Blocked/rejected/mismatch */
-  --color-error-bg:       #FEF3F2;
-  --color-error-text:     #B42318;
+  --color-error:          #BB0000;     /* Error / Failed / Mismatch */
+  --color-error-bg:       #FDF2F2;
+  --color-error-text:     #BB0000;
+  --color-error-border:   #F8C8C8;
   
-  --color-info:           #2F5FE0;     /* In-progress/en-route states */
-  --color-info-bg:        #EEF2FE;
-  --color-info-text:      #175CD3;
+  --color-info:           #0A6ED1;     /* Information / Active */
+  --color-info-bg:        #EAF3FC;
+  --color-info-text:      #0A6ED1;
+  --color-info-border:    #B8D8F8;
 
-  /* Card Radius */
-  --radius-card:          16px;
-  --radius-button:        10px;
-  --radius-pill:          999px;
-  --radius-input:         10px;
+  /* Minimal Enterprise Geometry (Prompt Section 1, 17, 18) */
+  --radius-card:          6px;
+  --radius-button:        4px;
+  --radius-pill:          4px;
+  --radius-input:         4px;
 
-  /* Shadows */
-  --shadow-card:          0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.06);
-  --shadow-card-hover:    0 4px 8px rgba(16,24,40,0.08);
-  --shadow-modal:         0 12px 32px rgba(16,24,40,0.12);
+  /* Subtle Shadows (Prompt Section 1, 18) */
+  --shadow-card:          0 1px 2px rgba(29, 45, 62, 0.04);
+  --shadow-card-hover:    0 2px 5px rgba(29, 45, 62, 0.08);
+  --shadow-modal:         0 8px 24px rgba(29, 45, 62, 0.12);
 
-  /* Font */
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-  --font-mono:   'JetBrains Mono', 'Fira Code', monospace;
+  /* Typography (Prompt Section 5) */
+  --font-family: '72', '72Black', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --font-mono:   'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
 
   /* ── Dynamic Typography variables mapped to :root (Inter font) ── */
   --text-h1-mobile: 28px;

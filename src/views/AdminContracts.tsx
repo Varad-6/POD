@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { caApi, ContractV3, PurchaseOrderV3, transportersApi, Transporter } from '../lib/api_v3';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { Table, Column } from '../components/Table';
-import { ConsolidatedContractPoForm } from '../components/ConsolidatedContractPoForm';
+import { Table } from '../components/Table';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge } from '../components/StatusBadge';
-import { Send, Clock, Calendar, Check, ShieldCheck, MapPin } from 'lucide-react';
+import { FilterBar } from '../components/FilterBar';
+import { Modal } from '../components/Modal';
+import { Checkbox } from '../components/Checkbox';
+import {
+  Send, Clock, Calendar, Check, ShieldCheck, MapPin,
+  FileText, Package, Truck, Layers, ArrowRight, X, CheckSquare, Square, RefreshCw,
+  Eye, ExternalLink
+} from 'lucide-react';
 import { formatDate, formatCurrency } from '../utils/format';
 
 export const AdminContracts: React.FC = () => {
@@ -17,8 +23,39 @@ export const AdminContracts: React.FC = () => {
   const [contracts, setContracts] = useState<ContractV3[]>([]);
   const [selectedContract, setSelectedContract] = useState<ContractV3 | null>(null);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrderV3[]>([]);
-  const [selectedPOToAssign, setSelectedPOToAssign] = useState<PurchaseOrderV3 | null>(null);
-  
+  const [selectedPOsToAssign, setSelectedPOsToAssign] = useState<PurchaseOrderV3[]>([]);
+
+  // PO Detail Inspector state
+  const [inspectingPo, setInspectingPo] = useState<PurchaseOrderV3 | null>(null);
+  const [poDetailLoading, setPoDetailLoading] = useState(false);
+  const [poDetailError, setPoDetailError] = useState<string | null>(null);
+
+  const handleOpenPoDetail = async (po: PurchaseOrderV3) => {
+    setPoDetailError(null);
+    setInspectingPo(po);
+    setPoDetailLoading(true);
+    try {
+      const fresh = await caApi.getPoDetails(po.id);
+      if (fresh) {
+        setInspectingPo(fresh);
+      }
+    } catch (err: any) {
+      console.warn('[PO Detail Fetch Warning]', err);
+    } finally {
+      setPoDetailLoading(false);
+    }
+  };
+
+  const handleClosePoDetail = () => {
+    setInspectingPo(null);
+    setPoDetailError(null);
+  };
+
+  // Search & Filters
+  const [contractSearch, setContractSearch] = useState('');
+  const [poSearch, setPoSearch] = useState('');
+  const [poStatusFilter, setPoStatusFilter] = useState('ALL');
+
   // Job Config Form inputs with SAP SLA Schedule parameters
   const [transporters, setTransporters] = useState<Transporter[]>([]);
   const [targetTransporterId, setTargetTransporterId] = useState('');
@@ -31,13 +68,7 @@ export const AdminContracts: React.FC = () => {
   const [timebound, setTimebound] = useState('2026-12-31');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const [showAssignForm, setShowAssignForm] = useState(false);
 
   // Fetch contracts on load
   const loadData = async () => {
@@ -52,7 +83,7 @@ export const AdminContracts: React.FC = () => {
       } else {
         setSelectedContract(null);
         setPurchaseOrders([]);
-        setSelectedPOToAssign(null);
+        setSelectedPOsToAssign([]);
       }
 
       const transList = await transportersApi.list();
@@ -80,11 +111,9 @@ export const AdminContracts: React.FC = () => {
     }
   }, [targetContractId, contracts]);
 
-  const [selectedPOsToAssign, setSelectedPOsToAssign] = useState<PurchaseOrderV3[]>([]);
-
   const handleContractSelect = async (c: ContractV3) => {
-    setSelectedPOToAssign(null);
     setSelectedPOsToAssign([]);
+    setShowAssignForm(false);
     try {
       const detail = await caApi.getContractDetails(c.id);
       setSelectedContract(detail);
@@ -96,11 +125,33 @@ export const AdminContracts: React.FC = () => {
     }
   };
 
+  const togglePoSelection = (po: PurchaseOrderV3) => {
+    if (po.status !== 'OPEN' && !selectedPOsToAssign.some(p => p.id === po.id)) {
+      alert(`PO #${po.sap_po_no} / ${po.po_item_no} is currently ${po.status} and cannot be assigned.`);
+      return;
+    }
+
+    if (selectedPOsToAssign.some(p => p.id === po.id)) {
+      setSelectedPOsToAssign(prev => prev.filter(p => p.id !== po.id));
+    } else {
+      setSelectedPOsToAssign(prev => [...prev, po]);
+    }
+  };
+
+  const toggleSelectAllPos = () => {
+    const openPos = purchaseOrders.filter(p => p.contract_id === selectedContract?.id && p.status === 'OPEN');
+    if (selectedPOsToAssign.length === openPos.length && openPos.length > 0) {
+      setSelectedPOsToAssign([]);
+    } else {
+      setSelectedPOsToAssign(openPos);
+    }
+  };
+
   const handleDistributeSubmit = async () => {
-    const targetPo = selectedPOToAssign || (selectedPOsToAssign.length > 0 ? selectedPOsToAssign[0] : null);
-    if (!targetPo || !targetTransporterId) return;
+    if (selectedPOsToAssign.length === 0 || !targetTransporterId) return;
     setIsSubmitting(true);
     try {
+      const targetPo = selectedPOsToAssign[0];
       await caApi.distributePo(targetPo.id, {
         po_ids: selectedPOsToAssign.map(p => p.id),
         transporter_id: parseInt(targetTransporterId),
@@ -116,8 +167,8 @@ export const AdminContracts: React.FC = () => {
       if (selectedContract) {
         handleContractSelect(selectedContract);
       }
-      setSelectedPOToAssign(null);
       setSelectedPOsToAssign([]);
+      setShowAssignForm(false);
     } catch (err) {
       console.error('Failed to distribute transport execution:', err);
       alert('Error creating multi-PO transport execution');
@@ -126,711 +177,955 @@ export const AdminContracts: React.FC = () => {
     }
   };
 
+  // Helper metadata
+  const getContractAgreementType = (no: string) => {
+    return no === '4600000026' || no === '4600000021' || no === '4600000017'
+      ? 'Value Contract (WK)'
+      : 'Quantity Contract (MK)';
+  };
+
+  const getContractSupplier = (no: string) => {
+    return no === '4600000026' || no === '4600000021'
+      ? '1403 — Gajanan Enterprises'
+      : '1402 — ABC Enterprises';
+  };
+
+  const filteredContracts = useMemo(() => {
+    if (!contractSearch) return contracts;
+    const term = contractSearch.toLowerCase();
+    return contracts.filter(c =>
+      c.sap_contract_no.toLowerCase().includes(term) ||
+      (c.customer_name && c.customer_name.toLowerCase().includes(term)) ||
+      (c as any).material?.toLowerCase().includes(term)
+    );
+  }, [contracts, contractSearch]);
+
+  const contractLinkedPos = useMemo(() => {
+    if (!selectedContract) return [];
+    return purchaseOrders.filter(po => po.contract_id === selectedContract.id);
+  }, [purchaseOrders, selectedContract]);
+
+  const filteredLinkedPos = useMemo(() => {
+    return contractLinkedPos.filter(po => {
+      const matchesSearch = !poSearch ||
+        po.sap_po_no.toLowerCase().includes(poSearch.toLowerCase()) ||
+        po.material.toLowerCase().includes(poSearch.toLowerCase());
+      const matchesStatus = poStatusFilter === 'ALL' || po.status === poStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [contractLinkedPos, poSearch, poStatusFilter]);
+
+  const openPos = useMemo(() => contractLinkedPos.filter(p => p.status === 'OPEN'), [contractLinkedPos]);
+
+  // Derived Line Items from contract POs or contract data
+  const contractLineItems = useMemo(() => {
+    if (!selectedContract) return [];
+    if (contractLinkedPos.length > 0) {
+      return contractLinkedPos.map((po, idx) => ({
+        itemNo: po.po_item_no || `${(idx + 1) * 10}`,
+        material: po.material,
+        description: `${po.material} — Bulk Industrial Grade`,
+        targetQty: po.target_qty,
+        uom: po.uom,
+        netPrice: po.rate
+      }));
+    }
+    return [
+      {
+        itemNo: '10',
+        material: (selectedContract as any).material || 'Washed Coal Grade A',
+        description: 'Industrial Bulk Energy Feedstock',
+        targetQty: (selectedContract as any).target_qty || 25000,
+        uom: 'TON',
+        netPrice: 1200
+      }
+    ];
+  }, [selectedContract, contractLinkedPos]);
+
+  const totalSelectedPayload = useMemo(() => {
+    return selectedPOsToAssign.reduce((sum, p) => sum + (Number(p.target_qty) || 0), 0);
+  }, [selectedPOsToAssign]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
+      {/* 1. Page Header */}
       <PageHeader 
         title="Contracts & PO Release Console"
-        subtitle="Manage active SAP S/4HANA Outline Agreements (ME33K/ME33L) and distribute purchase orders to transporters"
+        subtitle="Manage active SAP S/4HANA Outline Agreements (ME33K / ME33L) and distribute purchase orders to transporters"
+        actions={
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={loadData}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
+            Refresh
+          </Button>
+        }
       />
 
-      {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading Contracts...</div>
-      ) : isMobile ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {selectedContract === null ? (
-            /* Step 0: Contracts list */
-            <Card 
-              title={`Active S/4HANA Quantity Contracts (${contracts.length})`}
-              subtitle={`Showing ${contracts.length} active outline agreements synchronized from SAP S21 master data`}
-              style={{ padding: 0 }}
-            >
-              <Table<ContractV3>
-                data={contracts}
-                onRowClick={(c) => handleContractSelect(c)}
-                getRowStyle={(c) => ({
-                  backgroundColor: (selectedContract as ContractV3 | null)?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent'
-                })}
-                renderMobileCard={(c: ContractV3) => {
-                  const isSelected = (selectedContract as ContractV3 | null)?.id === c.id;
-                  const contractPoMaterials = purchaseOrders
-                    .filter(po => po.contract_id === c.id)
-                    .map(po => po.material);
-                  const uniqueMaterials = Array.from(new Set(contractPoMaterials));
-
-                  let materialDisplay = (c as any).material || 'Washed Coal Grade A';
-                  if (uniqueMaterials.length > 1) {
-                    materialDisplay = `Multiple Items (${uniqueMaterials.length})`;
-                  } else if (uniqueMaterials.length === 1) {
-                    materialDisplay = uniqueMaterials[0];
-                  }
-
-                  return (
-                    <div 
-                      onClick={() => handleContractSelect(c)}
-                      style={{ 
-                        display: 'flex', flexDirection: 'column', gap: '8px', 
-                        padding: '12px 16px', borderBottom: '1px solid var(--color-border)', 
-                        cursor: 'pointer',
-                        backgroundColor: isSelected ? 'var(--color-brand-blue-50)' : 'transparent'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{c.sap_contract_no}</span>
-                        <StatusBadge status={c.status} />
-                      </div>
-                      <div style={{ fontWeight: 600, fontSize: '13px' }}>{c.customer_name}</div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                        <span>{materialDisplay}</span>
-                        <span>{c.start_date} to {c.end_date}</span>
-                      </div>
-                    </div>
-                  );
-                }}
-                columns={[
-                  {
-                    header: 'Contract Ref',
-                    render: (c) => <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{c.sap_contract_no}</span>
-                  },
-                  {
-                    header: 'Yard/Customer',
-                    render: (c) => <span style={{ fontWeight: 600 }}>{c.customer_name}</span>
-                  },
-                  {
-                    header: 'Validity Period',
-                    render: (c) => <span style={{ fontSize: '12px' }}>{c.start_date} to {c.end_date}</span>
-                  },
-                  {
-                    header: 'Material / Items',
-                    render: (c) => {
-                      const contractPoMaterials = purchaseOrders
-                        .filter(po => po.contract_id === c.id)
-                        .map(po => po.material);
-                      const uniqueMaterials = Array.from(new Set(contractPoMaterials));
-
-                      let materialDisplay = (c as any).material || 'Washed Coal Grade A';
-                      if (uniqueMaterials.length > 1) {
-                        materialDisplay = `Multiple Items (${uniqueMaterials.length})`;
-                      } else if (uniqueMaterials.length === 1) {
-                        materialDisplay = uniqueMaterials[0];
-                      }
-
-                      return uniqueMaterials.length > 1 ? (
-                        <span style={{ 
-                          backgroundColor: '#EFF6FF', 
-                          color: '#1D4ED8', 
-                          border: '1px solid #BFDBFE', 
-                          padding: '3px 8px', 
-                          borderRadius: '6px', 
-                          fontSize: '11px',
-                          fontWeight: 700
-                        }}>
-                          {materialDisplay}
-                        </span>
-                      ) : (
-                        materialDisplay
-                      );
-                    }
-                  },
-                  {
-                    header: 'Status',
-                    render: (c) => <StatusBadge status={c.status} />
-                  }
-                ]}
-              />
-            </Card>
-          ) : selectedPOsToAssign.length === 0 ? (
-            /* Step 1: PO Consolidated Form */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <Button 
-                variant="secondary" 
-                style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
-                onClick={() => setSelectedContract(null)}
-              >
-                ← Back to Contracts List
-              </Button>
-              <ConsolidatedContractPoForm
-                contract={selectedContract}
-                purchaseOrders={purchaseOrders}
-                selectedPoIds={selectedPOsToAssign.map(p => p.id)}
-                onSelectPosChange={(pos) => {
-                  setSelectedPOsToAssign(pos);
-                  if (pos.length > 0) setSelectedPOToAssign(pos[0]);
-                  else setSelectedPOToAssign(null);
-                }}
-                onConfirmTransport={(pos) => {
-                  setSelectedPOsToAssign(pos);
-                  if (pos.length > 0) setSelectedPOToAssign(pos[0]);
-                }}
-                actionLabel="Proceed to Carrier Allocation"
-              />
-            </div>
-          ) : (
-            /* Step 2: Assign Form */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <Button 
-                variant="secondary" 
-                style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '6px' }}
-                onClick={() => setSelectedPOsToAssign([])}
-              >
-                ← Back to Purchase Orders
-              </Button>
-              <Card title="Assign Job & Send to Transporter" accentColor="var(--color-brand-blue-600)">
-                
-                {/* 1. Contract Context Summary Banner */}
-                {selectedContract && (
-                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Contract Context</div>
-                    <div className="mono" style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-text-heading)' }}>#{selectedContract.sap_contract_no}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-body)', fontWeight: 600 }}>{selectedContract.customer_name || 'SAP Client Entity'}</div>
-                  </div>
-                )}
-
-                {/* 2. Selected Purchase Orders Collection (Multi-PO or Single-PO) */}
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      SELECTED PURCHASE ORDERS ({selectedPOsToAssign.length > 0 ? selectedPOsToAssign.length : 1})
-                    </span>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
-                    {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).map((po) => (
-                      <div key={po.id} style={{
-                        backgroundColor: 'var(--color-brand-blue-50)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '8px',
-                        padding: '10px 12px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <strong className="mono" style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>PO #{po.sap_po_no} / {po.po_item_no}</strong>
-                            <StatusBadge status={po.status} />
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>
-                            {po.material}
-                          </div>
-                        </div>
-
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-600)' }}>
-                            {po.target_qty} {po.uom}
-                          </span>
-                          <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                            {formatCurrency(po.rate)} / {po.uom}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3. Total Planned Payload Summary */}
-                <div style={{
-                  backgroundColor: '#EFF6FF',
-                  border: '1px solid #BFDBFE',
-                  borderRadius: '10px',
-                  padding: '12px 14px',
-                  marginBottom: '20px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', textTransform: 'uppercase' }}>
-                    TOTAL PLANNED PAYLOAD
-                  </span>
-                  <span style={{ fontSize: '16px', fontWeight: 900, color: '#1D4ED8' }}>
-                    {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).reduce((sum, p) => sum + (Number(p.target_qty) || 0), 0).toFixed(2)} TON
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '20px' }}>
-                  
-                  {/* 4. Route Telemetry */}
-                  <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
-                      Route Locations
-                    </span>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', backgroundColor: 'var(--color-bg-page)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                      <div>
-                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>WHERE TO LOAD</span>
-                        <strong style={{ color: 'var(--color-text-heading)' }}>MON1 Siding</strong>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>WHERE TO DELIVER</span>
-                        <strong style={{ color: 'var(--color-text-heading)' }}>{selectedContract?.customer_name || 'Siding Yard 1001'}</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 5. Carrier Allocation */}
-                  <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
-                      Choose Transporter
-                    </span>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Select Transporter Company
-                        </label>
-                        <select
-                          value={targetTransporterId}
-                          onChange={(e) => setTargetTransporterId(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: '1.5px solid var(--color-border)',
-                            borderRadius: '10px',
-                            fontSize: '13px',
-                            backgroundColor: '#FFFFFF',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {transporters.map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 6. SAP SLA Schedule */}
-                  <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
-                      SLA Schedule Parameters
-                    </span>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Window Start</label>
-                          <input type="text" value={availStart} onChange={e => setAvailStart(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Window End</label>
-                          <input type="text" value={availEnd} onChange={e => setAvailEnd(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Expected Pickup</label>
-                        <input type="datetime-local" value={requestedPickup} onChange={e => setRequestedPickup(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Expected Delivery</label>
-                        <input type="datetime-local" value={expectedDelivery} onChange={e => setExpectedDelivery(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>SLA Acceptance Limit (Hours)</label>
-                        <input type="number" value={acceptanceHours} onChange={e => setAcceptanceHours(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1.5px solid var(--color-border)', paddingTop: '16px' }}>
-                  <Button 
-                    onClick={() => { setSelectedPOToAssign(null); setSelectedPOsToAssign([]); }} 
-                    variant="secondary"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleDistributeSubmit}
-                    disabled={isSubmitting}
-                    variant="primary"
-                  >
-                    <Send size={14} style={{ marginRight: '4px' }} />
-                    {isSubmitting ? 'Releasing...' : 'Release PO & Notify'}
-                  </Button>
-                </div>
-
-              </Card>
-            </div>
-          )}
+      {/* 2. Contracts Table Card */}
+      <Card 
+        title={`Active Outline Agreements (${contracts.length})`}
+        subtitle="Synchronized from SAP S/4HANA S21 master data. Click any row to inspect line items and release orders."
+        style={{ padding: 0 }}
+      >
+        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#FFFFFF' }}>
+          <div style={{ maxWidth: '360px' }}>
+            <input 
+              type="text"
+              placeholder="Search contract number or customer..."
+              value={contractSearch}
+              onChange={(e) => setContractSearch(e.target.value)}
+              className="form-input"
+              style={{ fontSize: '13px', padding: '6px 12px' }}
+            />
+          </div>
         </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', alignItems: 'start' }}>
-          {/* Left: Contracts & PO queues */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            
-             <Card 
-               title={`Active S/4HANA Quantity Contracts (${contracts.length})`}
-               subtitle={`Showing ${contracts.length} active outline agreements synchronized from SAP S21 master data`}
-               style={{ padding: 0 }}
-             >
-               <Table<ContractV3>
-                 data={contracts}
-                 onRowClick={(c) => handleContractSelect(c)}
-                 getRowStyle={(c) => ({
-                   backgroundColor: (selectedContract as ContractV3 | null)?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent'
-                 })}
-                 renderMobileCard={(c: ContractV3) => {
-                   const isSelected = (selectedContract as ContractV3 | null)?.id === c.id;
-                   const contractPoMaterials = purchaseOrders
-                     .filter(po => po.contract_id === c.id)
-                     .map(po => po.material);
-                   const uniqueMaterials = Array.from(new Set(contractPoMaterials));
 
-                   let materialDisplay = (c as any).material || 'Washed Coal Grade A';
-                   if (uniqueMaterials.length > 1) {
-                     materialDisplay = `Multiple Items (${uniqueMaterials.length})`;
-                   } else if (uniqueMaterials.length === 1) {
-                     materialDisplay = uniqueMaterials[0];
-                   }
+        <Table<ContractV3>
+          data={filteredContracts}
+          onRowClick={(c) => handleContractSelect(c)}
+          getRowStyle={(c) => ({
+            backgroundColor: selectedContract?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent',
+            cursor: 'pointer'
+          })}
+          columns={[
+            {
+              header: 'Contract Number',
+              render: (c) => (
+                <span 
+                  className="mono" 
+                  style={{ 
+                    fontWeight: 700, 
+                    color: 'var(--color-brand-blue-600)',
+                    textDecoration: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {c.sap_contract_no}
+                </span>
+              )
+            },
+            {
+              header: 'Customer / Yard',
+              render: (c) => <span style={{ fontWeight: 600, color: 'var(--color-text-heading)' }}>{c.customer_name}</span>
+            },
+            {
+              header: 'Agreement Type',
+              render: (c) => (
+                <span style={{ fontSize: '12px', color: 'var(--color-text-body)' }}>
+                  {getContractAgreementType(c.sap_contract_no)}
+                </span>
+              )
+            },
+            {
+              header: 'Supplier',
+              render: (c) => (
+                <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                  {getContractSupplier(c.sap_contract_no)}
+                </span>
+              )
+            },
+            {
+              header: 'Validity Period',
+              render: (c) => <span style={{ fontSize: '12px' }}>{c.start_date} → {c.end_date}</span>
+            },
+            {
+              header: 'Material / Items',
+              render: (c) => {
+                const contractPoMaterials = purchaseOrders
+                  .filter(po => po.contract_id === c.id)
+                  .map(po => po.material);
+                const uniqueMaterials = Array.from(new Set(contractPoMaterials));
 
-                   return (
-                     <div 
-                       onClick={() => handleContractSelect(c)}
-                       style={{ 
-                         display: 'flex', flexDirection: 'column', gap: '8px', 
-                         padding: '12px 16px', borderBottom: '1px solid var(--color-border)', 
-                         cursor: 'pointer',
-                         backgroundColor: isSelected ? 'var(--color-brand-blue-50)' : 'transparent'
-                       }}
-                     >
-                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                         <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{c.sap_contract_no}</span>
-                         <StatusBadge status={c.status} />
-                       </div>
-                       <div style={{ fontWeight: 600, fontSize: '13px' }}>{c.customer_name}</div>
-                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)' }}>
-                         <span>{materialDisplay}</span>
-                         <span>{c.start_date} to {c.end_date}</span>
-                       </div>
-                     </div>
-                   );
-                 }}
-                 columns={[
-                   {
-                     header: 'Contract Ref',
-                     render: (c) => <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{c.sap_contract_no}</span>
-                   },
-                   {
-                     header: 'Yard/Customer',
-                     render: (c) => <span style={{ fontWeight: 600 }}>{c.customer_name}</span>
-                   },
-                   {
-                     header: 'Validity Period',
-                     render: (c) => <span style={{ fontSize: '12px' }}>{c.start_date} to {c.end_date}</span>
-                   },
-                   {
-                     header: 'Material / Items',
-                     render: (c) => {
-                       const contractPoMaterials = purchaseOrders
-                         .filter(po => po.contract_id === c.id)
-                         .map(po => po.material);
-                       const uniqueMaterials = Array.from(new Set(contractPoMaterials));
+                let materialDisplay = (c as any).material || 'Washed Coal Grade A';
+                if (uniqueMaterials.length > 1) {
+                  return (
+                    <span className="badge badge-blue">
+                      {uniqueMaterials.length} Items
+                    </span>
+                  );
+                } else if (uniqueMaterials.length === 1) {
+                  materialDisplay = uniqueMaterials[0];
+                }
 
-                       let materialDisplay = (c as any).material || 'Washed Coal Grade A';
-                       if (uniqueMaterials.length > 1) {
-                         materialDisplay = `Multiple Items (${uniqueMaterials.length})`;
-                       } else if (uniqueMaterials.length === 1) {
-                         materialDisplay = uniqueMaterials[0];
-                       }
+                return <span>{materialDisplay}</span>;
+              }
+            },
+            {
+              header: 'Status',
+              render: (c) => <StatusBadge status={c.status} />
+            }
+          ]}
+        />
+      </Card>
 
-                       return uniqueMaterials.length > 1 ? (
-                         <span style={{ 
-                           backgroundColor: '#EFF6FF', 
-                           color: '#1D4ED8', 
-                           border: '1px solid #BFDBFE', 
-                           padding: '3px 8px', 
-                           borderRadius: '6px', 
-                           fontSize: '11px',
-                           fontWeight: 700
-                         }}>
-                           {materialDisplay}
-                         </span>
-                       ) : (
-                         materialDisplay
-                       );
-                     }
-                   },
-                   {
-                     header: 'Status',
-                     render: (c) => <StatusBadge status={c.status} />
-                   }
-                 ]}
-               />
-             </Card>
-
-
-            {/* PO Distribution Desk */}
-            {!selectedContract ? (
-              <Card title="Purchase Orders Distribution Queue" subtitle="Inspect purchase order references linked to selected outline contracts">
-                <div style={{ textAlign: 'center', padding: '36px 20px', color: 'var(--color-text-muted)' }}>
-                  <p style={{ fontWeight: 750, fontSize: '14px', margin: '0 0 6px 0', color: 'var(--color-text-heading)' }}>No Contract Selected</p>
-                  <p style={{ fontSize: '13px', margin: 0 }}>Click on any Active S/4HANA Contract row above to inspect its linked Purchase Orders.</p>
+      {/* 3. Contract Detail View (Sections 10 & 11) */}
+      {selectedContract && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          
+          {/* Header Bar for Selected Contract */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: '#FFFFFF',
+            padding: '14px 20px',
+            borderRadius: 'var(--radius-card)',
+            border: '1px solid var(--color-border)',
+            boxShadow: 'var(--shadow-card)',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '6px',
+                backgroundColor: 'var(--color-brand-blue-50)',
+                color: 'var(--color-brand-blue-600)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 800
+              }}>
+                <FileText size={18} />
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Contract Detail Inspector
                 </div>
-              </Card>
-            ) : (
-              <ConsolidatedContractPoForm
-                contract={selectedContract}
-                purchaseOrders={purchaseOrders}
-                selectedPoIds={selectedPOsToAssign.map(p => p.id)}
-                onSelectPosChange={(pos) => {
-                  setSelectedPOsToAssign(pos);
-                  if (pos.length > 0) setSelectedPOToAssign(pos[0]);
-                  else setSelectedPOToAssign(null);
-                }}
-                onConfirmTransport={(pos) => {
-                  setSelectedPOsToAssign(pos);
-                  if (pos.length > 0) setSelectedPOToAssign(pos[0]);
-                }}
-                actionLabel="Proceed to Carrier Allocation"
-              />
-            )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="mono" style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-text-heading)' }}>
+                    Contract #{selectedContract.sap_contract_no}
+                  </span>
+                  <span style={{ color: 'var(--color-text-muted)' }}>·</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-body)' }}>
+                    {selectedContract.customer_name}
+                  </span>
+                  <StatusBadge status={selectedContract.status} />
+                </div>
+              </div>
+            </div>
 
-
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={() => {
+                setSelectedContract(null);
+                setSelectedPOsToAssign([]);
+                setShowAssignForm(false);
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <X size={14} /> Close Detail
+            </Button>
           </div>
 
-          {/* Right Column: PO Distribution Form */}
-          <div>
-            {(selectedPOsToAssign.length > 0 || selectedPOToAssign) ? (
-              <Card title="Assign Job & Send to Transporter" accentColor="var(--color-brand-blue-600)">
-                
-                {/* 1. Contract Context Summary Banner */}
-                {selectedContract && (
-                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid var(--color-border)', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '10px', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Contract Context</div>
-                    <div className="mono" style={{ fontSize: '15px', fontWeight: 800, color: 'var(--color-text-heading)' }}>#{selectedContract.sap_contract_no}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--color-text-body)', fontWeight: 600 }}>{selectedContract.customer_name || 'SAP Client Entity'}</div>
-                  </div>
-                )}
+          {/* Section 1: General Information */}
+          <Card title="General Information" subtitle="SAP Outline Agreement Header Attributes">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '16px',
+              padding: '14px 16px',
+              backgroundColor: '#F8F9FA',
+              borderRadius: '6px',
+              border: '1px solid var(--color-border)'
+            }}>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Contract Number</span>
+                <span className="mono" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-heading)' }}>#{selectedContract.sap_contract_no}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Agreement Type</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-brand-blue-700)' }}>{getContractAgreementType(selectedContract.sap_contract_no)}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Supplier</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-heading)' }}>{getContractSupplier(selectedContract.sap_contract_no)}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Agreement Date</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-body)' }}>{selectedContract.start_date || '12.08.2026'}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Validity Range</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-body)' }}>{selectedContract.start_date} → {selectedContract.end_date}</span>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Currency</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-body)' }}>INR (₹)</span>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Loading Siding (Plant)</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-heading)' }}>MON1 Siding Yard 1001</span>
+              </div>
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Receiving Customer</span>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-heading)' }}>{selectedContract.customer_name}</span>
+              </div>
+            </div>
+          </Card>
 
-                {/* 2. Selected Purchase Orders Collection (Multi-PO or Single-PO) */}
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      SELECTED PURCHASE ORDERS ({selectedPOsToAssign.length > 0 ? selectedPOsToAssign.length : 1})
-                    </span>
-                  </div>
+          {/* Section 2: Contract Line Items (TABLE FORMAT) */}
+          <Card 
+            title={`Contract Line Items (${contractLineItems.length})`}
+            subtitle="Material schedule & contracted price breakdown"
+            style={{ padding: 0 }}
+          >
+            <Table
+              data={contractLineItems}
+              columns={[
+                {
+                  header: 'Item',
+                  render: (item) => <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-700)' }}>{item.itemNo}</span>
+                },
+                {
+                  header: 'Material',
+                  render: (item) => <strong style={{ color: 'var(--color-text-heading)' }}>{item.material}</strong>
+                },
+                {
+                  header: 'Description',
+                  render: (item) => <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{item.description}</span>
+                },
+                {
+                  header: 'Target Quantity',
+                  render: (item) => <span style={{ fontWeight: 700 }}>{item.targetQty} {item.uom}</span>
+                },
+                {
+                  header: 'Unit',
+                  render: (item) => <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{item.uom}</span>
+                },
+                {
+                  header: 'Net Price',
+                  render: (item) => <span className="mono" style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{formatCurrency(item.netPrice)} / {item.uom}</span>
+                }
+              ]}
+            />
+          </Card>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
-                    {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).map((po) => (
-                      <div key={po.id} style={{
-                        backgroundColor: 'var(--color-brand-blue-50)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: '8px',
-                        padding: '10px 12px',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <strong className="mono" style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>PO #{po.sap_po_no} / {po.po_item_no}</strong>
-                            <StatusBadge status={po.status} />
-                          </div>
-                          <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>
-                            {po.material}
-                          </div>
-                        </div>
+          {/* Section 3: Linked Purchase Orders (TABLE FORMAT with checkboxes) */}
+          <Card 
+            title={`Linked Purchase Orders (${contractLinkedPos.length})`}
+            subtitle="Select one or multiple open POs to distribute to a transporter"
+            style={{ padding: 0 }}
+          >
+            {/* Filter Sub-bar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 16px',
+              borderBottom: '1px solid var(--color-border)',
+              backgroundColor: '#FFFFFF',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input 
+                  type="text"
+                  placeholder="Search PO # or material..."
+                  value={poSearch}
+                  onChange={(e) => setPoSearch(e.target.value)}
+                  className="form-input"
+                  style={{ width: '220px', fontSize: '12px', padding: '6px 10px' }}
+                />
+                <select
+                  value={poStatusFilter}
+                  onChange={(e) => setPoStatusFilter(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '12px', padding: '6px 10px', width: 'auto' }}
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="OPEN">Open Only</option>
+                  <option value="ASSIGNED">Assigned Only</option>
+                </select>
+              </div>
 
-                        <div style={{ textAlign: 'right' }}>
-                          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-600)' }}>
-                            {po.target_qty} {po.uom}
-                          </span>
-                          <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                            {formatCurrency(po.rate)} / {po.uom}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                Showing {filteredLinkedPos.length} of {contractLinkedPos.length} POs
+              </div>
+            </div>
 
-                {/* 3. Total Planned Payload Summary */}
-                <div style={{
-                  backgroundColor: '#EFF6FF',
-                  border: '1px solid #BFDBFE',
-                  borderRadius: '10px',
-                  padding: '12px 14px',
-                  marginBottom: '20px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <span style={{ fontSize: '11px', fontWeight: 800, color: '#1E40AF', textTransform: 'uppercase' }}>
-                    TOTAL PLANNED PAYLOAD
-                  </span>
-                  <span style={{ fontSize: '16px', fontWeight: 900, color: '#1D4ED8' }}>
-                    {(selectedPOsToAssign.length > 0 ? selectedPOsToAssign : (selectedPOToAssign ? [selectedPOToAssign] : [])).reduce((sum, p) => sum + (Number(p.target_qty) || 0), 0).toFixed(2)} TON
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '20px' }}>
-                  
-                  {/* 4. Route Telemetry */}
-                  <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
-                      Route Locations
-                    </span>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', backgroundColor: 'var(--color-bg-page)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                      <div>
-                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>WHERE TO LOAD</span>
-                        <strong style={{ color: 'var(--color-text-heading)' }}>MON1 Siding</strong>
-                      </div>
-                      <div>
-                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'block' }}>WHERE TO DELIVER</span>
-                        <strong style={{ color: 'var(--color-text-heading)' }}>{selectedContract?.customer_name || 'Siding Yard 1001'}</strong>
-                      </div>
+            {/* POs Table */}
+            <Table<PurchaseOrderV3>
+              data={filteredLinkedPos}
+              columns={[
+                {
+                  header: (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Checkbox
+                        checked={openPos.length > 0 && selectedPOsToAssign.length === openPos.length}
+                        indeterminate={selectedPOsToAssign.length > 0 && selectedPOsToAssign.length < openPos.length}
+                        disabled={openPos.length === 0}
+                        onChange={toggleSelectAllPos}
+                        ariaLabel="Select all open purchase orders"
+                      />
                     </div>
-                  </div>
-
-                  {/* 5. Carrier Allocation */}
-                  <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
-                      Choose Transporter
-                    </span>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>
-                          Select Transporter Company
-                        </label>
-                        <select
-                          value={targetTransporterId}
-                          onChange={(e) => setTargetTransporterId(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            border: '1.5px solid var(--color-border)',
-                            borderRadius: '10px',
-                            fontSize: '13px',
-                            backgroundColor: '#FFFFFF',
-                            fontWeight: 600,
+                  ),
+                  style: { width: '44px', textAlign: 'center', padding: '11px 8px' },
+                  render: (po) => {
+                    const isSelected = selectedPOsToAssign.some(p => p.id === po.id);
+                    const isSelectable = po.status === 'OPEN';
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Checkbox
+                          checked={isSelected}
+                          disabled={!isSelectable}
+                          onChange={() => {
+                            if (isSelectable) togglePoSelection(po);
                           }}
-                        >
-                          {transporters.map(t => (
-                            <option key={t.id} value={t.id}>{t.name}</option>
-                          ))}
-                        </select>
+                          ariaLabel={`Select PO ${po.sap_po_no} item ${po.po_item_no}`}
+                        />
                       </div>
+                    );
+                  }
+                },
+                {
+                  header: 'PO Number / Item',
+                  render: (po) => (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenPoDetail(po);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: 'var(--color-brand-blue-700)',
+                        textAlign: 'left'
+                      }}
+                      title={`Open details for PO #${po.sap_po_no} / Item ${po.po_item_no}`}
+                    >
+                      <span className="mono" style={{ fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: '2px' }}>
+                        {po.sap_po_no} / {po.po_item_no}
+                      </span>
+                      <ExternalLink size={12} style={{ opacity: 0.7 }} />
+                    </button>
+                  )
+                },
+                {
+                  header: 'Material',
+                  render: (po) => <span style={{ fontWeight: 600 }}>{po.material}</span>
+                },
+                {
+                  header: 'Target Qty',
+                  render: (po) => <span style={{ fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>{po.target_qty}</span>
+                },
+                {
+                  header: 'Unit',
+                  render: (po) => <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{po.uom}</span>
+                },
+                {
+                  header: 'Rate / Ton',
+                  render: (po) => <span className="mono" style={{ fontSize: '13px' }}>{formatCurrency(po.rate)}</span>
+                },
+                {
+                  header: 'Status',
+                  render: (po) => (
+                    <div 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenPoDetail(po);
+                      }}
+                      style={{ cursor: 'pointer', display: 'inline-block' }}
+                      title={`Click to open PO #${po.sap_po_no} details`}
+                    >
+                      <StatusBadge status={po.status} />
                     </div>
+                  )
+                },
+                {
+                  header: 'Action',
+                  align: 'right',
+                  render: (po) => (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenPoDetail(po);
+                      }}
+                      style={{
+                        padding: '4px 12px',
+                        fontSize: '12px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        fontWeight: 600
+                      }}
+                      title={`Open PO #${po.sap_po_no} / Item ${po.po_item_no}`}
+                    >
+                      <Eye size={13} />
+                      <span>Open</span>
+                    </Button>
+                  )
+                }
+              ]}
+            />
+
+            {/* Multi-Select Action Bar (Section 11.1 Section 3) */}
+            {selectedPOsToAssign.length > 0 && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 20px',
+                backgroundColor: 'var(--color-brand-blue-50)',
+                borderTop: '1px solid var(--color-border)',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckSquare size={16} color="var(--color-brand-blue-600)" />
+                    <strong style={{ fontSize: '13px', color: 'var(--color-brand-blue-700)' }}>
+                      {selectedPOsToAssign.length} PO{selectedPOsToAssign.length > 1 ? 's' : ''} Selected
+                    </strong>
                   </div>
-
-                  {/* 6. SAP SLA Schedule */}
-                  <div style={{ borderTop: '1.5px solid var(--color-border)', paddingTop: '14px' }}>
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '10px' }}>
-                      SLA Schedule Parameters
-                    </span>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Window Start</label>
-                          <input type="text" value={availStart} onChange={e => setAvailStart(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                        </div>
-                        <div>
-                          <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Window End</label>
-                          <input type="text" value={availEnd} onChange={e => setAvailEnd(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Expected Pickup</label>
-                        <input type="datetime-local" value={requestedPickup} onChange={e => setRequestedPickup(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Expected Delivery</label>
-                        <input type="datetime-local" value={expectedDelivery} onChange={e => setExpectedDelivery(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                      </div>
-
-                      <div>
-                        <label style={{ display: 'block', fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>SLA Acceptance Limit (Hours)</label>
-                        <input type="number" value={acceptanceHours} onChange={e => setAcceptanceHours(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid var(--color-border)', borderRadius: '8px', fontSize: '12px' }} />
-                      </div>
-                    </div>
+                  <div style={{ fontSize: '13px', color: 'var(--color-text-heading)', fontWeight: 700 }}>
+                    Total Planned Payload: <span style={{ color: 'var(--color-brand-blue-600)' }}>{totalSelectedPayload.toFixed(2)} TON</span>
                   </div>
-
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', borderTop: '1.5px solid var(--color-border)', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Button 
-                    onClick={() => { setSelectedPOToAssign(null); setSelectedPOsToAssign([]); }} 
-                    variant="secondary"
+                    variant="secondary" 
+                    size="sm"
+                    onClick={() => {
+                      setSelectedPOsToAssign([]);
+                      setShowAssignForm(false);
+                    }}
                   >
-                    Cancel
+                    Clear Selection
                   </Button>
                   <Button 
-                    onClick={handleDistributeSubmit}
-                    disabled={isSubmitting}
-                    variant="primary"
+                    variant="primary" 
+                    size="sm"
+                    onClick={() => setShowAssignForm(true)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <Send size={14} style={{ marginRight: '4px' }} />
-                    {isSubmitting ? 'Releasing...' : 'Release PO & Notify'}
+                    Proceed to Carrier Allocation <ArrowRight size={14} />
                   </Button>
                 </div>
+              </div>
+            )}
+          </Card>
 
-              </Card>
-            ) : selectedContract ? (
-              <Card title="Contract Detail Inspector">
+          {/* Section 4: Transporter Assignment Form (Section 11.1 Section 4) */}
+          {(showAssignForm || selectedPOsToAssign.length > 0) && (
+            <Card 
+              title="Transporter Assignment & PO Release" 
+              subtitle="Allocate selected orders to a registered transporter and define SAP SLA parameters"
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+                
+                {/* Left Column: Scope & Route */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: '0 0 8px 0', letterSpacing: '0.04em' }}>
-                      SAP Outline Agreement Header (#{selectedContract.sap_contract_no})
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12.5px', backgroundColor: 'var(--color-bg-page)', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                      <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Agreement Type</span>
-                        <strong style={{ color: '#2563EB' }}>
-                          {selectedContract.sap_contract_no === '4600000026' || selectedContract.sap_contract_no === '4600000021' || selectedContract.sap_contract_no === '4600000017' ? 'Value Contract (WK)' : 'Quantity Contract (MK)'}
-                        </strong>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                      Selected Orders Payload ({selectedPOsToAssign.length})
+                    </span>
+                    <div style={{
+                      backgroundColor: '#F8F9FA',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '6px',
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Contract Reference:</span>
+                        <strong className="mono" style={{ fontSize: '13px' }}>#{selectedContract.sap_contract_no}</strong>
                       </div>
-                      <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Supplier</span>
-                        <strong style={{ color: 'var(--color-text-heading)' }}>
-                          {selectedContract.sap_contract_no === '4600000026' || selectedContract.sap_contract_no === '4600000021' ? '1403 — Gajanan Enterprises' : '1402 — ABC Enterprises'}
-                        </strong>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Total Payload:</span>
+                        <strong style={{ fontSize: '15px', color: 'var(--color-brand-blue-600)' }}>{totalSelectedPayload.toFixed(2)} TON</strong>
                       </div>
-                      <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Agreement Date</span>
-                        <strong>{selectedContract.start_date || '12.08.2026'}</strong>
-                      </div>
-                      <div>
-                        <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Currency</span>
-                        <strong>INR</strong>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                        {selectedPOsToAssign.map(po => (
+                          <span key={po.id} className="badge badge-blue">
+                            PO #{po.sap_po_no} ({po.target_qty}T)
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* Contract Items Overview */}
                   <div>
-                    <h4 style={{ fontSize: '12px', fontWeight: 800, color: 'var(--color-text-heading)', textTransform: 'uppercase', margin: '12px 0 8px 0', letterSpacing: '0.04em' }}>
-                      Contract Items & Line Items ({purchaseOrders.filter(p => p.contract_id === selectedContract.id).length > 0 ? purchaseOrders.filter(p => p.contract_id === selectedContract.id).length : 1})
-                    </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
-                      {purchaseOrders.filter(p => p.contract_id === selectedContract.id).map((po) => (
-                        <div key={po.id} style={{ fontSize: '12px', padding: '8px 10px', backgroundColor: '#F8FAFC', borderRadius: '6px', border: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between' }}>
-                          <span><strong>Item {po.po_item_no}:</strong> {po.material}</span>
-                          <span style={{ color: '#2563EB', fontWeight: 700 }}>{po.target_qty} {po.uom}</span>
-                        </div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                      Route Siding Coordinates
+                    </span>
+                    <div style={{
+                      backgroundColor: '#F8F9FA',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: '6px',
+                      padding: '12px 14px',
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '12px'
+                    }}>
+                      <div>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Loading Origin</span>
+                        <strong style={{ fontSize: '13px', color: 'var(--color-text-heading)' }}>MON1 Siding Yard</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>Delivery Destination</span>
+                        <strong style={{ fontSize: '13px', color: 'var(--color-text-heading)' }}>{selectedContract.customer_name}</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      Select Transporter
+                    </label>
+                    <select
+                      value={targetTransporterId}
+                      onChange={(e) => setTargetTransporterId(e.target.value)}
+                      className="form-input"
+                      style={{ fontSize: '13px', fontWeight: 600 }}
+                    >
+                      {transporters.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Right Column: SLA Schedule Parameters */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', display: 'block' }}>
+                    SLA Schedule & Delivery Window
+                  </span>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Window Start</label>
+                      <input 
+                        type="text" 
+                        value={availStart} 
+                        onChange={e => setAvailStart(e.target.value)} 
+                        className="form-input"
+                        style={{ fontSize: '12px' }} 
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Window End</label>
+                      <input 
+                        type="text" 
+                        value={availEnd} 
+                        onChange={e => setAvailEnd(e.target.value)} 
+                        className="form-input"
+                        style={{ fontSize: '12px' }} 
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Requested Pickup Datetime</label>
+                    <input 
+                      type="datetime-local" 
+                      value={requestedPickup} 
+                      onChange={e => setRequestedPickup(e.target.value)} 
+                      className="form-input"
+                      style={{ fontSize: '12px' }} 
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Expected Delivery Datetime</label>
+                    <input 
+                      type="datetime-local" 
+                      value={expectedDelivery} 
+                      onChange={e => setExpectedDelivery(e.target.value)} 
+                      className="form-input"
+                      style={{ fontSize: '12px' }} 
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Acceptance Limit (Hours)</label>
+                      <input 
+                        type="number" 
+                        value={acceptanceHours} 
+                        onChange={e => setAcceptanceHours(e.target.value)} 
+                        className="form-input"
+                        style={{ fontSize: '12px' }} 
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '4px' }}>Timebound Cutoff</label>
+                      <input 
+                        type="date" 
+                        value={timebound} 
+                        onChange={e => setTimebound(e.target.value)} 
+                        className="form-input"
+                        style={{ fontSize: '12px' }} 
+                      />
                     </div>
                   </div>
                 </div>
-              </Card>
 
-            ) : (
-              <Card title="Outline Inspector">
-                <p style={{ fontSize: '13.5px', color: 'var(--color-text-muted)', textAlign: 'center', padding: '24px 0', margin: 0 }}>
-                  Select an outline contract from the table list to inspect agreement details or distribute open purchase orders.
-                </p>
-              </Card>
-            )}
-          </div>
+              </div>
+
+              {/* Form Action Footer */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: '12px',
+                borderTop: '1px solid var(--color-border)',
+                paddingTop: '16px',
+                marginTop: '20px'
+              }}>
+                <Button 
+                  variant="secondary"
+                  onClick={() => setShowAssignForm(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="primary"
+                  onClick={handleDistributeSubmit}
+                  disabled={isSubmitting || selectedPOsToAssign.length === 0}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Send size={14} />
+                  {isSubmitting ? 'Releasing Orders...' : 'Distribute & Notify Carrier'}
+                </Button>
+              </div>
+            </Card>
+          )}
+
         </div>
       )}
+
+      {/* PO Detail Inspector Modal */}
+      {inspectingPo && (
+        <Modal
+          isOpen={!!inspectingPo}
+          onClose={handleClosePoDetail}
+          title={`Purchase Order #${inspectingPo.sap_po_no} / Item ${inspectingPo.po_item_no}`}
+          width="760px"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Header Banner */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              backgroundColor: 'var(--color-bg-subtle, #F8FAFC)',
+              padding: '16px 20px',
+              borderRadius: '8px',
+              border: '1px solid var(--color-border)',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-heading)' }}>
+                    PO #{inspectingPo.sap_po_no}
+                  </span>
+                  <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+                    Item {inspectingPo.po_item_no}
+                  </span>
+                  <StatusBadge status={inspectingPo.status} />
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+                  SAP S/4HANA Outline Agreement Release Order (Standard Purchase Order NB)
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 600 }}>
+                  Total Line Value
+                </div>
+                <div className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>
+                  {formatCurrency((inspectingPo.rate || 0) * (inspectingPo.target_qty || 0))}
+                </div>
+              </div>
+            </div>
+
+            {poDetailLoading && (
+              <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                Synchronizing live details from S21...
+              </div>
+            )}
+
+            {poDetailError && (
+              <div style={{ padding: '12px 16px', backgroundColor: '#FEF2F2', border: '1px solid #F87171', borderRadius: '6px', color: '#991B1B', fontSize: '13px' }}>
+                {poDetailError}
+              </div>
+            )}
+
+            {/* Section 1: PO Header Information */}
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-brand-blue-700)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                PO Header & Organization
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '12px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                padding: '14px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>PO TYPE</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>NB — Standard PO</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>OUTLINE CONTRACT</div>
+                  <div className="mono" style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px', color: 'var(--color-brand-blue-700)' }}>
+                    {selectedContract?.sap_contract_no || (inspectingPo as any).sap_contract_no || 'N/A'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>AGREEMENT TYPE</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>
+                    {selectedContract ? getContractAgreementType(selectedContract.sap_contract_no) : 'Value Contract (WK)'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>SUPPLIER</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>
+                    {selectedContract ? getContractSupplier(selectedContract.sap_contract_no) : '1402 — ABC Enterprises'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>COMPANY CODE</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>1000 — PODZO Mining SA</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>PURCHASING ORG</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>1000 — Mining Logistics</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>PURCHASING GROUP</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>001 — Heavy Materials</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>CURRENCY</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>ZAR (R) / INR (₹)</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>RECEIVING SITE / CUSTOMER</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>
+                    {selectedContract?.customer_name || (inspectingPo as any).customer_name || 'PODZO Mining – Emoyeni Siding'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>VALIDITY WINDOW</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px' }}>
+                    {selectedContract?.start_date ? `${formatDate(selectedContract.start_date)} – ${formatDate(selectedContract.end_date)}` : 'Active Outline'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Line Item Details */}
+            <div>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-brand-blue-700)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+                Item {inspectingPo.po_item_no} Specification
+              </div>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '12px',
+                backgroundColor: '#FFFFFF',
+                border: '1px solid var(--color-border)',
+                borderRadius: '8px',
+                padding: '14px'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>ITEM NUMBER</div>
+                  <div className="mono" style={{ fontSize: '14px', fontWeight: 700, marginTop: '2px' }}>{inspectingPo.po_item_no}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>MATERIAL DESCRIPTION</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px', color: 'var(--color-text-heading)' }}>{inspectingPo.material}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>TARGET QUANTITY</div>
+                  <div style={{ fontSize: '14px', fontWeight: 800, marginTop: '2px', color: 'var(--color-brand-blue-600)' }}>
+                    {inspectingPo.target_qty} {inspectingPo.uom}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>UNIT OF MEASURE</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>{inspectingPo.uom}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>NET RATE</div>
+                  <div className="mono" style={{ fontSize: '13px', fontWeight: 700, marginTop: '2px' }}>
+                    {formatCurrency(inspectingPo.rate)} / {inspectingPo.uom}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>COST CENTER</div>
+                  <div className="mono" style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px' }}>
+                    {inspectingPo.cost_center || 'CC-MINING-01'}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>TOLERANCE LIMIT</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px' }}>±{inspectingPo.tolerance_pct}%</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>ALLOWED QUEUE TIME</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px' }}>{inspectingPo.allowed_queue_time_mins || 60} mins</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>DETENTION RATE</div>
+                  <div className="mono" style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px' }}>
+                    {formatCurrency(inspectingPo.detention_rate_per_hour || 150)} / hr
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>PLANT / STORAGE LOCATION</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, marginTop: '2px' }}>1001 / SL01 (Bulk Yard)</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '10px', borderTop: '1px solid var(--color-border)' }}>
+              {inspectingPo.status === 'OPEN' && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    if (!selectedPOsToAssign.some(p => p.id === inspectingPo.id)) {
+                      setSelectedPOsToAssign(prev => [...prev, inspectingPo]);
+                    }
+                    handleClosePoDetail();
+                  }}
+                >
+                  Select for Transport Distribution
+                </Button>
+              )}
+              <Button variant="secondary" onClick={handleClosePoDetail}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
     </div>
   );
 };

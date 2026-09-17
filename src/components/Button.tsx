@@ -1,7 +1,7 @@
 import React from 'react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'tertiary';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
 }
@@ -18,6 +18,7 @@ export const Button: React.FC<ButtonProps> = ({
   if (variant === 'primary') btnClass += ' btn-primary';
   else if (variant === 'secondary') btnClass += ' btn-secondary';
   else if (variant === 'danger') btnClass += ' btn-danger';
+  else if (variant === 'ghost' || variant === 'tertiary') btnClass += ' btn-ghost';
 
   if (size === 'sm') btnClass += ' btn-sm';
   else if (size === 'lg') btnClass += ' btn-lg';
@@ -30,9 +31,9 @@ export const Button: React.FC<ButtonProps> = ({
         alignItems: 'center',
         justifyContent: 'center',
         fontWeight: 600,
-        borderRadius: 'var(--radius-button)',
+        borderRadius: 'var(--radius-button, 4px)',
         cursor: props.disabled ? 'not-allowed' : 'pointer',
-        transition: 'all var(--transition-normal)',
+        transition: 'all 0.15s ease',
         ...style,
       }}
       {...props}

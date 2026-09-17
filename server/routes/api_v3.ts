@@ -348,6 +348,21 @@ router.get('/purchase-orders', requireAuth, (req: Request, res: Response) => {
   return res.json(pos);
 });
 
+// GET /api/v3/purchase-orders/:id
+router.get('/purchase-orders/:id', requireAuth, (req: Request, res: Response) => {
+  const db = getDb();
+  const po = db.prepare(`
+    SELECT po.*, c.sap_contract_no, c.start_date, c.end_date, c.status as contract_status, cu.name as customer_name
+    FROM purchase_orders po
+    JOIN contracts c ON c.id = po.contract_id
+    JOIN customers cu ON cu.id = c.customer_id
+    WHERE po.id = ?
+  `).get(req.params.id) as any;
+
+  if (!po) return res.status(404).json({ error: 'Purchase Order not found' });
+  return res.json(po);
+});
+
 
 // GET /api/v3/contracts/:id
 router.get('/contracts/:id', requireAuth, requireRole('CA', 'TA', 'CR'), (req: Request, res: Response) => {
@@ -1215,9 +1230,10 @@ router.post('/job-configs/:id/assign', requireAuth, requireRole('TA'), (req: Req
   }
 
   // ── SINGLE-TRUCK PATH (legacy, backward compatible) ───────────
-  const { driver_id, vehicle_id, license_no, gstin, scheduled_date, location } = req.body;
-  if (!driver_id || !vehicle_id || !scheduled_date) {
-    return res.status(400).json({ error: 'driver_id, vehicle_id, and scheduled_date required' });
+  const { driver_id, vehicle_id, license_no, gstin, location } = req.body;
+  const scheduled_date = req.body.scheduled_date || new Date().toISOString().split('T')[0];
+  if (!driver_id || !vehicle_id) {
+    return res.status(400).json({ error: 'driver_id and vehicle_id required' });
   }
 
   const result = db.prepare(`

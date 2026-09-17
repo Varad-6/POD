@@ -9,8 +9,6 @@ import {
   LogOut, 
   LayoutDashboard,
   Activity,
-  PanelLeftClose,
-  PanelLeftOpen,
   X
 } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
@@ -148,180 +146,209 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
             )}
           </div>
 
-          {/* Section Divider Header */}
-          {!isEffectiveCollapsed && (
-            <div style={{ paddingLeft: '16px', marginBottom: '8px' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                MAIN NAVIGATION
-              </span>
-            </div>
-          )}
-
-          {/* Navigation Links */}
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {/* Navigation Links Grouped Logically (Section 7) */}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {currentUser.role === 'CA' ? (
-               <>
-                 <NavLink 
-                   to="/admin/dashboard" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Fleet Logistics Command" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Fleet Logistics Command</span>}
-                 </NavLink>
-                 
-                 <NavLink 
-                   to="/admin/contracts" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Contracts & PO Release" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <FileSignature size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Contracts & PO Release</span>}
-                 </NavLink>
-                 
-                 <NavLink 
-                   to="/admin/approvals" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "POD Verification Desk" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <ClipboardCheck size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>POD Verification Desk</span>}
-                 </NavLink>
-                 
-                 <NavLink 
-                   to="/admin/invoices" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "SAP MIRO Invoices" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <FileClock size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>SAP MIRO Invoices</span>}
-                 </NavLink>
-               </>
-             ) : currentUser.role === 'SR' ? (
-               <>
-                 <NavLink 
-                   to="/supervisor/dashboard" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Weighbridge Siding Gate" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Weighbridge Siding Gate</span>}
-                 </NavLink>
-               </>
-             ) : currentUser.role === 'CR' ? (
-               <>
-                 <NavLink 
-                   to="/customer/dashboard" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Yard Receiving Gate" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Yard Receiving Gate</span>}
-                 </NavLink>
-               </>
-             ) : currentUser.role === 'DR' ? (
-               <>
-                 <NavLink 
-                   to="/driver/dashboard" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Driver Haulage Console" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Driver Haulage Console</span>}
-                 </NavLink>
-               </>
-             ) : (
-               <>
-                 <NavLink 
-                   to="/transporter/dashboard" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Carrier Control Console" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <LayoutDashboard size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Carrier Control Console</span>}
-                 </NavLink>
-                 
-                 <NavLink 
-                   to="/transporter/purchase-orders" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Purchase Orders Queue" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <FileSignature size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Purchase Orders Queue</span>}
-                 </NavLink>
-                 
-                 <NavLink 
-                   to="/transporter/pods" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Waybill POD Uploads" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <Receipt size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Waybill POD Uploads</span>}
-                 </NavLink>
-                 
-                 <NavLink 
-                   to="/transporter/invoices" 
-                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                   title={isEffectiveCollapsed ? "Freight Delivery Invoices" : undefined}
-                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '12px 0', borderLeft: 'none', borderRadius: '10px' } : undefined}
-                 >
-                   <FileClock size={20} strokeWidth={2} style={{ flexShrink: 0 }} />
-                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Freight Delivery Invoices</span>}
-                 </NavLink>
-               </>
-             )}
+              <>
+                {/* Group 1: OPERATIONS */}
+                <div>
+                  {!isEffectiveCollapsed && (
+                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      OPERATIONS
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <NavLink 
+                      to="/admin/dashboard" 
+                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      title={isEffectiveCollapsed ? "Fleet Logistics Command" : undefined}
+                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                    >
+                      <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Fleet Logistics Command</span>}
+                    </NavLink>
+                    
+                    <NavLink 
+                      to="/admin/approvals" 
+                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      title={isEffectiveCollapsed ? "POD Verification Desk" : undefined}
+                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                    >
+                      <ClipboardCheck size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>POD Verification Desk</span>}
+                    </NavLink>
+                  </div>
+                </div>
+
+                {/* Group 2: PROCUREMENT */}
+                <div>
+                  {!isEffectiveCollapsed && (
+                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      PROCUREMENT
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <NavLink 
+                      to="/admin/contracts" 
+                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      title={isEffectiveCollapsed ? "Contracts & PO Release" : undefined}
+                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                    >
+                      <FileSignature size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Contracts & PO Release</span>}
+                    </NavLink>
+                  </div>
+                </div>
+
+                {/* Group 3: FINANCE */}
+                <div>
+                  {!isEffectiveCollapsed && (
+                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      FINANCE
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <NavLink 
+                      to="/admin/invoices" 
+                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      title={isEffectiveCollapsed ? "SAP MIRO Invoices" : undefined}
+                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                    >
+                      <FileClock size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>SAP MIRO Invoices</span>}
+                    </NavLink>
+                  </div>
+                </div>
+              </>
+            ) : currentUser.role === 'SR' ? (
+              <div>
+                {!isEffectiveCollapsed && (
+                  <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    OPERATIONS
+                  </div>
+                )}
+                <NavLink 
+                  to="/supervisor/dashboard" 
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  title={isEffectiveCollapsed ? "Weighbridge Siding Gate" : undefined}
+                  style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                >
+                  <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                  {!isEffectiveCollapsed && <span style={navLabelStyle}>Weighbridge Siding Gate</span>}
+                </NavLink>
+              </div>
+            ) : currentUser.role === 'CR' ? (
+              <div>
+                {!isEffectiveCollapsed && (
+                  <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    OPERATIONS
+                  </div>
+                )}
+                <NavLink 
+                  to="/customer/dashboard" 
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  title={isEffectiveCollapsed ? "Yard Receiving Gate" : undefined}
+                  style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                >
+                  <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                  {!isEffectiveCollapsed && <span style={navLabelStyle}>Yard Receiving Gate</span>}
+                </NavLink>
+              </div>
+            ) : currentUser.role === 'DR' ? (
+              <div>
+                {!isEffectiveCollapsed && (
+                  <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    OPERATIONS
+                  </div>
+                )}
+                <NavLink 
+                  to="/driver/dashboard" 
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  title={isEffectiveCollapsed ? "Driver Haulage Console" : undefined}
+                  style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                >
+                  <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                  {!isEffectiveCollapsed && <span style={navLabelStyle}>Driver Haulage Console</span>}
+                </NavLink>
+              </div>
+            ) : (
+              <>
+                {/* Transporter Admin: OPERATIONS */}
+                <div>
+                  {!isEffectiveCollapsed && (
+                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      OPERATIONS
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <NavLink 
+                      to="/transporter/dashboard" 
+                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      title={isEffectiveCollapsed ? "Carrier Control Console" : undefined}
+                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                    >
+                      <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Carrier Control Console</span>}
+                    </NavLink>
+                    
+                    <NavLink 
+                      to="/transporter/pods" 
+                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      title={isEffectiveCollapsed ? "Waybill POD Uploads" : undefined}
+                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                    >
+                      <Receipt size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Waybill POD Uploads</span>}
+                    </NavLink>
+                  </div>
+                </div>
+
+                {/* Transporter Admin: ORDERS */}
+                <div>
+                  {!isEffectiveCollapsed && (
+                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      ORDERS
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <NavLink 
+                      to="/transporter/purchase-orders" 
+                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      title={isEffectiveCollapsed ? "Purchase Orders Queue" : undefined}
+                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                    >
+                      <FileSignature size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Purchase Orders Queue</span>}
+                    </NavLink>
+                  </div>
+                </div>
+
+                {/* Transporter Admin: FINANCE */}
+                <div>
+                  {!isEffectiveCollapsed && (
+                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      FINANCE
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <NavLink 
+                      to="/transporter/invoices" 
+                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                      title={isEffectiveCollapsed ? "Freight Delivery Invoices" : undefined}
+                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                    >
+                      <FileClock size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Freight Delivery Invoices</span>}
+                    </NavLink>
+                  </div>
+                </div>
+              </>
+            )}
           </nav>
         </div>
 
-        {/* Bottom Section: Health Telemetry, Collapse Button & Logout */}
+        {/* Bottom Section: Health Telemetry & Logout */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '16px', borderTop: '1px solid var(--color-border)' }}>
-          {/* Sidebar Collapse/Expand Toggle Button */}
-          {onToggle && !mobileOpen && (
-            <button
-              onClick={onToggle}
-              title={isEffectiveCollapsed ? "Open sidebar" : "Close sidebar"}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: isEffectiveCollapsed ? 'center' : 'flex-start',
-                gap: '12px',
-                padding: isEffectiveCollapsed ? '12px 0' : '10px 14px',
-                color: 'var(--color-text-body)',
-                backgroundColor: 'transparent',
-                border: '1.5px solid var(--color-border)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                width: '100%',
-                fontSize: '13px',
-                fontWeight: 600,
-                borderRadius: 'var(--radius-md)',
-                transition: 'all var(--transition-normal)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#F8FAFC';
-                e.currentTarget.style.borderColor = 'var(--color-brand-blue-600)';
-                e.currentTarget.style.color = 'var(--color-brand-blue-600)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.borderColor = 'var(--color-border)';
-                e.currentTarget.style.color = 'var(--color-text-body)';
-              }}
-            >
-              {isEffectiveCollapsed ? <PanelLeftOpen size={18} style={{ flexShrink: 0 }} /> : <PanelLeftClose size={18} style={{ flexShrink: 0 }} />}
-              {!isEffectiveCollapsed && <span>Collapse Sidebar</span>}
-            </button>
-          )}
 
           {/* Telemetry Status Card */}
           <div

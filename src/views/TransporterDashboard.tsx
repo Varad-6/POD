@@ -1,38 +1,44 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../components/Card';
+import { Button } from '../components/Button';
+import { PageHeader } from '../components/PageHeader';
+import { KPISummaryBar } from '../components/KPISummaryBar';
 import { useAuthV3 } from '../contexts/AuthContextV3';
-import { Truck, FileText, ClipboardList, Receipt, ArrowRight, ChevronRight } from 'lucide-react';
+import { Truck, FileText, ClipboardList, Receipt, ArrowRight, ChevronRight, RefreshCw } from 'lucide-react';
 
-// ─── Dashboard Card ────────────────────────────────────────────────────────────
+// ─── Dashboard Navigation Card ────────────────────────────────────────────────
 const NavCard: React.FC<{
   icon: React.ReactNode;
   title: string;
   description: string;
   route: string;
-  color: string;
   badge?: string;
-}> = ({ icon, title, description, route, color, badge }) => {
+}> = ({ icon, title, description, route, badge }) => {
   const navigate = useNavigate();
   return (
     <Card
       onClick={() => navigate(route)}
       hoverEffect
       style={{
-        padding: '24px 24px 20px',
+        padding: '20px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
-        position: 'relative',
-        overflow: 'hidden',
+        gap: '14px',
+        cursor: 'pointer',
+        height: '100%'
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div style={{
-          width: '42px', height: '42px', borderRadius: '10px',
-          backgroundColor: 'var(--color-brand-blue-600)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#FFFFFF',
+          width: '38px',
+          height: '38px',
+          borderRadius: '6px',
+          backgroundColor: 'var(--color-brand-blue-50)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--color-brand-blue-600)',
         }}>
           {icon}
         </div>
@@ -44,13 +50,17 @@ const NavCard: React.FC<{
       </div>
 
       <div>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-text-heading)', margin: '0 0 6px' }}>{title}</h3>
-        <p style={{ fontSize: '13px', color: 'var(--color-text-body)', margin: 0, lineHeight: 1.5 }}>{description}</p>
+        <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--color-text-heading)', margin: '0 0 4px' }}>
+          {title}
+        </h3>
+        <p style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', margin: 0, lineHeight: 1.4 }}>
+          {description}
+        </p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-brand-blue-600)', fontSize: '13.5px', fontWeight: 700, marginTop: 'auto', paddingTop: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--color-brand-blue-600)', fontSize: '13px', fontWeight: 600, marginTop: 'auto', paddingTop: '4px' }}>
         <span>Open Console</span>
-        <ChevronRight size={15} />
+        <ChevronRight size={14} />
       </div>
     </Card>
   );
@@ -60,37 +70,41 @@ const NavCard: React.FC<{
 export const TransporterDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthV3();
-  const [jobConfigs, setJobConfigs] = React.useState<any[]>([]);
-  const [assignments, setAssignments] = React.useState<any[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [jobConfigs, setJobConfigs] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  const [isMobile, setIsMobile] = React.useState(window.innerWidth < 768);
-
-  React.useEffect(() => {
+  useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  React.useEffect(() => {
-    async function loadTAStats() {
-      setLoading(true);
-      try {
-        const jobs = await fetch('http://localhost:3001/api/v3/job-configs', {
+  const loadTAStats = async () => {
+    setLoading(true);
+    try {
+      const [jobsRes, assignsRes] = await Promise.all([
+        fetch('http://localhost:3001/api/v3/job-configs', {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
-        }).then(r => r.json());
-        setJobConfigs(jobs || []);
+        }),
+        fetch('http://localhost:3001/api/v3/assignments', {
+          headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
+        })
+      ]);
 
-        const trips = await fetch('http://localhost:3001/api/v3/assignments', {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
-        }).then(r => r.json());
-        setAssignments(trips || []);
-      } catch (err) {
-        console.warn('Failed to load TA metrics:', err);
-      } finally {
-        setLoading(false);
-      }
+      const jobs = await jobsRes.json();
+      const assigns = await assignsRes.json();
+      setJobConfigs(Array.isArray(jobs) ? jobs : []);
+      setAssignments(Array.isArray(assigns) ? assigns : []);
+    } catch (err) {
+      console.error('Failed to load transporter stats:', err);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     loadTAStats();
   }, []);
 
@@ -100,158 +114,156 @@ export const TransporterDashboard: React.FC = () => {
   const podPending = assignments.filter(a => (a.status === 'DELIVERED' && !a.pod_file_url) || a.status === 'REJECTED');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-      {/* ── Welcome Header (V3 Blue Hero Banner) ── */}
-      <div style={{
-        background: 'linear-gradient(135deg, var(--color-brand-blue-600) 0%, var(--color-brand-blue-700) 100%)',
-        borderRadius: '16px', padding: '32px 36px', color: '#fff',
-        position: 'relative', overflow: 'hidden',
-        boxShadow: 'var(--shadow-card)'
-      }}>
-        {/* Background circles */}
-        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '200px', height: '200px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.04)' }} />
-        <div style={{ position: 'absolute', bottom: '-20px', right: '100px', width: '120px', height: '120px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.06)' }} />
+      {/* 1. Page Header */}
+      <PageHeader 
+        title={`Welcome, ${user?.displayName?.split(' ')[0] || 'Transporter'}`}
+        subtitle="Operations Command Console • Manage transport purchase orders, fleet assignments, trip telemetry, and freight settlements."
+        actions={
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={loadTAStats}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
+            Refresh
+          </Button>
+        }
+      />
 
-        <div style={{ position: 'relative', zIndex: 2 }}>
-          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-brand-blue-50)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
-            Transporter Admin • Operations Console
-          </div>
-          <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
-            Welcome, {user?.displayName?.split(' ')[0] || 'Transporter'}
-          </h1>
-          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.85)', margin: 0, maxWidth: '520px', lineHeight: 1.5 }}>
-            Manage your delivery orders, assign drivers and trucks, track trips, upload delivery receipts, and raise invoices — all from one place.
-          </p>
-        </div>
+      {/* 2. SAP Horizontal KPI Summary Bar (Reference Screenshot 1) */}
+      <KPISummaryBar
+        items={[
+          {
+            id: 'pending-po',
+            value: pendingPO.length,
+            label: 'Pending Orders',
+            subtitle: pendingPO.length > 0 ? 'Requires Action' : 'All released handled',
+            onClick: () => navigate('/transporter/purchase-orders'),
+            accentColor: pendingPO.length > 0 ? 'var(--color-brand-blue-600)' : undefined
+          },
+          {
+            id: 'driver-assign',
+            value: pendingDriverAssign.length,
+            label: 'Driver Needed',
+            subtitle: pendingDriverAssign.length > 0 ? 'Driver / Truck Needed' : 'All assigned',
+            onClick: () => navigate('/transporter/purchase-orders'),
+            accentColor: pendingDriverAssign.length > 0 ? 'var(--color-warning)' : undefined
+          },
+          {
+            id: 'active-trips',
+            value: activeTransports.length,
+            label: 'Active Trips',
+            subtitle: 'In Transit Telemetry',
+            onClick: () => navigate('/transporter/trips'),
+          },
+          {
+            id: 'pod-pending',
+            value: podPending.length,
+            label: 'POD Pending',
+            subtitle: podPending.length > 0 ? 'Upload Required' : 'All uploaded',
+            onClick: () => navigate('/transporter/pods'),
+            accentColor: podPending.length > 0 ? 'var(--color-error)' : undefined
+          }
+        ]}
+      />
+
+      {/* 3. Primary Operational Navigation Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+        <NavCard
+          icon={<FileText size={20} />}
+          title="Purchase Orders"
+          description="View incoming transport execution orders and assign drivers and trucks."
+          route="/transporter/purchase-orders"
+          badge={pendingPO.length > 0 ? `${pendingPO.length} Pending` : undefined}
+        />
+        <NavCard
+          icon={<Truck size={20} />}
+          title="Active Transports"
+          description="Track active deliveries, weighbridge slips, and trip milestones."
+          route="/transporter/trips"
+        />
+        <NavCard
+          icon={<ClipboardList size={20} />}
+          title="Delivery Receipts (POD)"
+          description="Upload signed proof of delivery notes for automated OCR verification."
+          route="/transporter/pods"
+          badge={podPending.length > 0 ? `${podPending.length} Needed` : undefined}
+        />
+        <NavCard
+          icon={<Receipt size={20} />}
+          title="Invoices & Payments"
+          description="Raise tax invoices for approved trips and inspect SAP payment remittances."
+          route="/transporter/invoices"
+        />
       </div>
 
-      {/* ── Actionable KPI Status Cards ── */}
-      <div>
-        <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 16px' }}>
-          Action Required Right Now
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-          
-          <div className="kpi-card" onClick={() => navigate('/transporter/purchase-orders')} style={{ cursor: 'pointer', borderLeft: pendingPO.length > 0 ? '4px solid #2563EB' : '1px solid var(--color-border)' }}>
-            <div>
-              <div className="kpi-label">Pending PO</div>
-              <div className="kpi-value">{pendingPO.length}</div>
-              <div className="kpi-trend kpi-trend--up" style={{ color: pendingPO.length > 0 ? '#2563EB' : 'var(--color-text-muted)' }}>
-                {pendingPO.length > 0 ? 'Requires Transport Action' : 'All released POs handled'}
-              </div>
-            </div>
-            <div className="kpi-icon-wrapper" style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
-              <FileText size={20} />
-            </div>
-          </div>
-
-          <div className="kpi-card" onClick={() => navigate('/transporter/purchase-orders')} style={{ cursor: 'pointer', borderLeft: pendingDriverAssign.length > 0 ? '4px solid #D97706' : '1px solid var(--color-border)' }}>
-            <div>
-              <div className="kpi-label">Pending Driver Assignment</div>
-              <div className="kpi-value">{pendingDriverAssign.length}</div>
-              <div className="kpi-trend kpi-trend--up" style={{ color: pendingDriverAssign.length > 0 ? 'var(--color-warning-text)' : 'var(--color-success-text)' }}>
-                {pendingDriverAssign.length > 0 ? 'Driver / Vehicle Needed' : 'All jobs assigned'}
-              </div>
-            </div>
-            <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-warning-bg)', color: 'var(--color-warning-text)' }}>
-              <Truck size={20} />
-            </div>
-          </div>
-
-          <div className="kpi-card" onClick={() => navigate('/transporter/trips')} style={{ cursor: 'pointer', borderLeft: '1px solid var(--color-border)' }}>
-            <div>
-              <div className="kpi-label">Active Transports</div>
-              <div className="kpi-value">{activeTransports.length}</div>
-              <div className="kpi-trend kpi-trend--up" style={{ color: 'var(--color-brand-blue-600)' }}>
-                Trips In Transit
-              </div>
-            </div>
-            <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-brand-blue-50)', color: 'var(--color-brand-blue-600)' }}>
-              <ClipboardList size={20} />
-            </div>
-          </div>
-
-          <div className="kpi-card" onClick={() => navigate('/transporter/pods')} style={{ cursor: 'pointer', borderLeft: podPending.length > 0 ? '4px solid #DC2626' : '1px solid var(--color-border)' }}>
-            <div>
-              <div className="kpi-label">POD Pending</div>
-              <div className="kpi-value">{podPending.length}</div>
-              <div className="kpi-trend kpi-trend--down" style={{ color: podPending.length > 0 ? 'var(--color-error-text)' : 'var(--color-success-text)' }}>
-                {podPending.length > 0 ? 'POD Upload Required' : 'All PODs uploaded'}
-              </div>
-            </div>
-            <div className="kpi-icon-wrapper" style={{ backgroundColor: 'var(--color-error-bg)', color: 'var(--color-error-text)' }}>
-              <Receipt size={20} />
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-
-      {/* ── How it works ── */}
-      <div>
-        <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 16px' }}>
-          How the process works
-        </h2>
-        <div style={{ backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1px solid var(--color-border)', padding: '24px', boxShadow: 'var(--shadow-card)' }}>
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '24px' : '0', position: 'relative', flexWrap: 'wrap' }}>
-
-            {[
-              { num: '1', title: 'Order Arrives', desc: 'Company admin releases a PO. You receive it here.' },
-              { num: '2', title: 'Assign Driver', desc: 'Pick a driver and truck. Set the trip date and siding.' },
-              { num: '3', title: 'Driver Does Trip', desc: 'Driver loads coal, travels, and unloads at customer.' },
-              { num: '4', title: 'Upload POD', desc: 'Upload the stamped delivery receipt for approval.' },
-              { num: '5', title: 'Get Paid', desc: 'Create invoice. Company approves and SAP clears payment.' },
-            ].map((step, i, arr) => (
-              <div key={step.num} style={{ flex: 1, minWidth: '150px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '10px', position: 'relative', padding: '10px' }}>
-                {/* Connector line */}
-                {i < arr.length - 1 && !isMobile && (
-                  <div style={{
-                    position: 'absolute', top: '28px', left: 'calc(50% + 18px)', right: 'calc(-50% + 18px)',
-                    height: '2.5px', backgroundColor: 'var(--color-border)', zIndex: 0
-                  }} />
-                )}
+      {/* 4. Guided Workflow Process Bar */}
+      <Card title="Transport Execution Lifecycle" subtitle="Standard operating procedure from PO allocation to SAP clearance">
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '16px' : '0', position: 'relative' }}>
+          {[
+            { num: '1', title: 'Order Release', desc: 'Admin releases outline agreement PO' },
+            { num: '2', title: 'Assign Fleet', desc: 'Allocate driver and truck capacity' },
+            { num: '3', title: 'Trip Execution', desc: 'Loading siding, scale, transit, delivery' },
+            { num: '4', title: 'Upload POD', desc: 'Submit delivery receipt for OCR audit' },
+            { num: '5', title: 'SAP Settlement', desc: 'Auto MIRO invoice parking & payment' },
+          ].map((step, i, arr) => (
+            <div 
+              key={step.num} 
+              style={{ 
+                flex: 1, 
+                minWidth: '130px', 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                textAlign: 'center', 
+                gap: '8px', 
+                position: 'relative', 
+                padding: '8px 12px' 
+              }}
+            >
+              {i < arr.length - 1 && !isMobile && (
                 <div style={{
-                  width: '36px', height: '36px', borderRadius: '50%',
-                  backgroundColor: 'var(--color-brand-blue-600)', color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '14px', fontWeight: 900, flexShrink: 0, position: 'relative', zIndex: 1,
-                  boxShadow: '0 2px 6px rgba(47, 95, 224, 0.2)'
-                }}>
-                  {step.num}
-                </div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>{step.title}</div>
-                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>{step.desc}</div>
+                  position: 'absolute', 
+                  top: '22px', 
+                  left: 'calc(50% + 16px)', 
+                  right: 'calc(-50% + 16px)',
+                  height: '1.5px', 
+                  backgroundColor: 'var(--color-border)', 
+                  zIndex: 0
+                }} />
+              )}
+              <div style={{
+                width: '30px', 
+                height: '30px', 
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-brand-blue-50)', 
+                color: 'var(--color-brand-blue-600)',
+                border: '1.5px solid var(--color-brand-blue-600)',
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                fontSize: '13px', 
+                fontWeight: 800, 
+                flexShrink: 0, 
+                position: 'relative', 
+                zIndex: 1
+              }}>
+                {step.num}
               </div>
-            ))}
-          </div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                {step.title}
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', lineHeight: 1.3 }}>
+                {step.desc}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      </Card>
 
-      {/* ── Quick Action (Blue Tinted Banner) ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        backgroundColor: 'var(--color-brand-blue-50)', borderRadius: '16px', padding: '18px 24px',
-        border: '1px solid var(--color-border)', cursor: 'pointer',
-        boxShadow: 'var(--shadow-card)',
-        transition: 'all var(--transition-normal)'
-      }}
-        onClick={() => navigate('/transporter/purchase-orders')}
-        onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#EEF2FE'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--color-brand-blue-50)'; e.currentTarget.style.transform = 'translateY(0)'; }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--color-brand-blue-600)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Truck size={20} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-brand-blue-700)' }}>Go to Purchase Orders</div>
-            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>Assign drivers to pending orders now</div>
-          </div>
-        </div>
-        <ArrowRight size={20} color="var(--color-brand-blue-600)" />
-      </div>
     </div>
   );
 };

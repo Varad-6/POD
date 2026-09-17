@@ -6,207 +6,142 @@ interface StatusBadgeProps {
 }
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  let text = status.replace(/_/g, ' ');
-  let className = 'badge badge-neutral';
+  let text = status ? status.replace(/_/g, ' ') : '';
+  let variant: 'green' | 'amber' | 'red' | 'blue' | 'neutral' = 'neutral';
   let icon: React.ReactNode = null;
 
-  switch (status.toUpperCase()) {
-    // SUCCESS STATS (Green pills)
+  const s = (status || '').toUpperCase();
+
+  switch (s) {
+    // SUCCESS (Green)
+    case 'ACTIVE':
+    case 'COMPLETED':
     case 'ACCEPTED_SIGNED':
-      className = 'badge badge-green';
-      text = 'Driver Assigned';
-      icon = <Check size={13} />;
-      break;
-    case 'MINE_GROSS_LOGGED':
-      className = 'badge badge-green';
-      text = 'Gross Captured';
-      icon = <Check size={13} />;
-      break;
     case 'SUPERVISOR_APPROVED':
-      className = 'badge badge-green';
-      text = 'Supervisor Approved';
-      icon = <CheckCircle2 size={13} />;
-      break;
     case 'DELIVERED_STAMPED':
     case 'CUSTOMER_CONFIRMED':
-      className = 'badge badge-green';
-      text = 'Delivered & Stamped';
-      icon = <CheckCircle2 size={13} />;
-      break;
     case 'APPROVED':
-    case 'APPROVED_INVOICE_PENDING':
-      className = 'badge badge-green';
-      text = 'Approved';
-      icon = <CheckCircle2 size={13} />;
-      break;
-    case 'APPROVED_MISMATCH_OVERRIDE':
-      className = 'badge badge-green';
-      text = 'Approved (Override)';
-      icon = <AlertTriangle size={13} />;
-      break;
     case 'PAID':
-      className = 'badge badge-green';
-      text = 'Paid';
-      icon = <CheckCircle2 size={13} />;
-      break;
     case 'MATCH':
-      className = 'badge badge-green';
-      text = 'Match';
-      icon = <CheckCircle2 size={13} />;
-      break;
     case 'CLEARED':
-      className = 'badge badge-green';
-      text = 'Cleared';
-      icon = <CheckCircle2 size={13} />;
-      break;
     case 'DELIVERED':
-      className = 'badge badge-green';
-      text = 'Delivered';
-      icon = <CheckCircle2 size={13} />;
-      break;
     case 'RESOLVED':
-      className = 'badge badge-green';
-      text = 'Resolved';
-      icon = <CheckCircle2 size={13} />;
-      break;
     case 'ARRIVED':
-      className = 'badge badge-green';
-      text = 'Arrived';
-      icon = <MapPin size={13} />;
-      break;
     case 'WITHIN_TOLERANCE':
-      className = 'badge badge-green';
-      text = 'Within Tolerance';
-      icon = <CheckCircle2 size={13} />;
+    case 'MINE_GROSS_LOGGED':
+      variant = 'green';
+      if (s === 'ACCEPTED_SIGNED') text = 'Driver Assigned';
+      else if (s === 'MINE_GROSS_LOGGED') text = 'Gross Captured';
+      else if (s === 'SUPERVISOR_APPROVED') text = 'Supervisor Approved';
+      else if (s === 'DELIVERED_STAMPED' || s === 'CUSTOMER_CONFIRMED') text = 'Delivered & Stamped';
+      else if (s === 'ACTIVE') text = 'Active';
+      else if (s === 'PAID') text = 'Paid';
+      else if (s === 'COMPLETED') text = 'Completed';
       break;
 
-    // WARNING STATS (Orange pills)
+    // WARNING (Amber / Orange)
+    case 'PENDING':
     case 'PENDING_SIGNATURE':
-      className = 'badge badge-amber';
-      text = 'Ready for Driver';
-      icon = <Clock size={13} />;
-      break;
     case 'DRIVER_ARRIVED':
-      className = 'badge badge-amber';
-      text = 'Driver Arrived';
-      icon = <Clock size={13} />;
-      break;
     case 'MINE_TARE_LOGGED':
-      className = 'badge badge-amber';
-      text = 'Tare Captured';
-      icon = <Clock size={13} />;
-      break;
     case 'SUBMITTED_AWAITING_APPROVAL':
-      className = 'badge badge-amber';
-      text = 'Awaiting Approval';
-      icon = <Clock size={13} />;
-      break;
-    case 'LOW_CONFIDENCE':
-      className = 'badge badge-amber';
-      text = 'Low Confidence';
-      icon = <AlertCircle size={13} />;
-      break;
-    case 'UNDER_REVIEW':
-      className = 'badge badge-amber';
-      text = 'Under Review';
-      icon = <AlertCircle size={13} />;
-      break;
-    case 'OPEN':
-      className = 'badge badge-amber';
-      text = 'Open';
-      icon = <Clock size={13} />;
-      break;
-
-    // ERROR STATS (Red pills)
-    case 'SUPERVISOR_REJECTED':
-      className = 'badge badge-red';
-      text = 'Supervisor Rejected';
-      icon = <AlertTriangle size={13} />;
-      break;
-    case 'DELIVERED_FAILED':
-    case 'CUSTOMER_DEVIATION':
-      className = 'badge badge-red';
-      text = 'Delivery Failed';
-      icon = <AlertCircle size={13} />;
-      break;
-    case 'REJECTED':
-      className = 'badge badge-red';
-      text = 'Rejected';
-      icon = <AlertCircle size={13} />;
-      break;
-    case 'MISMATCH':
-      className = 'badge badge-red';
-      text = 'Mismatch';
-      icon = <AlertTriangle size={13} />;
-      break;
-    case 'GATE_DENIED':
-      className = 'badge badge-red';
-      text = 'Gate Denied';
-      icon = <AlertTriangle size={13} />;
-      break;
-    case 'OUTSIDE_TOLERANCE':
-      className = 'badge badge-red';
-      text = 'Outside Tolerance';
-      icon = <AlertTriangle size={13} />;
-      break;
-
-    // INFO STATS (Blue pills)
-    case 'ASSIGNED':
-    case 'ASSIGNED_TO_TRANSPORTER':
-      className = 'badge badge-blue';
-      text = 'Assigned to Transporter';
-      icon = <Clock size={13} />;
-      break;
-    case 'DRIVER_ASSIGNED':
-    case 'ASSIGNED_TO_DRIVER':
-      className = 'badge badge-blue';
-      text = 'Assigned to Driver';
-      icon = <Clock size={13} />;
-      break;
-    case 'EN_ROUTE':
-      className = 'badge badge-blue';
-      text = 'En Route';
-      icon = <MapPin size={13} />;
-      break;
+    case 'AWAITING_CUSTOMER':
+    case 'AWAITING_SUPERVISOR':
+    case 'AWAITING_MIRO':
     case 'PARKED':
-    case 'MIRO_PARKED':
-      className = 'badge badge-blue';
-      text = 'MIRO Parked';
-      icon = <Clock size={13} />;
-      break;
-    case 'POSTED':
-    case 'MIRO_POSTED':
-      className = 'badge badge-blue';
-      text = 'MIRO Posted';
-      icon = <Check size={13} />;
-      break;
+    case 'PARTIALLY_INVOICED':
+    case 'PARTIALLY INVOICED':
+    case 'IN_TRANSIT':
+    case 'EN_ROUTE':
     case 'DISPATCHED':
-      className = 'badge badge-blue';
-      text = 'Dispatched';
-      icon = <Clock size={13} />;
-      break;
-    case 'INVOICED':
-      className = 'badge badge-blue';
-      text = 'Invoiced';
-      icon = <Check size={13} />;
+      variant = 'amber';
+      if (s === 'PENDING_SIGNATURE') text = 'Ready for Driver';
+      else if (s === 'DRIVER_ARRIVED') text = 'Driver Arrived';
+      else if (s === 'MINE_TARE_LOGGED') text = 'Tare Captured';
+      else if (s === 'PARKED') text = 'Parked (MIRO)';
+      else if (s === 'PARTIALLY_INVOICED' || s === 'PARTIALLY INVOICED') text = 'Partially Invoiced';
+      else if (s === 'PENDING') text = 'Pending';
       break;
 
-    // NEUTRAL / DEFAULT STATS (Gray pills)
-    case 'UNASSIGNED':
-      className = 'badge badge-neutral';
-      text = 'Unassigned';
+    // ERROR (Red)
+    case 'FAILED':
+    case 'REJECTED':
+    case 'BLOCKED':
+    case 'FLAGGED':
+    case 'MISMATCH':
+    case 'TOLERANCE_EXCEEDED':
+    case 'EXPIRED':
+    case 'ERROR':
+      variant = 'red';
+      if (s === 'TOLERANCE_EXCEEDED') text = 'Tolerance Exceeded';
+      else if (s === 'MISMATCH') text = 'Mismatch';
+      else if (s === 'FAILED') text = 'Failed';
       break;
-    case 'PENDING_POD':
-    case 'AWAITING_INVOICE_SUBMISSION':
-      className = 'badge badge-neutral';
-      text = 'Need POD';
+
+    // INFO / BLUE
+    case 'NEW':
+    case 'OPEN':
+    case 'RELEASED':
+    case 'ASSIGNED':
+    case 'CONFIRMED':
+    case 'OCR_PROCESSED':
+    case 'POSTED':
+      variant = 'blue';
+      if (s === 'NEW') text = 'New';
+      else if (s === 'OPEN') text = 'Open';
+      else if (s === 'RELEASED') text = 'Released';
       break;
+
     default:
-      className = 'badge badge-neutral';
+      variant = 'neutral';
+      break;
   }
 
+  const styles: Record<string, React.CSSProperties> = {
+    green: {
+      backgroundColor: '#F1F8F4',
+      color: '#107E3E',
+      border: '1px solid #C6E7D2',
+    },
+    amber: {
+      backgroundColor: '#FEF7F1',
+      color: '#E9730C',
+      border: '1px solid #FAD8B7',
+    },
+    red: {
+      backgroundColor: '#FDF2F2',
+      color: '#BB0000',
+      border: '1px solid #F8C8C8',
+    },
+    blue: {
+      backgroundColor: '#EAF3FC',
+      color: '#0A6ED1',
+      border: '1px solid #B8D8F8',
+    },
+    neutral: {
+      backgroundColor: '#F5F6F7',
+      color: '#5B738B',
+      border: '1px solid #D9E1E8',
+    },
+  };
+
   return (
-    <span className={className}>
+    <span
+      className={`sap-badge sap-badge--${variant}`}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '2px 8px',
+        borderRadius: '4px',
+        fontSize: '11px',
+        fontWeight: 600,
+        letterSpacing: '0.02em',
+        lineHeight: 1.4,
+        whiteSpace: 'nowrap',
+        ...styles[variant],
+      }}
+    >
       {icon}
       {text}
     </span>

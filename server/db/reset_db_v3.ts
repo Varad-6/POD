@@ -1,7 +1,7 @@
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { getDb } from './database_v3.js';
+import { getDb, initDb } from './database_v3.js';
 import bcrypt from 'bcryptjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -31,6 +31,9 @@ export function resetDbV3() {
   // Run seed
   const seed = readFileSync(SEED_PATH, 'utf8');
   db.exec(seed);
+
+  // Run initDb for column checks and migrations
+  initDb();
 
   // Hash passwords properly
   const DEMO_PASSWORD = 'Demo@1234';

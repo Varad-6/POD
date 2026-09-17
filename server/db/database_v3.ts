@@ -75,9 +75,9 @@ export function initDb(): Database.Database {
   `);
 
 
-  // Check if seeded
+  // Check if seeded (ensure all core personas exist)
   const userCount = (instance.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }).c;
-  if (userCount === 0) {
+  if (userCount < 12) {
     const seed = readFileSync(SEED_PATH, 'utf8');
     instance.exec(seed);
 
@@ -85,7 +85,7 @@ export function initDb(): Database.Database {
     const DEMO_PASSWORD = 'Demo@1234';
     const hash = bcrypt.hashSync(DEMO_PASSWORD, 10);
     instance.prepare('UPDATE users SET password_hash = ?').run(hash);
-    console.log('[DB V3] Seed data applied. All users set to password: Demo@1234');
+    console.log('[DB V3] Seed data synchronized. All users set to password: Demo@1234');
   } else {
     console.log(`[DB V3] Database already has ${userCount} users, skipping seed.`);
   }

@@ -76,7 +76,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
 
   return (
     <div style={overlayStyle} onClick={handleOverlayClick} className="animate-fade-in">
-      <div style={modalStyle} className="animate-scale-in">
+      <div style={modalStyle} className="animate-scale-in" role="dialog" aria-modal="true">
         <div style={headerStyle}>
           <h2 style={{ fontSize: '18px', fontWeight: '600' }}>{title}</h2>
           <button 

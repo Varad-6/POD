@@ -129,6 +129,8 @@ CREATE TABLE IF NOT EXISTS transport_assignments (
   journey_authorized INTEGER DEFAULT 0,
   queue_time_mins INTEGER,
   penalty_amount REAL,
+  dispatch_ip TEXT,
+  dispatch_user_agent TEXT,
   status        TEXT NOT NULL CHECK(status IN (
     'ASSIGNED', 'GATE_DENIED', 'MINE_TARE_LOGGED', 'MINE_GROSS_LOGGED', 
     'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 

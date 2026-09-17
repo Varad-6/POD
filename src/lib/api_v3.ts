@@ -27,12 +27,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
-  if (res.status === 401) {
-    clearToken();
-    window.location.href = '/login';
-    throw new Error('Unauthorized');
-  }
-
   const contentType = res.headers.get('content-type') || '';
   let data: any = {};
 
@@ -48,6 +42,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       throw new Error(`HTTP ${res.status} — ${res.statusText || 'Server Endpoint Error'}`);
     }
     data = { text: rawText };
+  }
+
+  if (res.status === 401) {
+    clearToken();
+    if (!path.startsWith('/auth/login') && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+    throw new Error(data.error || data.message || 'Unauthorized');
   }
 
   if (!res.ok) {
@@ -97,6 +99,8 @@ export const caApi = {
   distributePo: (poId: number, data: { transporter_id: number; po_ids?: number[]; availability_window?: string; timebound?: string }) =>
 
     request<{ id: number; po_ids?: number[]; message: string }>(`/po/${poId}/distribute`, { method: 'POST', body: JSON.stringify(data) }),
+  getPoDetails: (poId: number) =>
+    request<PurchaseOrderV3>(`/purchase-orders/${poId}`),
 
   getReviewQueue: (status: 'OPEN' | 'RESOLVED' = 'OPEN') =>
     request<ReviewQueueItemV3[]>(`/review-queue?status=${status}`),
@@ -222,6 +226,10 @@ export interface PurchaseOrderV3 {
   rate: number;
   tolerance_pct: number;
   cost_center?: string;
+  allowed_queue_time_mins?: number;
+  detention_rate_per_hour?: number;
+  sap_contract_no?: string;
+  customer_name?: string;
   status: string;
 }
 
@@ -251,6 +259,7 @@ export interface JobConfigV3 {
   material?: string;
   target_qty?: number;
   rate?: number;
+  customer_name?: string;
   // Multi-item aggregation (new)
   po_items?: PoItemV3[];
   item_count?: number;

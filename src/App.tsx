@@ -37,6 +37,19 @@ function getDefaultRoute(role: string): string {
   }
 }
 
+interface RoleRouteProps {
+  allowedRoles: string[];
+  userRole: string;
+  children: React.ReactElement;
+}
+
+const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles, userRole, children }) => {
+  if (!allowedRoles.includes(userRole)) {
+    return <Navigate to={getDefaultRoute(userRole)} replace />;
+  }
+  return children;
+};
+
 function getPageTitle(path: string, role: string): string {
   if (path.includes('/admin/dashboard')) return 'Control Tower';
   if (path.includes('/transporter/dashboard')) return 'Transport Operations';
@@ -62,11 +75,15 @@ const MainApp: React.FC = () => {
   const [isMobile, setIsMobile] = React.useState<boolean>(window.innerWidth < 768);
 
   const toggleSidebar = () => {
-    setIsSidebarCollapsed(prev => {
-      const next = !prev;
-      localStorage.setItem('podzo_sidebar_collapsed', String(next));
-      return next;
-    });
+    if (window.innerWidth < 768) {
+      setMobileOpen(prev => !prev);
+    } else {
+      setIsSidebarCollapsed(prev => {
+        const next = !prev;
+        localStorage.setItem('podzo_sidebar_collapsed', String(next));
+        return next;
+      });
+    }
   };
 
   useEffect(() => {
@@ -142,7 +159,6 @@ const MainApp: React.FC = () => {
       <div className="app-container">
         <Sidebar 
           collapsed={isSidebarCollapsed} 
-          onToggle={toggleSidebar} 
           mobileOpen={mobileOpen} 
           onMobileClose={() => setMobileOpen(false)} 
         />
@@ -161,25 +177,25 @@ const MainApp: React.FC = () => {
           <main className="content-container">
             <Routes>
               {/* Transporter Routes */}
-              <Route path="/transporter/dashboard"      element={<TransporterDashboard />} />
-              <Route path="/transporter/purchase-orders" element={<TransporterPOs />} />
-              <Route path="/transporter/pods"           element={<TransporterPODs />} />
-              <Route path="/transporter/invoices"       element={<TransporterInvoices />} />
+              <Route path="/transporter/dashboard"      element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterDashboard /></RoleRoute>} />
+              <Route path="/transporter/purchase-orders" element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterPOs /></RoleRoute>} />
+              <Route path="/transporter/pods"           element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterPODs /></RoleRoute>} />
+              <Route path="/transporter/invoices"       element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterInvoices /></RoleRoute>} />
 
               {/* Admin Routes */}
-              <Route path="/admin/dashboard"  element={<AdminDashboard />} />
-              <Route path="/admin/contracts"  element={<AdminContracts />} />
-              <Route path="/admin/approvals"  element={<AdminApprovals />} />
-              <Route path="/admin/invoices"   element={<AdminInvoices />} />
+              <Route path="/admin/dashboard"  element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminDashboard /></RoleRoute>} />
+              <Route path="/admin/contracts"  element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminContracts /></RoleRoute>} />
+              <Route path="/admin/approvals"  element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminApprovals /></RoleRoute>} />
+              <Route path="/admin/invoices"   element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminInvoices /></RoleRoute>} />
 
               {/* Supervisor Routes */}
-              <Route path="/supervisor/dashboard" element={<SupervisorDashboard />} />
+              <Route path="/supervisor/dashboard" element={<RoleRoute allowedRoles={['SR']} userRole={user.role}><SupervisorDashboard /></RoleRoute>} />
 
               {/* Customer Routes */}
-              <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+              <Route path="/customer/dashboard" element={<RoleRoute allowedRoles={['CR']} userRole={user.role}><CustomerDashboard /></RoleRoute>} />
 
               {/* Driver Routes */}
-              <Route path="/driver/dashboard" element={<DriverDashboard />} />
+              <Route path="/driver/dashboard" element={<RoleRoute allowedRoles={['DR']} userRole={user.role}><DriverDashboard /></RoleRoute>} />
 
               {/* Dev/Design System Routes */}
               <Route path="/gallery" element={<ComponentGallery />} />
