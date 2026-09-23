@@ -11,7 +11,7 @@ import { Modal } from '../components/Modal';
 import { Checkbox } from '../components/Checkbox';
 import {
   Send, Clock, Calendar, Check, ShieldCheck, MapPin,
-  FileText, Package, Truck, Layers, ArrowRight, X, CheckSquare, Square, RefreshCw,
+  FileText, Package, Truck, Layers, ArrowRight, ArrowLeft, X, CheckSquare, Square, RefreshCw,
   Eye, ExternalLink
 } from 'lucide-react';
 import { formatDate, formatCurrency } from '../utils/format';
@@ -249,122 +249,124 @@ export const AdminContracts: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
-      {/* 1. Page Header */}
-      <PageHeader 
-        title="Contracts & PO Release Console"
-        subtitle="Manage active SAP S/4HANA Outline Agreements (ME33K / ME33L) and distribute purchase orders to transporters"
-        actions={
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={loadData}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <RefreshCw size={14} className={loading ? 'spin' : ''} />
-            Refresh
-          </Button>
-        }
-      />
-
-      {/* 2. Contracts Table Card */}
-      <Card 
-        title={`Active Outline Agreements (${contracts.length})`}
-        subtitle="Synchronized from SAP S/4HANA S21 master data. Click any row to inspect line items and release orders."
-        style={{ padding: 0 }}
-      >
-        <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#FFFFFF' }}>
-          <div style={{ maxWidth: '360px' }}>
-            <input 
-              type="text"
-              placeholder="Search contract number or customer..."
-              value={contractSearch}
-              onChange={(e) => setContractSearch(e.target.value)}
-              className="form-input"
-              style={{ fontSize: '13px', padding: '6px 12px' }}
-            />
-          </div>
-        </div>
-
-        <Table<ContractV3>
-          data={filteredContracts}
-          onRowClick={(c) => handleContractSelect(c)}
-          getRowStyle={(c) => ({
-            backgroundColor: selectedContract?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent',
-            cursor: 'pointer'
-          })}
-          columns={[
-            {
-              header: 'Contract Number',
-              render: (c) => (
-                <span 
-                  className="mono" 
-                  style={{ 
-                    fontWeight: 700, 
-                    color: 'var(--color-brand-blue-600)',
-                    textDecoration: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {c.sap_contract_no}
-                </span>
-              )
-            },
-            {
-              header: 'Customer / Yard',
-              render: (c) => <span style={{ fontWeight: 600, color: 'var(--color-text-heading)' }}>{c.customer_name}</span>
-            },
-            {
-              header: 'Agreement Type',
-              render: (c) => (
-                <span style={{ fontSize: '12px', color: 'var(--color-text-body)' }}>
-                  {getContractAgreementType(c.sap_contract_no)}
-                </span>
-              )
-            },
-            {
-              header: 'Supplier',
-              render: (c) => (
-                <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                  {getContractSupplier(c.sap_contract_no)}
-                </span>
-              )
-            },
-            {
-              header: 'Validity Period',
-              render: (c) => <span style={{ fontSize: '12px' }}>{c.start_date} → {c.end_date}</span>
-            },
-            {
-              header: 'Material / Items',
-              render: (c) => {
-                const contractPoMaterials = purchaseOrders
-                  .filter(po => po.contract_id === c.id)
-                  .map(po => po.material);
-                const uniqueMaterials = Array.from(new Set(contractPoMaterials));
-
-                let materialDisplay = (c as any).material || 'Washed Coal Grade A';
-                if (uniqueMaterials.length > 1) {
-                  return (
-                    <span className="badge badge-blue">
-                      {uniqueMaterials.length} Items
-                    </span>
-                  );
-                } else if (uniqueMaterials.length === 1) {
-                  materialDisplay = uniqueMaterials[0];
-                }
-
-                return <span>{materialDisplay}</span>;
-              }
-            },
-            {
-              header: 'Status',
-              render: (c) => <StatusBadge status={c.status} />
+      {!selectedContract ? (
+        <>
+          {/* 1. Page Header */}
+          <PageHeader 
+            title="Contracts & PO Release Console"
+            subtitle="Manage active SAP S/4HANA Outline Agreements (ME33K / ME33L) and distribute purchase orders to transporters"
+            actions={
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={loadData}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <RefreshCw size={14} className={loading ? 'spin' : ''} />
+                Refresh
+              </Button>
             }
-          ]}
-        />
-      </Card>
+          />
 
-      {/* 3. Contract Detail View (Sections 10 & 11) */}
-      {selectedContract && (
+          {/* 2. Contracts Table Card */}
+          <Card 
+            title={`Active Outline Agreements (${contracts.length})`}
+            subtitle="Synchronized from SAP S/4HANA S21 master data. Click any row to inspect line items and release orders."
+            style={{ padding: 0 }}
+          >
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#FFFFFF' }}>
+              <div style={{ maxWidth: '360px' }}>
+                <input 
+                  type="text"
+                  placeholder="Search contract number or customer..."
+                  value={contractSearch}
+                  onChange={(e) => setContractSearch(e.target.value)}
+                  className="form-input"
+                  style={{ fontSize: '13px', padding: '6px 12px' }}
+                />
+              </div>
+            </div>
+
+            <Table<ContractV3>
+              data={filteredContracts}
+              onRowClick={(c) => handleContractSelect(c)}
+              getRowStyle={(c) => ({
+                backgroundColor: selectedContract?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent',
+                cursor: 'pointer'
+              })}
+              columns={[
+                {
+                  header: 'Contract Number',
+                  render: (c) => (
+                    <span 
+                      className="mono" 
+                      style={{ 
+                        fontWeight: 700, 
+                        color: 'var(--color-brand-blue-600)',
+                        textDecoration: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {c.sap_contract_no}
+                    </span>
+                  )
+                },
+                {
+                  header: 'Customer / Yard',
+                  render: (c) => <span style={{ fontWeight: 600, color: 'var(--color-text-heading)' }}>{c.customer_name}</span>
+                },
+                {
+                  header: 'Agreement Type',
+                  render: (c) => (
+                    <span style={{ fontSize: '12px', color: 'var(--color-text-body)' }}>
+                      {getContractAgreementType(c.sap_contract_no)}
+                    </span>
+                  )
+                },
+                {
+                  header: 'Supplier',
+                  render: (c) => (
+                    <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                      {getContractSupplier(c.sap_contract_no)}
+                    </span>
+                  )
+                },
+                {
+                  header: 'Validity Period',
+                  render: (c) => <span style={{ fontSize: '12px' }}>{c.start_date} → {c.end_date}</span>
+                },
+                {
+                  header: 'Material / Items',
+                  render: (c) => {
+                    const contractPoMaterials = purchaseOrders
+                      .filter(po => po.contract_id === c.id)
+                      .map(po => po.material);
+                    const uniqueMaterials = Array.from(new Set(contractPoMaterials));
+
+                    let materialDisplay = (c as any).material || 'Washed Coal Grade A';
+                    if (uniqueMaterials.length > 1) {
+                      return (
+                        <span className="badge badge-blue">
+                          {uniqueMaterials.length} Items
+                        </span>
+                      );
+                    } else if (uniqueMaterials.length === 1) {
+                      materialDisplay = uniqueMaterials[0];
+                    }
+
+                    return <span>{materialDisplay}</span>;
+                  }
+                },
+                {
+                  header: 'Status',
+                  render: (c) => <StatusBadge status={c.status} />
+                }
+              ]}
+            />
+          </Card>
+        </>
+      ) : (
+        /* 3. Dedicated Contract Detail View (Sections 10 & 11) */
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* Header Bar for Selected Contract */}
@@ -380,48 +382,65 @@ export const AdminContracts: React.FC = () => {
             flexWrap: 'wrap',
             gap: '12px'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '6px',
-                backgroundColor: 'var(--color-brand-blue-50)',
-                color: 'var(--color-brand-blue-600)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800
-              }}>
-                <FileText size={18} />
-              </div>
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  Contract Detail Inspector
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <Button 
+                variant="secondary" 
+                size="sm"
+                onClick={() => {
+                  setSelectedContract(null);
+                  setSelectedPOsToAssign([]);
+                  setShowAssignForm(false);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
+              >
+                <ArrowLeft size={15} /> Back to Outline Agreements
+              </Button>
+
+              <div style={{ height: '24px', width: '1px', backgroundColor: 'var(--color-border)' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--color-brand-blue-50)',
+                  color: 'var(--color-brand-blue-600)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800
+                }}>
+                  <FileText size={18} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className="mono" style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-text-heading)' }}>
-                    Contract #{selectedContract.sap_contract_no}
-                  </span>
-                  <span style={{ color: 'var(--color-text-muted)' }}>·</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-text-body)' }}>
-                    {selectedContract.customer_name}
-                  </span>
-                  <StatusBadge status={selectedContract.status} />
+                <div>
+                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Outline Agreement Inspector
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="mono" style={{ fontSize: '16px', fontWeight: 800, color: 'var(--color-text-heading)' }}>
+                      Contract #{selectedContract.sap_contract_no}
+                    </span>
+                    <span style={{ color: 'var(--color-text-muted)' }}>·</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-body)' }}>
+                      {selectedContract.customer_name}
+                    </span>
+                    <StatusBadge status={selectedContract.status} />
+                  </div>
                 </div>
               </div>
             </div>
 
             <Button 
-              variant="secondary" 
+              variant="ghost" 
               size="sm"
               onClick={() => {
                 setSelectedContract(null);
                 setSelectedPOsToAssign([]);
                 setShowAssignForm(false);
               }}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-text-muted)' }}
             >
-              <X size={14} /> Close Detail
+              <X size={14} /> Close View
             </Button>
           </div>
 

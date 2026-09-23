@@ -41,13 +41,14 @@ body {
   flex-direction: column;
   margin-left: var(--sidebar-width);
   min-width: 0;
+  width: calc(100% - var(--sidebar-width));
   transition: margin-left var(--transition-normal);
 }
 
 .content-container {
   flex: 1;
-  padding: var(--space-6) var(--space-8);
-  max-width: var(--content-max-width);
+  padding: var(--space-4) var(--space-6);
+  max-width: 100%;
   width: 100%;
   margin: 0 auto;
 }
@@ -341,11 +342,16 @@ h4 { font-size: 14px; }
   background-color: #990000;
 }
 
+.btn:active {
+  transform: scale(0.97);
+}
+
 /* Disabled state */
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none !important;
+  transform: none !important;
 }
 
 .btn-sm {
@@ -365,8 +371,10 @@ h4 { font-size: 14px; }
   background: var(--color-bg-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
-  overflow: hidden;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow-card);
+  width: 100%;
 }
 
 table.data-table {
@@ -374,6 +382,7 @@ table.data-table {
   border-collapse: collapse;
   text-align: left;
   font-size: 13px;
+  min-width: 680px;
 }
 
 table.data-table th {
@@ -385,6 +394,7 @@ table.data-table th {
   letter-spacing: 0.04em;
   padding: 10px 16px;
   border-bottom: 1.5px solid var(--color-border);
+  white-space: nowrap;
 }
 
 table.data-table td {
@@ -392,15 +402,28 @@ table.data-table td {
   color: var(--color-text-body);
   border-bottom: 1px solid var(--color-border-subtle, #E5E7EB);
   vertical-align: middle;
+  transition: background-color 0.15s ease;
 }
 
 table.data-table tr:last-child td {
   border-bottom: none;
 }
 
-table.data-table tr:hover td,
+table.data-table tr[style*="cursor: pointer"],
+table.data-table tr.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.08s ease;
+}
+
+table.data-table tr[style*="cursor: pointer"]:hover td,
+table.data-table tr.clickable-row:hover td,
 .table-row-hover:hover {
-  background-color: #F4F8FD !important;
+  background-color: #EAF3FC !important;
+}
+
+table.data-table tr[style*="cursor: pointer"]:active td,
+table.data-table tr.clickable-row:active td {
+  background-color: #D4E7FA !important;
 }
 
 /* Numeric columns right-aligned */
@@ -784,7 +807,7 @@ input::placeholder {
   display: grid;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1024px) {
   .responsive-split {
     grid-template-columns: 1fr !important;
   }

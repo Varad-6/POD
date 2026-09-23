@@ -3,6 +3,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
+import { Table } from '../components/Table';
 import { crApi, drApi, TransportAssignmentV3 } from '../lib/api_v3';
 import { Tabs } from '../components/Tabs';
 import {
@@ -24,6 +25,7 @@ export const CustomerDashboard: React.FC = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<TransportAssignmentV3 | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
+  const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -397,6 +399,18 @@ export const CustomerDashboard: React.FC = () => {
   const historyItems = incoming.filter(a => !isActiveStatus(a.status));
 
   const currentList = activeTab === 'ACTIVE' ? activeItems : historyItems;
+  const filteredList = currentList.filter(a => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      a.sap_po_no?.toLowerCase().includes(term) ||
+      a.driver_name?.toLowerCase().includes(term) ||
+      a.vehicle_reg?.toLowerCase().includes(term) ||
+      a.material?.toLowerCase().includes(term) ||
+      a.from_location?.toLowerCase().includes(term) ||
+      a.to_location?.toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -472,131 +486,98 @@ export const CustomerDashboard: React.FC = () => {
         onChange={(id) => setActiveTab(id as any)}
       />
 
-      {loading ? (
-        <div style={{ padding: '60px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading incoming trucks...</div>
-      ) : currentList.length === 0 ? (
-        <EmptyState
-          icon={<PackageCheck size={48} />}
-          title={activeTab === 'ACTIVE' ? "No Trucks Incoming" : "No Completed Deliveries"}
-          description={activeTab === 'ACTIVE' ? "No trucks are currently on their way to your yard." : "You have no completed delivery records in your archive yet."}
-        />
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {currentList.map(a => {
-            const isItemActive = isActiveStatus(a.status);
-            if (isMobile) {
-              return (
-                <Card
-                  key={a.id}
-                  onClick={() => setSelectedAssignment(a)}
-                  hoverEffect
-                  style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px 20px', cursor: 'pointer' }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO / Item</div>
-                      <div className="mono" style={{ fontSize: '16px', fontWeight: 900, color: 'var(--color-text-primary)' }}>#{a.sap_po_no} / {a.po_item_no}</div>
-                    </div>
-                    <StatusBadge status={a.status} />
+      {/* ── UNIFIED SAP ENTERPRISE TABLE FOR INCOMING DELIVERIES ── */}
+      <Card 
+        title={`Yard Deliveries Queue (${filteredList.length})`}
+        subtitle="Incoming truck consignments. Click any row to record yard scale measurements and confirm unloading."
+        style={{ padding: 0 }}
+      >
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)', backgroundColor: '#FFFFFF' }}>
+          <div style={{ maxWidth: '360px' }}>
+            <input 
+              type="text"
+              placeholder="Search PO #, driver, vehicle reg, or product..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="form-input"
+              style={{ fontSize: '13px', padding: '6px 12px' }}
+            />
+          </div>
+        </div>
+
+        <Table<TransportAssignmentV3>
+          data={filteredList}
+          loading={loading}
+          onRowClick={(a) => setSelectedAssignment(a)}
+          emptyState={
+            <EmptyState
+              icon={<PackageCheck size={48} />}
+              title={activeTab === 'ACTIVE' ? "No Trucks Incoming" : "No Completed Deliveries"}
+              description={activeTab === 'ACTIVE' ? "No trucks are currently on their way to your yard." : "You have no completed delivery records in your archive yet."}
+            />
+          }
+          columns={[
+            {
+              header: 'PO Number / Item',
+              render: (a) => (
+                <span className="mono" style={{ fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>
+                  #{a.sap_po_no} / {a.po_item_no}
+                </span>
+              )
+            },
+            {
+              header: 'Driver & Vehicle',
+              render: (a) => (
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{a.driver_name || 'Driver'}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                    <Truck size={11} color="var(--color-brand-blue-600)" />
+                    <span className="mono" style={{ fontWeight: 600 }}>{a.vehicle_reg}</span>
                   </div>
-
-                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Driver / Truck</div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.driver_name || 'Driver'}</div>
-                      <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
-                        <Truck size={11} /> <span className="mono">{a.vehicle_reg}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Product</div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.material}</div>
-                    </div>
-                  </div>
-
-                  <div style={{ height: '1px', backgroundColor: 'var(--color-border)' }} />
-
-                  <div>
-                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '4px' }}>Route</div>
-                    <div style={{ fontSize: '12.5px', color: 'var(--color-text-secondary)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>{a.from_location || 'MON1 Siding'}</span>
-                      <ArrowRight size={12} color="var(--color-border)" />
-                      <span>{a.to_location || 'Emoyeni Siding'}</span>
-                    </div>
-                  </div>
-
-                  <div 
-                    className="btn btn-secondary btn-sm"
-                    style={{
-                      backgroundColor: isItemActive ? 'var(--color-brand-blue-50)' : 'var(--color-success-bg)', 
-                      color: isItemActive ? 'var(--color-brand-blue-600)' : 'var(--color-success-text)',
-                      border: 'none', fontSize: '12px', fontWeight: 700, textAlign: 'center', width: '100%', padding: '10px'
+                </div>
+              )
+            },
+            {
+              header: 'Product Material',
+              render: (a) => <span style={{ fontWeight: 600, color: 'var(--color-text-heading)' }}>{a.material}</span>
+            },
+            {
+              header: 'Route (Siding → Yard)',
+              render: (a) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--color-text-body)' }}>
+                  <span>{a.from_location || 'MON1 Siding'}</span>
+                  <ArrowRight size={12} color="var(--color-brand-blue-600)" />
+                  <span>{a.to_location || 'Emoyeni Siding'}</span>
+                </div>
+              )
+            },
+            {
+              header: 'Status',
+              render: (a) => <StatusBadge status={a.status} />
+            },
+            {
+              header: 'Action',
+              align: 'right',
+              render: (a) => {
+                const isItemActive = isActiveStatus(a.status);
+                return (
+                  <Button
+                    size="sm"
+                    variant={isItemActive ? "primary" : "secondary"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedAssignment(a);
                     }}
+                    style={{ fontSize: '12px', padding: '4px 12px', fontWeight: 600 }}
                   >
                     {isItemActive ? 'Process Unload →' : 'View Details →'}
-                  </div>
-                </Card>
-              );
+                  </Button>
+                );
+              }
             }
-
-            return (
-              <Card
-                key={a.id}
-                onClick={() => setSelectedAssignment(a)}
-                hoverEffect
-                style={{ display: 'flex', alignItems: 'center', gap: '18px', padding: '18px 22px', cursor: 'pointer' }}
-              >
-                {/* Left blue/green indicator depending on tab */}
-                <div style={{ width: '4px', height: '54px', borderRadius: '2px', backgroundColor: isItemActive ? 'var(--color-brand-blue-600)' : 'var(--color-success)', flexShrink: 0 }} />
-
-                {/* PO */}
-                <div style={{ flexShrink: 0 }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>PO / Item</div>
-                  <div className="mono" style={{ fontSize: '17px', fontWeight: 900, color: 'var(--color-text-primary)' }}>#{a.sap_po_no} / {a.po_item_no}</div>
-                </div>
-
-                <div style={{ width: '1px', height: '40px', backgroundColor: 'var(--color-border)' }} />
-
-                {/* Driver + Truck */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.driver_name || 'Driver'}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                    <Truck size={11} /> <span className="mono">{a.vehicle_reg}</span>
-                  </div>
-                </div>
-
-                {/* Material */}
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>Product</div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>{a.material}</div>
-                </div>
-
-                {/* From → To */}
-                <div style={{ flex: 2, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>{a.from_location || 'MON1 Siding'}</span>
-                  <ArrowRight size={12} color="var(--color-border)" />
-                  <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>{a.to_location || 'Emoyeni Siding'}</span>
-                </div>
-
-                <StatusBadge status={a.status} />
-
-                <div 
-                  className="btn btn-secondary btn-sm"
-                  style={{
-                    backgroundColor: isItemActive ? 'var(--color-brand-blue-50)' : 'var(--color-success-bg)', 
-                    color: isItemActive ? 'var(--color-brand-blue-600)' : 'var(--color-success-text)',
-                    border: 'none', fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap'
-                  }}
-                >
-                  {isItemActive ? 'Process Unload →' : 'View Details →'}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+          ]}
+        />
+      </Card>
     </div>
   );
 };
