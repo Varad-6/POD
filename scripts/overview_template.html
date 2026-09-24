@@ -1,0 +1,837 @@
+import os
+import sys
+import base64
+from pathlib import Path
+
+# Paths
+BASE_DIR = Path("C:/projects/POD")
+LOGO_PATH = BASE_DIR / "public/branding/podzo-logo-compact.png"
+PDF_OUT = BASE_DIR / "PODZO_Solution_Overview_v1.0.pdf"
+DOCX_OUT = BASE_DIR / "PODZO_Solution_Overview_v1.0.docx"
+HTML_OUT = BASE_DIR / "scripts/overview_template.html"
+
+# Encode Logo
+logo_base64 = ""
+if LOGO_PATH.exists():
+    with open(LOGO_PATH, "rb") as f:
+        logo_base64 = "data:image/png;base64," + base64.b64encode(f.read()).decode("utf-8")
+
+html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PODZO — Solution Overview</title>
+  <style>
+    @page {{
+      size: A4 portrait;
+      margin: 0;
+    }}
+    * {{
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }}
+    body {{
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      color: #1D2D3E;
+      background-color: #F0F4F8;
+    }}
+    .page {{
+      width: 210mm;
+      height: 297mm;
+      max-height: 297mm;
+      padding: 12mm 15mm 10mm 15mm;
+      margin: 0 auto;
+      background: #FFFFFF;
+      position: relative;
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }}
+    .page:last-child {{
+      page-break-after: avoid;
+    }}
+
+    /* Typography & Hierarchy */
+    h1, h2, h3, h4, p {{
+      margin: 0;
+      padding: 0;
+    }}
+    .header-wrap {{
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #0A6ED1;
+      padding-bottom: 8px;
+      margin-bottom: 10px;
+    }}
+    .brand-title {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }}
+    .brand-title img {{
+      height: 34px;
+      object-fit: contain;
+    }}
+    .doc-meta {{
+      text-align: right;
+    }}
+    .meta-badge {{
+      display: inline-block;
+      background: #EAF3FC;
+      color: #0854A0;
+      font-size: 8.5pt;
+      font-weight: 700;
+      padding: 2.5px 7px;
+      border-radius: 4px;
+      border: 1px solid #D4E7FA;
+      letter-spacing: 0.03em;
+    }}
+    .meta-sub {{
+      font-size: 7.5pt;
+      color: #5B738B;
+      margin-top: 2px;
+      font-weight: 600;
+    }}
+    .main-title {{
+      font-size: 17pt;
+      font-weight: 800;
+      color: #0F2744;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+    }}
+    .main-subtitle {{
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: #0A6ED1;
+      margin-top: 1px;
+    }}
+    .lead-description {{
+      font-size: 8.5pt;
+      color: #334E68;
+      line-height: 1.35;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      background: #F8FAFC;
+      border-left: 3px solid #0A6ED1;
+      padding: 5px 10px;
+      border-radius: 0 4px 4px 0;
+    }}
+
+    /* Section Styling */
+    .section-title {{
+      font-size: 9.5pt;
+      font-weight: 800;
+      color: #0854A0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }}
+    .section-title::after {{
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #E2E8F0;
+    }}
+    .section-icon {{
+      color: #FF5B00;
+      font-weight: bold;
+    }}
+
+    /* Glance Box */
+    .glance-box {{
+      background: #FFFFFF;
+      border: 1px solid #D9E1E8;
+      border-radius: 6px;
+      padding: 8px 11px;
+      margin-bottom: 10px;
+      font-size: 8.5pt;
+      line-height: 1.35;
+      color: #243B53;
+      box-shadow: 0 1px 2px rgba(10, 110, 209, 0.03);
+    }}
+
+    /* Capability Cards */
+    .capability-grid {{
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      margin-bottom: 10px;
+    }}
+    .cap-card {{
+      background: #FFFFFF;
+      border: 1px solid #D9E1E8;
+      border-top: 2.5px solid #0A6ED1;
+      border-radius: 5px;
+      padding: 7px 9px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }}
+    .cap-title {{
+      font-size: 8.2pt;
+      font-weight: 700;
+      color: #0F2744;
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }}
+    .cap-desc {{
+      font-size: 7.2pt;
+      color: #486581;
+      line-height: 1.3;
+    }}
+
+    /* Role Cards */
+    .roles-container {{
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }}
+    .role-card {{
+      background: #F8FAFC;
+      border: 1px solid #D9E1E8;
+      border-radius: 5px;
+      padding: 6px 7px;
+      text-align: center;
+    }}
+    .role-badge {{
+      display: inline-block;
+      font-size: 6.8pt;
+      font-weight: 800;
+      padding: 1.5px 5px;
+      border-radius: 3px;
+      background: #0A6ED1;
+      color: #FFFFFF;
+      margin-bottom: 3px;
+    }}
+    .role-name {{
+      font-size: 7.5pt;
+      font-weight: 700;
+      color: #0F2744;
+      margin-bottom: 2px;
+    }}
+    .role-desc {{
+      font-size: 6.7pt;
+      color: #486581;
+      line-height: 1.25;
+    }}
+
+    /* Workflow Diagram */
+    .workflow-strip {{
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 3px;
+      background: #F0F4F8;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
+      padding: 7px 6px;
+      margin-bottom: 6px;
+    }}
+    .wf-step {{
+      flex: 1;
+      background: #FFFFFF;
+      border: 1px solid #D9E1E8;
+      border-radius: 4px;
+      padding: 5px 4px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }}
+    .wf-step.sap {{
+      border-color: #0A6ED1;
+      background: #EAF3FC;
+    }}
+    .wf-step.action {{
+      border-color: #CBD5E1;
+    }}
+    .wf-num {{
+      font-size: 6.2pt;
+      font-weight: 800;
+      color: #0A6ED1;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }}
+    .wf-title {{
+      font-size: 7.1pt;
+      font-weight: 700;
+      color: #0F2744;
+      margin-top: 1px;
+    }}
+    .wf-actor {{
+      font-size: 6.2pt;
+      color: #627D98;
+      margin-top: 1px;
+      font-weight: 600;
+    }}
+    .wf-arrow {{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0A6ED1;
+      font-weight: bold;
+      font-size: 8pt;
+      padding: 0 1px;
+    }}
+
+    /* Page Footer */
+    .page-footer {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid #D9E1E8;
+      padding-top: 5px;
+      font-size: 7.2pt;
+      color: #627D98;
+    }}
+    .page-footer strong {{
+      color: #0F2744;
+    }}
+
+    /* PAGE 2 SPECIFIC STYLES */
+    .page2-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1.5px solid #0A6ED1;
+      padding-bottom: 5px;
+      margin-bottom: 9px;
+    }}
+    .page2-header .title {{
+      font-size: 11pt;
+      font-weight: 800;
+      color: #0F2744;
+    }}
+    .page2-header .sub {{
+      font-size: 8pt;
+      color: #0A6ED1;
+      font-weight: 600;
+    }}
+
+    /* SAP Integration Table / Flow */
+    .integration-box {{
+      border: 1px solid #D9E1E8;
+      border-radius: 6px;
+      overflow: hidden;
+      margin-bottom: 9px;
+    }}
+    .integration-table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7.3pt;
+    }}
+    .integration-table th {{
+      background: #0854A0;
+      color: #FFFFFF;
+      padding: 5px 8px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 7.2pt;
+      letter-spacing: 0.03em;
+    }}
+    .integration-table td {{
+      padding: 5px 8px;
+      border-bottom: 1px solid #E5E7EB;
+      vertical-align: top;
+      line-height: 1.3;
+    }}
+    .integration-table tr:nth-child(even) td {{
+      background: #F8FAFC;
+    }}
+    .tag-sap {{
+      display: inline-block;
+      font-size: 6.2pt;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: #EAF3FC;
+      color: #0854A0;
+      border: 1px solid #D4E7FA;
+    }}
+    .tag-pod {{
+      display: inline-block;
+      font-size: 6.2pt;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: #FFF4E5;
+      color: #C05621;
+      border: 1px solid #FBD38D;
+    }}
+
+    /* Architecture Block */
+    .arch-container {{
+      border: 1px solid #D9E1E8;
+      border-radius: 6px;
+      background: #F8FAFC;
+      padding: 8px 10px;
+      margin-bottom: 9px;
+    }}
+    .arch-layer {{
+      background: #FFFFFF;
+      border: 1px solid #CBD5E1;
+      border-radius: 5px;
+      padding: 6px 9px;
+      margin-bottom: 5px;
+    }}
+    .arch-layer:last-child {{
+      margin-bottom: 0;
+    }}
+    .arch-layer-head {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 3px;
+    }}
+    .arch-layer-name {{
+      font-size: 7.8pt;
+      font-weight: 800;
+      color: #0F2744;
+    }}
+    .arch-layer-badge {{
+      font-size: 6.5pt;
+      font-weight: 700;
+      padding: 1.5px 5px;
+      border-radius: 3px;
+      background: #EAF3FC;
+      color: #0A6ED1;
+    }}
+    .arch-layer-items {{
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }}
+    .arch-chip {{
+      font-size: 6.8pt;
+      padding: 2.5px 6px;
+      background: #F1F5F9;
+      border: 1px solid #E2E8F0;
+      border-radius: 3px;
+      color: #334E68;
+      font-weight: 600;
+    }}
+    .arch-arrow {{
+      text-align: center;
+      color: #0A6ED1;
+      font-weight: bold;
+      font-size: 8pt;
+      line-height: 1;
+      margin: 2px 0;
+    }}
+
+    /* Technology Strip */
+    .tech-strip {{
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      background: #FFFFFF;
+      border: 1px solid #D9E1E8;
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-bottom: 9px;
+    }}
+    .tech-item {{
+      border-right: 1px solid #E2E8F0;
+      padding-right: 6px;
+    }}
+    .tech-item:last-child {{
+      border-right: none;
+      padding-right: 0;
+    }}
+    .tech-cat {{
+      font-size: 6.3pt;
+      font-weight: 800;
+      color: #0A6ED1;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }}
+    .tech-val {{
+      font-size: 7.3pt;
+      font-weight: 700;
+      color: #0F2744;
+      margin-top: 1px;
+    }}
+    .tech-sub {{
+      font-size: 6.3pt;
+      color: #627D98;
+    }}
+
+    /* Business Value Cards */
+    .value-grid {{
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      margin-bottom: 9px;
+    }}
+    .val-card {{
+      background: #FFFFFF;
+      border: 1px solid #D9E1E8;
+      border-left: 3px solid #107E3E;
+      border-radius: 4px;
+      padding: 6px 8px;
+    }}
+    .val-title {{
+      font-size: 7.8pt;
+      font-weight: 700;
+      color: #0F2744;
+      margin-bottom: 2px;
+    }}
+    .val-desc {{
+      font-size: 6.9pt;
+      color: #486581;
+      line-height: 1.25;
+    }}
+
+    /* Approach Box */
+    .approach-box {{
+      background: #EAF3FC;
+      border: 1px solid #B8D8F8;
+      border-radius: 5px;
+      padding: 6px 9px;
+      margin-bottom: 6px;
+    }}
+    .approach-title {{
+      font-size: 7.5pt;
+      font-weight: 800;
+      color: #0854A0;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }}
+    .approach-desc {{
+      font-size: 7.2pt;
+      color: #102A43;
+      line-height: 1.3;
+    }}
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PAGE 1 ==================== -->
+  <div class="page">
+    <div>
+      <!-- Header -->
+      <div class="header-wrap">
+        <div class="brand-title">
+          <img src="{logo_base64}" alt="PODZO Logo" />
+          <div>
+            <div class="main-title">PODZO — Solution Overview</div>
+            <div class="main-subtitle">SAP-Connected Delivery &amp; Transport Management Platform</div>
+          </div>
+        </div>
+        <div class="doc-meta">
+          <div class="meta-badge">CLIENT SOLUTION OVERVIEW</div>
+          <div class="meta-sub">Version 1.0 &bull; September 2026</div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="lead-description">
+        <strong>Executive Summary:</strong> PODZO provides a centralized operational interface for managing SAP-connected contracts and purchase orders, transport allocation, delivery execution, and proof-of-delivery (POD) processes.
+      </div>
+
+      <!-- Section 1: At a Glance -->
+      <div class="section-title"><span class="section-icon">&block;</span> Section 1 — PODZO at a Glance</div>
+      <div class="glance-box">
+        PODZO is an enterprise operational execution platform designed to bridge SAP S/21 with day-to-day transport logistics and bulk haulage fulfillment. Used by industrial shippers, commercial hauliers, siding supervisors, drivers, and receiving customers, PODZO manages the physical realization of transport purchase orders. By retrieving active contracts and released POs directly from SAP S/21, PODZO governs vehicle allocation, 4-point weighbridge validation, digital journey tracking, and OCR-assisted POD verification—delivering end-to-end operational visibility while preserving SAP as the single authoritative financial core.
+      </div>
+
+      <!-- Section 2: Key Capabilities -->
+      <div class="section-title"><span class="section-icon">&block;</span> Section 2 — Key Capabilities</div>
+      <div class="capability-grid">
+        <div class="cap-card">
+          <div class="cap-title">&#9670; SAP S/21 Synchronization</div>
+          <div class="cap-desc">Direct ingestion of active outline agreements (ME33K) and transport purchase orders (ME23N) with quantities, rates, and validity periods.</div>
+        </div>
+        <div class="cap-card">
+          <div class="cap-title">&#9670; Transport Allocation &amp; E-Sign</div>
+          <div class="cap-desc">Timebound PO allocation to certified transporters with mandatory digital signature acknowledgment and electronic bilty/waybill reference.</div>
+        </div>
+        <div class="cap-card">
+          <div class="cap-title">&#9670; 4-Point Weighbridge Control</div>
+          <div class="cap-desc">Capture dispatch tare/gross (loading siding) and destination tare/gross (receiving yard) to guarantee net payload and capture transit loss.</div>
+        </div>
+        <div class="cap-card">
+          <div class="cap-title">&#9670; Driver Mobile Execution</div>
+          <div class="cap-desc">Mobile-first driver web console for route navigation, arrival timestamp logging, gate check-in, and instant physical POD slip photo upload.</div>
+        </div>
+        <div class="cap-card">
+          <div class="cap-title">&#9670; OCR POD Verification Desk</div>
+          <div class="cap-desc">Automated document data extraction matching waybill numbers, truck registrations, and delivered weights against SAP records with confidence scoring.</div>
+        </div>
+        <div class="cap-card">
+          <div class="cap-title">&#9670; Invoicing &amp; SAP MIRO Posting</div>
+          <div class="cap-desc">Consolidation of verified delivered tonnage into freight invoices, staging audit-ready data for SAP MIRO supplier invoice parking and clearing.</div>
+        </div>
+      </div>
+
+      <!-- Section 3: Role-Based Operations -->
+      <div class="section-title"><span class="section-icon">&block;</span> Section 3 — Role-Based Operations</div>
+      <div class="roles-container">
+        <div class="role-card">
+          <span class="role-badge">CA</span>
+          <div class="role-name">Company Admin</div>
+          <div class="role-desc">Manages contracts, PO allocations, variance review queues, and final MIRO invoice approvals.</div>
+        </div>
+        <div class="role-card">
+          <span class="role-badge">TA</span>
+          <div class="role-name">Transporter Admin</div>
+          <div class="role-desc">Accepts allocated POs via digital signature, schedules fleet/drivers, and submits freight invoices.</div>
+        </div>
+        <div class="role-card">
+          <span class="role-badge">SR</span>
+          <div class="role-name">Supervisor</div>
+          <div class="role-desc">Conducts siding pre-dispatch inspections, logs weighbridge weights, and authorizes gate release.</div>
+        </div>
+        <div class="role-card">
+          <span class="role-badge">DR</span>
+          <div class="role-name">Driver</div>
+          <div class="role-desc">Executes assignments via mobile web, verifies loading, and uploads stamped physical POD slips.</div>
+        </div>
+        <div class="role-card">
+          <span class="role-badge">CR</span>
+          <div class="role-name">Customer</div>
+          <div class="role-desc">Captures receiving weighbridge readings, records transit deviations, and confirms delivery acceptance.</div>
+        </div>
+      </div>
+
+      <!-- Section 4: End-to-End Workflow -->
+      <div class="section-title"><span class="section-icon">&block;</span> Section 4 — End-to-End Operational Workflow</div>
+      <div class="workflow-strip">
+        <div class="wf-step sap">
+          <div class="wf-num">Step 1</div>
+          <div class="wf-title">SAP S/21 Sync</div>
+          <div class="wf-actor">Contracts &amp; POs</div>
+        </div>
+        <div class="wf-arrow">&rarr;</div>
+        <div class="wf-step action">
+          <div class="wf-num">Step 2</div>
+          <div class="wf-title">PO E-Acceptance</div>
+          <div class="wf-actor">Transporter (TA)</div>
+        </div>
+        <div class="wf-arrow">&rarr;</div>
+        <div class="wf-step action">
+          <div class="wf-num">Step 3</div>
+          <div class="wf-title">Siding Dispatch</div>
+          <div class="wf-actor">Supervisor (SR)</div>
+        </div>
+        <div class="wf-arrow">&rarr;</div>
+        <div class="wf-step action">
+          <div class="wf-num">Step 4</div>
+          <div class="wf-title">Transit Execution</div>
+          <div class="wf-actor">Driver (DR)</div>
+        </div>
+        <div class="wf-arrow">&rarr;</div>
+        <div class="wf-step action">
+          <div class="wf-num">Step 5</div>
+          <div class="wf-title">Yard Receiving</div>
+          <div class="wf-actor">Customer (CR)</div>
+        </div>
+        <div class="wf-arrow">&rarr;</div>
+        <div class="wf-step action">
+          <div class="wf-num">Step 6</div>
+          <div class="wf-title">OCR POD Review</div>
+          <div class="wf-actor">Company Admin (CA)</div>
+        </div>
+        <div class="wf-arrow">&rarr;</div>
+        <div class="wf-step sap">
+          <div class="wf-num">Step 7</div>
+          <div class="wf-title">SAP MIRO Clear</div>
+          <div class="wf-actor">Park &amp; Post Invoice</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      <div><strong>PODZO</strong> &bull; SAP-Connected Delivery &amp; Transport Management Platform</div>
+      <div>Page 1 of 2</div>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 2 ==================== -->
+  <div class="page">
+    <div>
+      <!-- Page 2 Header -->
+      <div class="page2-header">
+        <div>
+          <div class="title">PODZO &mdash; Integration &amp; Technical Architecture</div>
+          <div class="sub">SAP S/21 Integration, Architectural Blueprint &amp; Enterprise Value</div>
+        </div>
+        <div class="doc-meta">
+          <div class="meta-badge">ENTERPRISE BLUEPRINT</div>
+          <div class="meta-sub">Page 2 of 2</div>
+        </div>
+      </div>
+
+      <!-- Section 5: SAP S/21 Integration -->
+      <div class="section-title"><span class="section-icon">&block;</span> Section 5 — SAP S/21 Integration</div>
+      <div class="integration-box">
+        <table class="integration-table">
+          <thead>
+            <tr>
+              <th style="width: 25%;">Integration Dimension</th>
+              <th style="width: 45%;">Data Scope &amp; Functional Mapping</th>
+              <th style="width: 30%;">Data Governance &amp; Storage Boundary</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Inbound from SAP S/21</strong><br/><span class="tag-sap">OData / REST APIs</span></td>
+              <td>Outline Contracts (ME33K), Transport POs (ME23N), Line Items, Target Tonnage, Unit Rates, Cost Centers, Delivery Sites, Vendor Master (LFA1).</td>
+              <td><em>Retrieved from SAP.</em> Master records remain governed exclusively in SAP S/21; cached for operational display.</td>
+            </tr>
+            <tr>
+              <td><strong>Operational Processing</strong><br/><span class="tag-pod">PODZO Core Layer</span></td>
+              <td>Digital PO acceptance signature hashes, carrier waybills (bilties), 4-point weighbridge tickets, OTP verifications, driver stamps, uploaded POD scans.</td>
+              <td><em>Stored in PODZO.</em> Field execution logs and audit telemetry are persisted locally in PODZO's transactional database.</td>
+            </tr>
+            <tr>
+              <td><strong>Outbound to SAP S/21</strong><br/><span class="tag-sap">ABAP RFC / MIRO API</span></td>
+              <td>Verified delivered quantities, Service Entry Sheet (SES / ML81N) triggers, MIRO supplier invoice parking/posting, ArchiveLink POD attachments.</td>
+              <td><em>Posted to SAP.</em> Final financial and compliance artifacts are transmitted back to SAP for settlement.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Section 6: High-Level Solution Architecture -->
+      <div class="section-title"><span class="section-icon">&block;</span> Section 6 — High-Level Solution Architecture</div>
+      <div class="arch-container">
+        <!-- Top Tier -->
+        <div class="arch-layer">
+          <div class="arch-layer-head">
+            <span class="arch-layer-name">1. Enterprise ERP Layer (SAP S/21 System of Record)</span>
+            <span class="arch-layer-badge">SAP ECC / S/4HANA</span>
+          </div>
+          <div class="arch-layer-items">
+            <span class="arch-chip">Outline Agreements (ME33K)</span>
+            <span class="arch-chip">Purchase Orders (ME23N)</span>
+            <span class="arch-chip">Service Entry Sheets (ML81N)</span>
+            <span class="arch-chip">Supplier Invoices (MIRO)</span>
+            <span class="arch-chip">ArchiveLink / DMS</span>
+          </div>
+        </div>
+
+        <div class="arch-arrow">&#8645; Secure SAP Integration Layer (REST &bull; OData &bull; RFC Proxy &bull; Sync Logs) &#8645;</div>
+
+        <!-- Middle Tier -->
+        <div class="arch-layer">
+          <div class="arch-layer-head">
+            <span class="arch-layer-name">2. PODZO Operational Core Platform (Execution &amp; Verification Layer)</span>
+            <span class="arch-layer-badge">Express &bull; Node.js &bull; SQLite WAL</span>
+          </div>
+          <div class="arch-layer-items">
+            <span class="arch-chip">4-Point Weighbridge Engine</span>
+            <span class="arch-chip">OCR Document Matching Desk</span>
+            <span class="arch-chip">Tolerance &amp; Variance Engine</span>
+            <span class="arch-chip">Exception Review Queue</span>
+            <span class="arch-chip">Secure Document Vault</span>
+            <span class="arch-chip">Audit &amp; Transit Event Logger</span>
+          </div>
+        </div>
+
+        <div class="arch-arrow">&#8645; Role-Governed Secure Web Endpoints (JWT Authentication &bull; RBAC) &#8645;</div>
+
+        <!-- Bottom Tier -->
+        <div class="arch-layer">
+          <div class="arch-layer-head">
+            <span class="arch-layer-name">3. Role-Tailored Operational Consoles (SAP Fiori-Inspired UX)</span>
+            <span class="arch-layer-badge">React 19 &bull; Desktop &bull; Mobile</span>
+          </div>
+          <div class="arch-layer-items">
+            <span class="arch-chip">CA: Admin Control Tower &amp; Approvals</span>
+            <span class="arch-chip">TA: Transporter POs &amp; Fleet Operations</span>
+            <span class="arch-chip">SR: Siding Weighbridge Console</span>
+            <span class="arch-chip">DR: Driver Journey Web App</span>
+            <span class="arch-chip">CR: Customer Receiving Yard</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 7: Technology Overview -->
+      <div class="section-title"><span class="section-icon">&block;</span> Section 7 — Technology Overview</div>
+      <div class="tech-strip">
+        <div class="tech-item">
+          <div class="tech-cat">Frontend</div>
+          <div class="tech-val">React 19 &bull; Vite</div>
+          <div class="tech-sub">TypeScript, React Router 7</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-cat">Backend Services</div>
+          <div class="tech-val">Node.js &bull; Express 5</div>
+          <div class="tech-sub">RESTful API Architecture</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-cat">SAP Integration</div>
+          <div class="tech-val">S21 OData / REST</div>
+          <div class="tech-sub">OData, RFC Proxy, Sync Logs</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-cat">Data Store</div>
+          <div class="tech-val">SQLite (WAL Mode)</div>
+          <div class="tech-sub">Full Transactional Durability</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-cat">Design System</div>
+          <div class="tech-val">SAP Fiori Inspired</div>
+          <div class="tech-sub">Responsive Desktop &amp; Mobile</div>
+        </div>
+      </div>
+
+      <!-- Section 8: Business Value -->
+      <div class="section-title"><span class="section-icon">&block;</span> Section 8 — Business Value</div>
+      <div class="value-grid">
+        <div class="val-card">
+          <div class="val-title">Unified Operational Truth</div>
+          <div class="val-desc">Bridges SAP S/21 with field transporters and receiving yards without requiring third-party hauliers to hold full enterprise SAP user licenses.</div>
+        </div>
+        <div class="val-card">
+          <div class="val-title">Dispute-Free Weight Verification</div>
+          <div class="val-desc">Mandatory 4-point weighbridge logging captures tare and gross weights at both origin and destination, eliminating payload discrepancies and transit loss disputes.</div>
+        </div>
+        <div class="val-card">
+          <div class="val-title">Compressed Invoicing Cycles</div>
+          <div class="val-desc">Immediate digital POD capture paired with OCR verification replaces multi-week physical paper transit, collapsing billing and MIRO clearing to hours.</div>
+        </div>
+        <div class="val-card">
+          <div class="val-title">Complete Audit Governance</div>
+          <div class="val-desc">Every vehicle dispatch, weighbridge entry, tolerance override, and MIRO posting is immutably timestamped with user credentials and audit logs.</div>
+        </div>
+      </div>
+
+      <!-- Section 9: Current Solution Position -->
+      <div class="approach-box">
+        <div class="approach-title">Solution Approach &amp; Positioning</div>
+        <div class="approach-desc">
+          PODZO provides a purpose-built operational execution and verification layer around SAP-connected contract and purchase order workflows. It enables business users, logistics providers, and drivers to collaborate through a modern, role-based interface while preserving strict alignment, security, and traceability with SAP S/21 business data.
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      <div><strong>PODZO</strong> &bull; Solution Overview v1.0 &bull; Confidential Client Document</div>
+      <div>Page 2 of 2</div>
+    </div>
+  </div>
+
+</body>
+</html>
+"""
+
+with open(HTML_OUT, "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print(f"Generated HTML template at: {HTML_OUT}")
