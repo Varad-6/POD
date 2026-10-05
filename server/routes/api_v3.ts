@@ -660,7 +660,9 @@ router.get('/review-queue', requireAuth, requireRole('CA', 'SR'), (req: Request,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_GROSS' LIMIT 1) as dest_gross_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_TARE' LIMIT 1) as dest_tare_kg,
-           pd.ocr_waybill_extracted, pd.ocr_weight_extracted, pd.ocr_confidence_pct, pd.match_status as ocr_match_status
+           pd.scanned_pod_url, pd.ocr_waybill_extracted, pd.ocr_weight_extracted, pd.ocr_confidence_pct, pd.match_status as ocr_match_status,
+           pd.ocr_invoice_no, pd.ocr_vendor_name, pd.ocr_po_no, pd.ocr_material, pd.ocr_total_amount, pd.ocr_tax_amount,
+           pd.ocr_line_items_json, pd.ocr_provider, pd.ocr_processing_status
     FROM review_queue rq
     JOIN transport_assignments ta ON ta.id = rq.assignment_id
     JOIN job_configs jc ON jc.id = ta.job_config_id
@@ -670,21 +672,10 @@ router.get('/review-queue', requireAuth, requireRole('CA', 'SR'), (req: Request,
     JOIN vehicles v ON v.id = ta.vehicle_id
     LEFT JOIN pod_documents pd ON pd.assignment_id = ta.id
     WHERE rq.status = ?
+    ORDER BY rq.id DESC
   `).all(status);
 
-  if (!reviews || reviews.length === 0) {
-    return res.json([{
-      id: 0,
-      assignment_id: 0,
-      driver_name: 'All Consignments Clear',
-      vehicle_reg: 'Within Tolerance',
-      sap_po_no: 'None',
-      reason: 'All active deliveries are within tolerance threshold (0.5%)',
-      status: 'CLEARED'
-    }]);
-  }
-
-  return res.json(reviews);
+  return res.json(reviews || []);
 });
 
 // DELETE /api/v3/review-queue (Wipe all demo review items)
@@ -1864,7 +1855,7 @@ router.post('/assignments/:id/pod-upload', requireAuth, upload.any(), async (req
   const assignmentId = req.params.id;
   const files = (req.files as Express.Multer.File[]) || [];
   const uploadedFile = files[0];
-  const { pod_file_url, mock_scenario } = req.body;
+  const { pod_file_url, mock_scenario } = (req.body || {}) as any;
 
   try {
     // 1. Determine if real file upload or file path provided
