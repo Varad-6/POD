@@ -27,3 +27,10 @@ dist-ssr
 *.db
 *.db-shm
 *.db-wal
+
+# OCR caches
+*.traineddata
+
+# Uploaded documents
+uploads/invoices/*
+!uploads/invoices/.gitkeep

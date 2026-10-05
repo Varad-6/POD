@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { KPISummaryBar } from '../components/KPISummaryBar';
 import { useAuthV3 } from '../contexts/AuthContextV3';
+import { API_BASE } from '../lib/api_v3';
 import { Truck, FileText, ClipboardList, Receipt, ArrowRight, ChevronRight, RefreshCw } from 'lucide-react';
 
 // ─── Dashboard Navigation Card ────────────────────────────────────────────────
@@ -87,10 +88,10 @@ export const TransporterDashboard: React.FC = () => {
       const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
       const host = isLocal ? 'http://localhost:3001' : 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com';
       const [jobsRes, assignsRes] = await Promise.all([
-        fetch(`${host}/api/v3/job-configs`, {
+        fetch(`${API_BASE}/job-configs`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
         }),
-        fetch(`${host}/api/v3/assignments`, {
+        fetch(`${API_BASE}/assignments`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
         })
       ]);

@@ -353,6 +353,7 @@ export const TransporterPOs: React.FC = () => {
         scheduled_date: scheduledDate,
         location: pickupLocation,
       };
+      await new Promise(r => setTimeout(r, 1200));
       const result = await taApi.assignJob(selectedJC.id, payload);
       setSuccessMsg(`${result.truck_count} truck${(result.truck_count || 1) > 1 ? 's' : ''} assigned to PO #${selectedJC.sap_po_no}!`);
       await loadData();

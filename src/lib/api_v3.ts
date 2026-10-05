@@ -2,9 +2,12 @@
  * Ikwezi Transporter Portal — API Client V3
  */
 
-const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const PROD_API_HOST = 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com';
-const API_BASE = isLocal ? 'http://localhost:3001/api/v3' : `${PROD_API_HOST}/api/v3`;
+export const API_HOST = (import.meta as any).env?.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com'
+    : 'http://localhost:3001');
+
+export const API_BASE = `${API_HOST}/api/v3`;
 
 function getToken(): string | null {
   return localStorage.getItem('podzo_token_v3');
@@ -21,8 +24,9 @@ export function clearToken() {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers as Record<string, string>),
   };
   if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -166,8 +170,19 @@ export const drApi = {
     request<{ message: string }>(`/assignments/${id}/transit-event`, { method: 'POST', body: JSON.stringify(data) }),
   confirmArrival: (id: number, gps: { gps_lat: number; gps_lng: number }) =>
     request<{ message: string; ip_captured: string; outside_geofence: boolean }>(`/assignments/${id}/arrived`, { method: 'POST', body: JSON.stringify(gps) }),
-  uploadPod: (id: number, data: { pod_file_url: string; mock_scenario?: 'MATCH' | 'MISMATCH' | 'BLURRY' }) =>
-    request<{ message: string; ocr: any; variance: any; under_review: boolean }>(`/assignments/${id}/pod-upload`, { method: 'POST', body: JSON.stringify(data) }),
+  uploadPod: (id: number, data: { pod_file_url?: string; mock_scenario?: 'MATCH' | 'MISMATCH' | 'BLURRY'; file?: File } | FormData) => {
+    if (typeof FormData !== 'undefined' && data instanceof FormData) {
+      return request<{ message: string; ocr: any; variance: any; under_review: boolean; extracted_invoice?: any }>(`/assignments/${id}/pod-upload`, { method: 'POST', body: data });
+    }
+    if ('file' in data && data.file) {
+      const fd = new FormData();
+      fd.append('file', data.file);
+      if (data.mock_scenario) fd.append('mock_scenario', data.mock_scenario);
+      if (data.pod_file_url) fd.append('pod_file_url', data.pod_file_url);
+      return request<{ message: string; ocr: any; variance: any; under_review: boolean; extracted_invoice?: any }>(`/assignments/${id}/pod-upload`, { method: 'POST', body: fd });
+    }
+    return request<{ message: string; ocr: any; variance: any; under_review: boolean; extracted_invoice?: any }>(`/assignments/${id}/pod-upload`, { method: 'POST', body: JSON.stringify(data) });
+  },
 };
 
 // ─── ASSIGNMENTS ENDPOINTS ───────────────────────────────────

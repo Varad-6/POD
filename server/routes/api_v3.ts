@@ -4,6 +4,43 @@
 import { Router, Request, Response } from 'express';
 import { getDb } from '../db/database_v3.js';
 import { requireAuth, requireRole, getClientIp } from '../middleware/auth_v3.js';
+import multer from 'multer';
+import { join, dirname, extname } from 'path';
+import { existsSync, mkdirSync, statSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { OCRService } from '../services/ocr/OCRService.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const uploadDir = join(__dirname, '../../uploads/invoices');
+if (!existsSync(uploadDir)) {
+  mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (_req, file, cb) => {
+    const ext = extname(file.originalname).toLowerCase() || '.pdf';
+    const safeName = `inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+    cb(null, safeName);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
+  fileFilter: (_req, file, cb) => {
+    const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    if (allowed.includes(file.mimetype.toLowerCase())) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported file type: ${file.mimetype}. Allowed: PDF, PNG, JPG`));
+    }
+  }
+});
 
 const router = Router();
 
@@ -1695,26 +1732,56 @@ router.post('/assignments/:id/arrived', requireAuth, requireRole('DR'), (req: Re
 });
 
 // POST /api/v3/assignments/:id/pod-upload
-router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Response) => {
+router.post('/assignments/:id/pod-upload', requireAuth, upload.any(), async (req: Request, res: Response) => {
   const db = getDb();
   const assignmentId = req.params.id;
+  const files = (req.files as Express.Multer.File[]) || [];
+  const uploadedFile = files[0];
   const { pod_file_url, mock_scenario } = req.body;
-  const scenario = mock_scenario || 'MATCH';
 
   try {
-    const fileUrl = pod_file_url || '/uploads/sample_pod.pdf';
+    // 1. Determine if real file upload or file path provided
+    let filePath: string | null = null;
+    let mimeType: string = 'application/pdf';
+    let fileUrl: string = pod_file_url || '/uploads/sample_pod.pdf';
+    let originalName: string = 'sample_pod.pdf';
+
+    if (uploadedFile) {
+      filePath = uploadedFile.path;
+      mimeType = uploadedFile.mimetype;
+      fileUrl = `/uploads/invoices/${uploadedFile.filename}`;
+      originalName = uploadedFile.originalname;
+    } else if (pod_file_url) {
+      const cleaned = pod_file_url.replace(/^\//, '');
+      const possiblePaths = [
+        join(process.cwd(), cleaned),
+        join(process.cwd(), 'test-invoices', cleaned.split('/').pop() || ''),
+        join(process.cwd(), 'public', cleaned),
+        join(__dirname, '../../', cleaned)
+      ];
+      for (const p of possiblePaths) {
+        if (existsSync(p) && !statSync(p).isDirectory()) {
+          filePath = p;
+          originalName = cleaned.split('/').pop() || 'invoice.pdf';
+          mimeType = p.endsWith('.png') ? 'image/png' : p.endsWith('.jpg') || p.endsWith('.jpeg') ? 'image/jpeg' : 'application/pdf';
+          fileUrl = pod_file_url;
+          break;
+        }
+      }
+    }
 
     // Read PO details safely
-    let poInfo = { target_qty: 34.0, tolerance_pct: 0.5, sap_po_no: '4500001714' };
+    let poInfo = { target_qty: 34.0, tolerance_pct: 0.5, sap_po_no: '4500001714', material: 'SL BIT 20%ASH (40006653)', rate: 151.50, vendor_name: 'Sipho Transport Services' };
     try {
       const queriedPo = db.prepare(`
-        SELECT po.target_qty, po.tolerance_pct, po.sap_po_no
+        SELECT po.target_qty, po.tolerance_pct, po.sap_po_no, po.material, po.rate, t.name as vendor_name
         FROM transport_assignments ta
         JOIN job_configs jc ON jc.id = ta.job_config_id
         JOIN purchase_orders po ON po.id = jc.po_id
+        LEFT JOIN transporters t ON t.id = jc.transporter_id
         WHERE ta.id = ?
       `).get(assignmentId) as any;
-      if (queriedPo) poInfo = queriedPo;
+      if (queriedPo) poInfo = { ...poInfo, ...queriedPo };
     } catch (e) {
       console.warn('poInfo query warning:', e);
     }
@@ -1751,42 +1818,159 @@ router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Resp
     let ocrWaybill = sapPoNo;
     let matchStatus = 'MATCH';
     let flagReason = 'AWAITING_CA_VERIFY';
+    let extractedInvoice: any = null;
 
-    if (scenario === 'MISMATCH') {
-      ocrWeight = physicalNetTons + 5.0; // discrepancy of exactly 5.0 tons!
-      matchStatus = 'MISMATCH';
-      confidence = 94.2;
-      variancePct = parseFloat(((5.0 / physicalNetTons) * 100).toFixed(2));
-      passBool = 0;
-      flagReason = 'TOLERANCE_EXCEEDED';
-    } else if (scenario === 'BLURRY') {
-      ocrWeight = 0.0;
-      ocrWaybill = 'UNKNOWN';
-      matchStatus = 'LOW_CONFIDENCE';
-      confidence = 34.0;
-      variancePct = 100.0;
-      passBool = 0;
-      flagReason = 'OCR_MISMATCH';
+    // IF A REAL FILE WAS UPLOADED OR PROVIDED (NOT ONLY MOCK DROPDOWN)
+    if (filePath && !mock_scenario) {
+      extractedInvoice = await OCRService.processInvoice(filePath, mimeType, originalName);
+
+      if (extractedInvoice.processingStatus === 'FAILED') {
+        return res.status(400).json({
+          error: extractedInvoice.processingError || 'Unable to process the invoice. Please verify that the file is readable and try again.',
+          processing_status: 'FAILED'
+        });
+      }
+
+      ocrWaybill = extractedInvoice.poNumber || extractedInvoice.deliveryNumber || extractedInvoice.invoiceNumber || 'UNKNOWN';
+      confidence = extractedInvoice.confidence;
+
+      // Extract quantity from line items or total
+      const extractedQty = extractedInvoice.lineItems?.[0]?.quantity || 
+        (extractedInvoice.totalAmount && poInfo.rate ? (extractedInvoice.totalAmount / poInfo.rate) : physicalNetTons);
+      ocrWeight = parseFloat(extractedQty.toFixed(2));
+      acceptedPayload = ocrWeight * 1000;
+
+      // ─── EXISTING BUSINESS VALIDATION LOGIC ───────────────────
+      // Check 1: Duplicate Invoice Check
+      let isDuplicate = false;
+      if (extractedInvoice.fileHash) {
+        const dupCheck = db.prepare(`
+          SELECT id, assignment_id FROM pod_documents
+          WHERE (file_hash = ? AND file_hash IS NOT NULL AND file_hash != '' AND assignment_id != ?)
+             OR (ocr_invoice_no = ? AND ocr_vendor_name = ? AND ocr_invoice_no IS NOT NULL AND assignment_id != ?)
+        `).get(extractedInvoice.fileHash, assignmentId, extractedInvoice.invoiceNumber, extractedInvoice.vendorName, assignmentId) as any;
+        if (dupCheck) isDuplicate = true;
+      }
+
+      // Check 2: PO Mismatch or Missing PO
+      const isMissingPo = !extractedInvoice.poNumber;
+      const isPoMismatch = !isMissingPo && extractedInvoice.poNumber !== sapPoNo;
+
+      // Check 3: Vendor Mismatch
+      let isVendorMismatch = false;
+      if (extractedInvoice.vendorName && poInfo.vendor_name) {
+        const v1 = extractedInvoice.vendorName.toLowerCase();
+        const v2 = poInfo.vendor_name.toLowerCase();
+        const v1Words = v1.split(/\s+/).filter((w: string) => w.length > 3 && !['transport', 'logistics', 'services', 'ltd', 'pty'].includes(w));
+        const v2Words = v2.split(/\s+/).filter((w: string) => w.length > 3 && !['transport', 'logistics', 'services', 'ltd', 'pty'].includes(w));
+        const sharesKeyword = v1Words.some((w: string) => v2.includes(w)) || v2Words.some((w: string) => v1.includes(w));
+        if (!sharesKeyword) {
+          isVendorMismatch = true;
+        }
+      }
+
+      // Check 4: Quantity Variance
+      variancePct = parseFloat((Math.abs((ocrWeight - physicalNetTons) / physicalNetTons) * 100).toFixed(2));
+      const isQtyVariance = variancePct > tolerancePct;
+
+      // Check 5: Amount / Rate Mismatch
+      let isAmountMismatch = false;
+      if (extractedInvoice.totalAmount && poInfo.rate) {
+        const expectedSubtotal = ocrWeight * poInfo.rate;
+        const expectedTotal = expectedSubtotal * 1.15; // 15% VAT
+        if (Math.abs(extractedInvoice.totalAmount - expectedTotal) / expectedTotal > 0.05 &&
+            Math.abs(extractedInvoice.totalAmount - expectedSubtotal) / expectedSubtotal > 0.05) {
+          isAmountMismatch = true;
+        }
+      }
+
+      // Check 6: Tax Mismatch
+      let isTaxMismatch = false;
+      if (extractedInvoice.taxAmount && extractedInvoice.subtotalAmount) {
+        const expectedTax = extractedInvoice.subtotalAmount * 0.15;
+        if (Math.abs(extractedInvoice.taxAmount - expectedTax) > 50.0) {
+          isTaxMismatch = true;
+        }
+      }
+
+      // Check 7: Low Confidence / Blurry
+      const isLowConfidence = confidence < 70.0 || extractedInvoice.processingStatus === 'REVIEW_REQUIRED';
+
+      // ── Combine into existing match status & flag reasons ──
+      if (isDuplicate) {
+        matchStatus = 'MISMATCH';
+        passBool = 0;
+        flagReason = 'OCR_MISMATCH';
+      } else if (isMissingPo || isPoMismatch || isVendorMismatch) {
+        matchStatus = 'MISMATCH';
+        passBool = 0;
+        flagReason = 'OCR_MISMATCH';
+      } else if (isQtyVariance || isAmountMismatch || isTaxMismatch) {
+        matchStatus = 'MISMATCH';
+        passBool = 0;
+        flagReason = 'TOLERANCE_EXCEEDED';
+      } else if (isLowConfidence) {
+        matchStatus = 'LOW_CONFIDENCE';
+        passBool = 0;
+        flagReason = 'OCR_MISMATCH';
+      } else {
+        matchStatus = 'MATCH';
+        passBool = 1;
+        flagReason = 'AWAITING_CA_VERIFY';
+      }
+    } else {
+      // BACKWARD COMPATIBLE DEMO SCENARIO LOGIC
+      const scenario = mock_scenario || 'MATCH';
+      if (scenario === 'MISMATCH') {
+        ocrWeight = physicalNetTons + 5.0; // discrepancy of exactly 5.0 tons!
+        matchStatus = 'MISMATCH';
+        confidence = 94.2;
+        variancePct = parseFloat(((5.0 / physicalNetTons) * 100).toFixed(2));
+        passBool = 0;
+        flagReason = 'TOLERANCE_EXCEEDED';
+      } else if (scenario === 'BLURRY') {
+        ocrWeight = 0.0;
+        ocrWaybill = 'UNKNOWN';
+        matchStatus = 'LOW_CONFIDENCE';
+        confidence = 34.0;
+        variancePct = 100.0;
+        passBool = 0;
+        flagReason = 'OCR_MISMATCH';
+      }
     }
 
-    // Insert base POD record safely
+    // Persist POD & Extracted OCR data
     try {
       db.prepare(`
-        INSERT OR REPLACE INTO pod_documents (assignment_id, pod_file_url, match_status)
-        VALUES (?, ?, ?)
-      `).run(assignmentId, fileUrl, matchStatus);
+        INSERT OR REPLACE INTO pod_documents (
+          assignment_id, pod_file_url, ocr_waybill_extracted, ocr_weight_extracted,
+          ocr_confidence_pct, match_status, ocr_invoice_no, ocr_vendor_name,
+          ocr_po_no, ocr_material, ocr_quantity, ocr_total_amount, ocr_tax_amount,
+          ocr_line_items_json, ocr_raw_text, file_hash, ocr_provider,
+          ocr_processing_status, ocr_processed_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+      `).run(
+        assignmentId,
+        fileUrl,
+        ocrWaybill,
+        ocrWeight,
+        confidence,
+        matchStatus,
+        extractedInvoice?.invoiceNumber || null,
+        extractedInvoice?.vendorName || null,
+        extractedInvoice?.poNumber || null,
+        extractedInvoice?.lineItems?.[0]?.description || poInfo.material || null,
+        ocrWeight,
+        extractedInvoice?.totalAmount || null,
+        extractedInvoice?.taxAmount || null,
+        extractedInvoice?.lineItems ? JSON.stringify(extractedInvoice.lineItems) : null,
+        extractedInvoice?.rawText || null,
+        extractedInvoice?.fileHash || null,
+        extractedInvoice?.ocrProvider || 'MOCK',
+        extractedInvoice?.processingStatus || 'EXTRACTED'
+      );
     } catch (e) {
-      console.warn('pod_documents insert warning:', e);
-    }
-
-    try {
-      db.prepare(`
-        UPDATE pod_documents
-        SET ocr_waybill_extracted = ?, ocr_weight_extracted = ?, ocr_confidence_pct = ?, match_status = ?
-        WHERE assignment_id = ?
-      `).run(ocrWaybill, ocrWeight, confidence, matchStatus, assignmentId);
-    } catch (e) {
-      console.warn('pod_documents update warning:', e);
+      console.warn('pod_documents upsert warning:', e);
     }
 
     try {
@@ -1826,7 +2010,8 @@ router.post('/assignments/:id/pod-upload', requireAuth, (req: Request, res: Resp
         variance_pct: variancePct,
         pass_bool: passBool === 1
       },
-      under_review: true
+      under_review: true,
+      extracted_invoice: extractedInvoice
     });
   } catch (err: any) {
     console.error('[POD Upload Handler Error]', err);

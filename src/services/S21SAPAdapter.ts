@@ -13,6 +13,7 @@ import type {
   SAPSyncLog,
 } from '../types/domain';
 import { MockSAPAdapter } from './MockSAPAdapter';
+import { API_BASE } from '../lib/api_v3';
 
 // Load config from environment variables
 const S21_BASE_URL = import.meta.env.VITE_SAP_S21_BASE_URL || '';
@@ -129,9 +130,7 @@ export const S21SAPAdapter: ISAPAdapter = {
         message: `S21 Fetch Failed: ${err.message}. Falling back to mock data.`,
       });
       // Fallback: Fetch directly from S21 Express Server database endpoints (/api/v3/contracts)
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const host = isLocal ? 'http://localhost:3001' : 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com';
-      const caContracts = await fetch(`${host}/api/v3/contracts`, {
+      const caContracts = await fetch(`${API_BASE}/contracts`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
       }).then(r => r.json());
       
@@ -202,9 +201,7 @@ export const S21SAPAdapter: ISAPAdapter = {
         message: `S21 Fetch PO Failed: ${err.message}. Falling back to mock data.`,
       });
       // Fallback: Fetch directly from S21 Express Server database endpoints (/api/v3/purchase-orders)
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const host = isLocal ? 'http://localhost:3001' : 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com';
-      const caPOs = await fetch(`${host}/api/v3/purchase-orders`, {
+      const caPOs = await fetch(`${API_BASE}/purchase-orders`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
       }).then(r => r.json());
 

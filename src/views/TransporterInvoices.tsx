@@ -5,6 +5,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { Table, Column } from '../components/Table';
 import { formatCurrency, formatDate } from '../utils/format';
+import { API_BASE } from '../lib/api_v3';
 
 export const TransporterInvoices: React.FC = () => {
   const [ledgerList, setLedgerList] = useState<any[]>([]);
@@ -13,9 +14,7 @@ export const TransporterInvoices: React.FC = () => {
   const loadInvoices = async () => {
     setLoading(true);
     try {
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const host = isLocal ? 'http://localhost:3001' : 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com';
-      const resLedger = await fetch(`${host}/api/v3/delivery-invoices?status=LEDGER`, {
+      const resLedger = await fetch(`${API_BASE}/delivery-invoices?status=LEDGER`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3')}` }
       });
       const dataLedger = await resLedger.json();

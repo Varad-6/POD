@@ -6,10 +6,13 @@ import { drApi, TransportAssignmentV3 } from '../lib/api_v3';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { PodzoLogo } from '../components/branding/PodzoLogo';
+import { FileUploadBox } from '../components/FileUploadBox';
 import {
   Truck, MapPin, CheckCircle2, Upload, AlertTriangle, Key, Check,
-  Navigation, Package, Clock, ArrowRight, ChevronDown, ChevronUp
+  Navigation, Package, Clock, ArrowRight, ChevronDown, ChevronUp,
+  FileText, RefreshCw, AlertCircle
 } from 'lucide-react';
+import { formatCurrency } from '../utils/format';
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 const JourneyStep: React.FC<{ num: number; label: string; done: boolean; active: boolean }> = ({ num, label, done, active }) => (
@@ -97,7 +100,12 @@ export const DriverDashboard: React.FC = () => {
   const [pickupOtp, setPickupOtp] = useState('');
   const [deliveryOtp, setDeliveryOtp] = useState('');
 
-  // POD
+  // POD & Real Invoice OCR
+  const [uploadMode, setUploadMode] = useState<'REAL_FILE' | 'DEMO_MOCK'>('REAL_FILE');
+  const [selectedRealFile, setSelectedRealFile] = useState<File | null>(null);
+  const [selectedRealFileName, setSelectedRealFileName] = useState<string | null>(null);
+  const [ocrStep, setOcrStep] = useState<'IDLE' | 'UPLOADING' | 'SCANNING' | 'EXTRACTING' | 'PROCESSING'>('IDLE');
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [selectedPodFile, setSelectedPodFile] = useState('/uploads/pods/waybill_match.png');
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [mockScenario, setMockScenario] = useState<'MATCH' | 'MISMATCH' | 'BLURRY'>('MATCH');
@@ -175,6 +183,7 @@ export const DriverDashboard: React.FC = () => {
     if (!s) return;
     setIsSubmitting(true);
     try {
+      await new Promise(r => setTimeout(r, 900));
       const res = await drApi.otpGenerate(s.id, type);
       if (type === 'PICKUP') setPickupOtp(res.otp_code);
       if (type === 'DELIVERY') setDeliveryOtp(res.otp_code);
@@ -189,6 +198,7 @@ export const DriverDashboard: React.FC = () => {
     if (!s || isSubmitting) return;
     setIsSubmitting(true);
     try {
+      await new Promise(r => setTimeout(r, 1100));
       await drApi.confirmArrival(s.id, { gps_lat: -25.7670, gps_lng: 29.4630 });
       await loadAssignments(true);
     } catch (err: any) {
@@ -199,20 +209,50 @@ export const DriverDashboard: React.FC = () => {
   };
 
   const handlePodSubmit = async () => {
-    if (!s || !selectedPodFile) return;
+    if (!s) return;
+    if (uploadMode === 'REAL_FILE' && !selectedRealFile) {
+      setUploadError('Please select or drag-and-drop an invoice file (PDF, PNG, or JPG) to upload.');
+      return;
+    }
     setIsSubmitting(true);
+    setUploadError(null);
     try {
-      const res = await drApi.uploadPod(s.id, {
-        pod_file_url: selectedPodFile,
-        mock_scenario: mockScenario
-      });
-      setOcrResult(res);
-      await loadAssignments();
+      if (uploadMode === 'REAL_FILE' && selectedRealFile) {
+        setOcrStep('UPLOADING');
+        await new Promise(r => setTimeout(r, 900));
+        setOcrStep('SCANNING');
+        await new Promise(r => setTimeout(r, 1100));
+        setOcrStep('EXTRACTING');
+        await new Promise(r => setTimeout(r, 1000));
+        setOcrStep('PROCESSING');
+        await new Promise(r => setTimeout(r, 800));
+
+        const res = await drApi.uploadPod(s.id, { file: selectedRealFile });
+        setOcrResult(res);
+        await loadAssignments();
+      } else {
+        setOcrStep('UPLOADING');
+        await new Promise(r => setTimeout(r, 750));
+        setOcrStep('SCANNING');
+        await new Promise(r => setTimeout(r, 950));
+        setOcrStep('EXTRACTING');
+        await new Promise(r => setTimeout(r, 850));
+        setOcrStep('PROCESSING');
+        await new Promise(r => setTimeout(r, 700));
+
+        const res = await drApi.uploadPod(s.id, {
+          pod_file_url: selectedPodFile,
+          mock_scenario: mockScenario
+        });
+        setOcrResult(res);
+        await loadAssignments();
+      }
     } catch (err: any) {
-      console.error('Failed to upload POD:', err);
-      alert('Error uploading POD: ' + (err.message || 'Server error'));
+      console.error('Failed to upload POD/Invoice:', err);
+      setUploadError('Unable to process the invoice. Please verify that the file is readable and try again.');
     } finally {
       setIsSubmitting(false);
+      setOcrStep('IDLE');
     }
   };
 
@@ -535,8 +575,8 @@ export const DriverDashboard: React.FC = () => {
 
           {/* ── STEP 4: Upload POD ── */}
           <ActionCard
-            title="Step 4 — Upload Delivery Receipt (POD)"
-            subtitle={canUploadPod ? "Take a photo of the stamped receipt and upload it here." : "Awaiting customer yard receiver to complete unloading weigh-in & stamp your receipt."}
+            title="Step 4 — Upload Tax Invoice & Delivery Receipt"
+            subtitle={canUploadPod ? "Upload an actual tax invoice (PDF, PNG, JPG) or select a sample receipt scenario for automated OCR verification." : "Awaiting customer yard receiver to complete unloading weigh-in & stamp your receipt."}
             icon={<Upload size={18} />}
             accentColor="var(--color-brand-blue-600)"
             locked={!canUploadPod}
@@ -544,105 +584,274 @@ export const DriverDashboard: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {isUploaded ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--color-success-text)', fontWeight: 700, fontSize: '14px', backgroundColor: 'var(--color-success-bg)', padding: '14px', borderRadius: '12px', border: '1px solid var(--color-success-light)', marginBottom: '4px' }}>
-                  <CheckCircle2 size={18} /> Waybill POD Successfully Uploaded! Run Complete.
+                  <CheckCircle2 size={18} /> Waybill POD & Invoice Successfully Processed! Run Complete.
                 </div>
               ) : (
                 <>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                      Select Sample Stamped Receipt Scenario (Demo Mode)
-                    </label>
-                    <select
-                      value={mockScenario}
-                      onChange={(e) => {
-                        const val = e.target.value as 'MATCH' | 'MISMATCH' | 'BLURRY';
-                        setMockScenario(val);
-                        if (val === 'MATCH') {
-                          setSelectedPodFile('/uploads/pods/waybill_match.png');
-                        } else if (val === 'MISMATCH') {
-                          setSelectedPodFile('/uploads/pods/waybill_mismatch.png');
-                        } else {
-                          setSelectedPodFile('/uploads/pods/waybill_blurry.png');
-                        }
+                  {/* Mode switcher */}
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setUploadMode('REAL_FILE'); setUploadError(null); }}
+                      style={{
+                        flex: 1, padding: '9px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                        border: '1.5px solid',
+                        borderColor: uploadMode === 'REAL_FILE' ? 'var(--color-brand-blue-600)' : 'var(--color-border)',
+                        backgroundColor: uploadMode === 'REAL_FILE' ? 'var(--color-brand-blue-50)' : 'var(--color-bg-page)',
+                        color: uploadMode === 'REAL_FILE' ? 'var(--color-brand-blue-700)' : 'var(--color-text-muted)',
+                        cursor: 'pointer', transition: 'all 0.2s'
                       }}
-                       style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: isMobile ? '11px' : '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', cursor: 'pointer' }}
-                     >
-                       <option value="MATCH">{isMobile ? '🟢 MATCH (100% Weight Match)' : '🟢 MATCH (Clean Scan, 100% Weight Agreement)'}</option>
-                       <option value="MISMATCH">{isMobile ? '🔴 MISMATCH (Weight Discrepancy)' : '🔴 MISMATCH (Variance Found, Weight Discrepancy)'}</option>
-                       <option value="BLURRY">{isMobile ? '🟡 BLURRY (Low OCR Confidence)' : '🟡 BLURRY (Low Image Quality, Low OCR Confidence)'}</option>
-                    </select>
-                    {selectedPodFile && (
-                      <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--color-brand-blue-700)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <Check size={14} color="var(--color-success)" /> Selected Mock Document: {selectedPodFile.split('/').pop()}
-                      </div>
-                    )}
+                    >
+                      📄 Upload Real Invoice (PDF / PNG / JPG)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setUploadMode('DEMO_MOCK'); setUploadError(null); }}
+                      style={{
+                        flex: 1, padding: '9px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                        border: '1.5px solid',
+                        borderColor: uploadMode === 'DEMO_MOCK' ? 'var(--color-brand-blue-600)' : 'var(--color-border)',
+                        backgroundColor: uploadMode === 'DEMO_MOCK' ? 'var(--color-brand-blue-50)' : 'var(--color-bg-page)',
+                        color: uploadMode === 'DEMO_MOCK' ? 'var(--color-brand-blue-700)' : 'var(--color-text-muted)',
+                        cursor: 'pointer', transition: 'all 0.2s'
+                      }}
+                    >
+                      🧪 Select Sample Mock (Demo Mode)
+                    </button>
                   </div>
+
+                  {uploadMode === 'REAL_FILE' ? (
+                    <div>
+                      <FileUploadBox
+                        onFileSelect={(name, file) => {
+                          setSelectedRealFileName(name);
+                          setSelectedRealFile(file);
+                          setUploadError(null);
+                        }}
+                        selectedFileName={selectedRealFileName}
+                        onClear={() => {
+                          setSelectedRealFileName(null);
+                          setSelectedRealFile(null);
+                          setUploadError(null);
+                        }}
+                      />
+                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '-8px', marginBottom: '8px' }}>
+                        Supports PDF invoices, camera photos, or scanned receipts up to 15MB.
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                        Select Sample Stamped Receipt Scenario (Demo Mode)
+                      </label>
+                      <select
+                        value={mockScenario}
+                        onChange={(e) => {
+                          const val = e.target.value as 'MATCH' | 'MISMATCH' | 'BLURRY';
+                          setMockScenario(val);
+                          if (val === 'MATCH') {
+                            setSelectedPodFile('/uploads/pods/waybill_match.png');
+                          } else if (val === 'MISMATCH') {
+                            setSelectedPodFile('/uploads/pods/waybill_mismatch.png');
+                          } else {
+                            setSelectedPodFile('/uploads/pods/waybill_blurry.png');
+                          }
+                        }}
+                        style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: isMobile ? '11px' : '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', cursor: 'pointer' }}
+                      >
+                        <option value="MATCH">{isMobile ? '🟢 MATCH (100% Weight Match)' : '🟢 MATCH (Clean Scan, 100% Weight Agreement)'}</option>
+                        <option value="MISMATCH">{isMobile ? '🔴 MISMATCH (Weight Discrepancy)' : '🔴 MISMATCH (Variance Found, Weight Discrepancy)'}</option>
+                        <option value="BLURRY">{isMobile ? '🟡 BLURRY (Low OCR Confidence)' : '🟡 BLURRY (Low Image Quality, Low OCR Confidence)'}</option>
+                      </select>
+                      {selectedPodFile && (
+                        <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--color-brand-blue-700)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Check size={14} color="var(--color-success)" /> Selected Mock Document: {selectedPodFile.split('/').pop()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Progressive OCR Status Banner */}
+                  {ocrStep !== 'IDLE' && (
+                    <div style={{
+                      backgroundColor: 'var(--color-brand-blue-50)', border: '1.5px solid var(--color-brand-blue-200)',
+                      borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px'
+                    }}>
+                      <RefreshCw size={16} className="spin" color="var(--color-brand-blue-600)" />
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-brand-blue-700)' }}>
+                        {ocrStep === 'UPLOADING' && 'Uploading Invoice Document...'}
+                        {ocrStep === 'SCANNING' && 'Scanning Document with PaddleOCR Engine...'}
+                        {ocrStep === 'EXTRACTING' && 'Extracting Structured Line Items & Tax Metadata...'}
+                        {ocrStep === 'PROCESSING' && 'Verifying Against SAP PO & Destination Weighment...'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* User-friendly Error message */}
+                  {uploadError && (
+                    <div style={{
+                      backgroundColor: 'var(--color-error-bg)', border: '1.5px solid var(--color-error-light)',
+                      borderRadius: '10px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px',
+                      color: 'var(--color-error-text)', fontSize: '13px', fontWeight: 600
+                    }}>
+                      <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                      <span>{uploadError}</span>
+                    </div>
+                  )}
 
                   <Button
                     onClick={handlePodSubmit}
-                    disabled={isSubmitting || !selectedPodFile}
+                    disabled={isSubmitting || (uploadMode === 'REAL_FILE' ? !selectedRealFile : !selectedPodFile)}
                     variant="primary"
                     style={{
                       padding: '14px 20px', width: '100%', minHeight: '48px',
                       display: 'flex', alignItems: 'center', gap: '8px'
                     }}
                   >
-                    <Upload size={16} /> Upload Receipt & Submit for Verification
+                    <Upload size={16} />
+                    {isSubmitting
+                      ? (ocrStep === 'UPLOADING' ? 'Uploading...' : ocrStep === 'SCANNING' ? 'Scanning OCR...' : ocrStep === 'EXTRACTING' ? 'Extracting Data...' : 'Processing...')
+                      : (uploadMode === 'REAL_FILE' ? 'Upload Invoice & Run OCR Verification' : 'Upload Receipt & Submit for Verification')
+                    }
                   </Button>
                 </>
               )}
 
+              {/* OCR Extracted Results & Preview */}
               {ocrResult && (
-                <div style={{ backgroundColor: 'var(--color-bg-page)', borderRadius: '12px', padding: '16px', border: '1px solid var(--color-border)' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '12px' }}>
-                    Receipt Scan Results
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* 1. Structured Invoice Preview */}
+                  {ocrResult.extracted_invoice && (
+                    <div style={{
+                      backgroundColor: 'var(--color-bg-card)', borderRadius: '12px',
+                      border: '1.5px solid var(--color-border)', padding: '16px',
+                      boxShadow: 'var(--shadow-card)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <FileText size={16} color="var(--color-brand-blue-600)" />
+                          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-text-heading)' }}>
+                            OCR Extracted Invoice Data
+                          </span>
+                        </div>
+                        <span className="badge badge-blue" style={{ fontSize: '11px', fontWeight: 700 }}>
+                          Confidence: {ocrResult.extracted_invoice.confidence}%
+                        </span>
+                      </div>
+
+                      {/* Header details */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', fontSize: '12px', marginBottom: '14px' }}>
+                        <div>
+                          <div style={{ color: 'var(--color-text-muted)', fontSize: '10.5px', textTransform: 'uppercase', fontWeight: 700 }}>Invoice Number</div>
+                          <div className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)' }}>{ocrResult.extracted_invoice.invoiceNumber || '—'}</div>
+                        </div>
+                        <div>
+                          <div style={{ color: 'var(--color-text-muted)', fontSize: '10.5px', textTransform: 'uppercase', fontWeight: 700 }}>Invoice Date</div>
+                          <div style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.extracted_invoice.invoiceDate || '—'}</div>
+                        </div>
+                        <div>
+                          <div style={{ color: 'var(--color-text-muted)', fontSize: '10.5px', textTransform: 'uppercase', fontWeight: 700 }}>Vendor</div>
+                          <div style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.extracted_invoice.vendorName || '—'}</div>
+                        </div>
+                        <div>
+                          <div style={{ color: 'var(--color-text-muted)', fontSize: '10.5px', textTransform: 'uppercase', fontWeight: 700 }}>Extracted PO #</div>
+                          <div className="mono" style={{ fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>{ocrResult.extracted_invoice.poNumber || 'None / Missing'}</div>
+                        </div>
+                        <div>
+                          <div style={{ color: 'var(--color-text-muted)', fontSize: '10.5px', textTransform: 'uppercase', fontWeight: 700 }}>Total Amount</div>
+                          <div className="mono" style={{ fontWeight: 850, color: 'var(--color-text-heading)' }}>
+                            {ocrResult.extracted_invoice.totalAmount ? formatCurrency(ocrResult.extracted_invoice.totalAmount) : '—'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Line Items Table */}
+                      {ocrResult.extracted_invoice.lineItems && ocrResult.extracted_invoice.lineItems.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                            Line Items ({ocrResult.extracted_invoice.lineItems.length})
+                          </div>
+                          <div style={{ overflowX: 'auto', border: '1px solid var(--color-border)', borderRadius: '8px' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11.5px', textAlign: 'left' }}>
+                              <thead>
+                                <tr style={{ backgroundColor: 'var(--color-bg-page)', borderBottom: '1px solid var(--color-border)' }}>
+                                  <th style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>Material</th>
+                                  <th style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--color-text-muted)' }}>Description</th>
+                                  <th style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--color-text-muted)', textAlign: 'right' }}>Qty</th>
+                                  <th style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--color-text-muted)', textAlign: 'right' }}>Rate</th>
+                                  <th style={{ padding: '6px 10px', fontWeight: 700, color: 'var(--color-text-muted)', textAlign: 'right' }}>Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {ocrResult.extracted_invoice.lineItems.map((li: any, idx: number) => (
+                                  <tr key={idx} style={{ borderBottom: idx < ocrResult.extracted_invoice.lineItems.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
+                                    <td className="mono" style={{ padding: '6px 10px', fontWeight: 700 }}>{li.materialCode || '—'}</td>
+                                    <td style={{ padding: '6px 10px' }}>{li.description}</td>
+                                    <td className="mono" style={{ padding: '6px 10px', textAlign: 'right' }}>{li.quantity}</td>
+                                    <td className="mono" style={{ padding: '6px 10px', textAlign: 'right' }}>{li.unitPrice ? formatCurrency(li.unitPrice) : '—'}</td>
+                                    <td className="mono" style={{ padding: '6px 10px', textAlign: 'right', fontWeight: 700 }}>{li.lineTotal ? formatCurrency(li.lineTotal) : '—'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 2. Verification & Reconciliation Results */}
+                  <div style={{ backgroundColor: 'var(--color-bg-page)', borderRadius: '12px', padding: '16px', border: '1px solid var(--color-border)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '12px' }}>
+                      Invoice & Weight Reconciliation Results
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: 'var(--color-text-muted)' }}>Waybill / Reference</span>
+                        <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.ocr?.ocr_waybill_extracted || '—'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: 'var(--color-text-muted)' }}>Quantity / Weight Extracted</span>
+                        <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.ocr?.ocr_weight_extracted || '—'} Tons</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                        <span style={{ color: 'var(--color-text-muted)' }}>OCR Scan Quality</span>
+                        <span style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.ocr?.ocr_confidence_pct || '—'}%</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid var(--color-border)', paddingTop: '8px', marginTop: '4px' }}>
+                        <span style={{ color: 'var(--color-text-muted)' }}>Matches SAP PO?</span>
+                        <span style={{ 
+                          fontWeight: 850, 
+                          color: ocrResult.ocr?.match_status === 'MATCH' 
+                            ? 'var(--color-success-text)' 
+                            : ocrResult.ocr?.match_status === 'LOW_CONFIDENCE' 
+                              ? 'var(--color-warning-text)' 
+                              : 'var(--color-error-text)' 
+                        }}>
+                          {ocrResult.ocr?.match_status === 'MATCH' 
+                            ? '✓ Yes, Matches' 
+                            : ocrResult.ocr?.match_status === 'LOW_CONFIDENCE'
+                              ? '⚠️ Low Confidence / Manual Audit Required'
+                              : '✗ Discrepancy Found — Sent to Review Queue'}
+                        </span>
+                      </div>
+                    </div>
+                    {ocrResult.ocr?.match_status === 'MATCH' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: 'var(--color-success-bg)', borderRadius: '8px', padding: '10px 12px', color: 'var(--color-success-text)', fontSize: '12px', fontWeight: 600, border: '1px solid var(--color-success-light)' }}>
+                        <CheckCircle2 size={14} /> Clean OCR match! Queued for standard review.
+                      </div>
+                    )}
+                    {ocrResult.ocr?.match_status === 'MISMATCH' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: 'var(--color-error-bg)', borderRadius: '8px', padding: '10px 12px', color: 'var(--color-error-text)', fontSize: '12px', fontWeight: 600, border: '1px solid var(--color-error-light)' }}>
+                        <AlertTriangle size={14} /> Discrepancy detected against SAP PO. Queued for Company Admin verification.
+                      </div>
+                    )}
+                    {ocrResult.ocr?.match_status === 'LOW_CONFIDENCE' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: 'var(--color-warning-bg)', borderRadius: '8px', padding: '10px 12px', color: 'var(--color-warning-text)', fontSize: '12px', fontWeight: 600, border: '1px solid var(--color-warning-light)' }}>
+                        <AlertTriangle size={14} /> Low OCR confidence or blurry document. Sent to company admin for manual check.
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                      <span style={{ color: 'var(--color-text-muted)' }}>Bill Number</span>
-                      <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.ocr?.ocr_waybill_extracted || '—'}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                      <span style={{ color: 'var(--color-text-muted)' }}>Weight Read</span>
-                      <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.ocr?.ocr_weight_extracted || '—'} Tons</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                      <span style={{ color: 'var(--color-text-muted)' }}>Scan Quality</span>
-                      <span style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.ocr?.ocr_confidence_pct || '—'}%</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid var(--color-border)', paddingTop: '8px', marginTop: '4px' }}>
-                      <span style={{ color: 'var(--color-text-muted)' }}>Matches SAP PO?</span>
-                      <span style={{ 
-                        fontWeight: 850, 
-                        color: ocrResult.ocr?.match_status === 'MATCH' 
-                          ? 'var(--color-success-text)' 
-                          : ocrResult.ocr?.match_status === 'LOW_CONFIDENCE' 
-                            ? 'var(--color-warning-text)' 
-                            : 'var(--color-error-text)' 
-                      }}>
-                        {ocrResult.ocr?.match_status === 'MATCH' 
-                          ? '✓ Yes, Matches' 
-                          : ocrResult.ocr?.match_status === 'LOW_CONFIDENCE'
-                            ? '⚠️ Blurry / Low Confidence Scan'
-                            : '✗ No, Mismatch — Sent for Review'}
-                      </span>
-                    </div>
-                  </div>
-                  {ocrResult.ocr?.match_status === 'MATCH' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: 'var(--color-success-bg)', borderRadius: '8px', padding: '10px 12px', color: 'var(--color-success-text)', fontSize: '12px', fontWeight: 600, border: '1px solid var(--color-success-light)' }}>
-                      <CheckCircle2 size={14} /> Clean OCR match! Queued for standard review.
-                    </div>
-                  )}
-                  {ocrResult.ocr?.match_status === 'MISMATCH' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: 'var(--color-error-bg)', borderRadius: '8px', padding: '10px 12px', color: 'var(--color-error-text)', fontSize: '12px', fontWeight: 600, border: '1px solid var(--color-error-light)' }}>
-                      <AlertTriangle size={14} /> Weight difference detected. Sent to company admin review queue.
-                    </div>
-                  )}
-                  {ocrResult.ocr?.match_status === 'LOW_CONFIDENCE' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '12px', backgroundColor: 'var(--color-warning-bg)', borderRadius: '8px', padding: '10px 12px', color: 'var(--color-warning-text)', fontSize: '12px', fontWeight: 600, border: '1px solid var(--color-warning-light)' }}>
-                      <AlertTriangle size={14} /> Blurry waybill scan. Sent to company admin for manual check.
-                    </div>
-                  )}
                 </div>
               )}
             </div>
