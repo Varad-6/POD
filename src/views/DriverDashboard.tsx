@@ -249,7 +249,7 @@ export const DriverDashboard: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to upload POD/Invoice:', err);
-      setUploadError('Unable to process the invoice. Please verify that the file is readable and try again.');
+      setUploadError(err.message || 'Unable to process the invoice. Please verify that the file is readable and try again.');
     } finally {
       setIsSubmitting(false);
       setOcrStep('IDLE');
