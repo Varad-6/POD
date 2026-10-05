@@ -7,6 +7,7 @@ import { basename, join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { createHash } from 'crypto';
 import { spawn } from 'child_process';
+import { inflateSync } from 'zlib';
 import { ExtractedInvoiceData, IOCRProvider, InvoiceLineItem } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -39,6 +40,46 @@ function parseCleanNumber(val: any): number | null {
   if (!cleaned) return null;
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : num;
+}
+
+function extractTextFromPdfBuffer(buffer: Buffer): string {
+  try {
+    const raw = buffer.toString('binary');
+    const texts: string[] = [];
+    const streamRegex = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+    let match;
+    while ((match = streamRegex.exec(raw)) !== null) {
+      const streamData = Buffer.from(match[1], 'binary');
+      let decompressed = '';
+      try {
+        decompressed = inflateSync(streamData).toString('utf-8');
+      } catch {
+        try {
+          decompressed = streamData.toString('utf-8');
+        } catch {}
+      }
+      
+      if (decompressed) {
+        const tjRegex = /\((.*?)\)\s*Tj/g;
+        let tjMatch;
+        while ((tjMatch = tjRegex.exec(decompressed)) !== null) {
+          texts.push(tjMatch[1]);
+        }
+        
+        const arrayTjRegex = /\[(.*?)\]\s*TJ/g;
+        let arrayMatch;
+        while ((arrayMatch = arrayTjRegex.exec(decompressed)) !== null) {
+          const innerMatches = arrayMatch[1].match(/\((.*?)\)/g);
+          if (innerMatches) {
+            texts.push(innerMatches.map(m => m.slice(1, -1)).join(' '));
+          }
+        }
+      }
+    }
+    return texts.join(' ').replace(/\\([()\\])/g, '$1').trim();
+  } catch {
+    return '';
+  }
 }
 
 export class OpenAIProvider implements IOCRProvider {
@@ -127,8 +168,12 @@ export class OpenAIProvider implements IOCRProvider {
 
     if (isPdf) {
       const rendered = await this.renderPdf(filePath);
-      imagesBase64 = rendered.images;
-      extractedText = rendered.text;
+      imagesBase64 = rendered.images || [];
+      extractedText = rendered.text || '';
+      
+      if (!extractedText && imagesBase64.length === 0) {
+        extractedText = extractTextFromPdfBuffer(fileBuffer);
+      }
     } else {
       imagesBase64 = [fileBuffer.toString('base64')];
     }
@@ -186,7 +231,7 @@ If line items cannot be determined, return an empty array [].`;
     if (extractedText) {
       userContent.push({
         type: 'text',
-        text: `Embedded Document Text:\n${extractedText.slice(0, 3000)}`
+        text: `Document Content:\n${extractedText.slice(0, 4000)}`
       });
     }
 
@@ -229,7 +274,7 @@ If line items cannot be determined, return an empty array [].`;
         console.error('[OpenAIProvider] API request failed with status:', response.status, errJson?.error?.message);
         return {
           ...emptyResult,
-          processingError: 'Unable to scan this invoice. Please verify the document and try again.'
+          processingError: `OpenAI API request failed (${response.status}): ${errJson?.error?.message || 'Unknown error'}`
         };
       }
 
@@ -258,8 +303,7 @@ If line items cannot be determined, return an empty array [].`;
       const poNo = parsed.poNumber ? String(parsed.poNumber).trim() : null;
       const invNo = parsed.invoiceNumber ? String(parsed.invoiceNumber).trim() : null;
 
-      // Status determined by extraction success (Section 9/13/14)
-      const hasKeyData = !!(invNo || poNo || lineItems.length > 0);
+      const hasKeyData = !!(invNo || poNo || lineItems.length > 0 || totalAmt !== null);
       const status = hasKeyData ? 'EXTRACTED' : 'REVIEW_REQUIRED';
 
       return {
@@ -277,7 +321,7 @@ If line items cannot be determined, return an empty array [].`;
         lineItems,
         ocrProvider: 'OPENAI',
         rawText: extractedText || JSON.stringify(parsed, null, 2),
-        confidence: null as any, // Null per prompt Section 14 (no invented confidences)
+        confidence: null as any,
         confidenceFields: {},
         processingStatus: status,
         processedAt: new Date().toISOString(),
