@@ -1,0 +1,55 @@
+[
+  {
+    "timestamp": "2026-10-05T18:50:49.717Z",
+    "command": "login",
+    "level": "debug",
+    "message": "Executing: login"
+  },
+  {
+    "timestamp": "2026-10-05T18:50:49.719Z",
+    "command": "login",
+    "level": "debug",
+    "message": "Joule version: 2.0.2"
+  },
+  {
+    "timestamp": "2026-10-05T18:50:49.737Z",
+    "command": "login",
+    "level": "info",
+    "message": "Logged out"
+  },
+  {
+    "timestamp": "2026-10-05T18:50:49.751Z",
+    "command": "login",
+    "level": "debug",
+    "message": "Attempting to discover auth configuration from API URL: https://ais-joule-hqc0gyza.eu10.sapdas.cloud.sap"
+  },
+  {
+    "timestamp": "2026-10-05T18:50:49.759Z",
+    "command": "login",
+    "level": "debug",
+    "message": "Attempting to discover auth from: https://ais-joule-hqc0gyza.eu10.sapdas.cloud.sap/"
+  },
+  {
+    "timestamp": "2026-10-05T18:50:50.270Z",
+    "command": "login",
+    "level": "debug",
+    "message": "Response status: 200"
+  },
+  {
+    "timestamp": "2026-10-05T18:50:50.277Z",
+    "command": "login",
+    "level": "debug",
+    "message": "Response headers: {\"cache-control\":\"no-cache, no-store, must-revalidate\",\"content-security-policy\":\"script-src 'self' 'nonce-dBgFvxw9yrDJDEet12L3Fw=='; frame-ancestors *\",\"content-type\":\"text/html\",\"date\":\"Mon, 05 Oct 2026 18:50:50 GMT\",\"set-cookie\":[\"JSESSIONID=9babdb52-2ca6-48c0-815e-5db47ffd7c9c; Max-Age=180; Path=/; HttpOnly; Secure; SameSite=None\",\"__VCAP_ID__=93a949a1-328d-4439-6cc7-29f3; Path=/; Max-Age=180; HttpOnly; Secure; SameSite=None\",\"__VCAP_ID_META__=secure&maxage=1791226430&samesite=none; Path=/; Max-Age=180; HttpOnly; Secure; SameSite=None\"],\"x-request-id\":\"bc04e014-5818-4b16-620b-0d7e48653f7e\",\"x-vcap-request-id\":\"bc04e014-5818-4b16-620b-0d7e48653f7e\",\"transfer-encoding\":\"chunked\",\"strict-transport-security\":\"max-age=31536000; includeSubDomains; preload;\"}"
+  },
+  {
+    "timestamp": "2026-10-05T18:50:50.284Z",
+    "command": "login",
+    "level": "debug",
+    "message": "Found redirect URL: https://alltpqkty.accounts.cloud.sap/oauth2/authorize?response_type=code&client_id=630e747a-b61b-436d-8eac-c94110d413e7&redirect_uri=https%3A%2F%2Fais-joule-hqc0gyza.eu10.sapdas.cloud.sap%2Flogin%2Fcallback%3FauthType%3Dias&scope=openid&app_tid=9476941f-88e3-474e-a4c6-28b1214965f2"
+  },
+  {
+    "timestamp": "2026-10-05T18:50:50.292Z",
+    "command": "login",
+    "level": "debug",
+    "message": "Successfully discovered auth configuration from API URL"
+  }

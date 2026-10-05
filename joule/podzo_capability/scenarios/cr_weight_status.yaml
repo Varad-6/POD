@@ -3,7 +3,7 @@ description: |
 
 slots:
   - name: po_id
-    description: Target Purchase Order or Assignment ID to inspect
+    description: Purchase Order or Assignment ID
 
 response_context:
   - value: $target_result.sap_po_no

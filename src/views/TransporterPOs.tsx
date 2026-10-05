@@ -209,14 +209,14 @@ export const TransporterPOs: React.FC = () => {
     setLoading(true);
     try {
       const [pendingList, assignedList, drs, activeAssigns] = await Promise.all([
-        taApi.getJobConfigs('PENDING'),
-        taApi.getJobConfigs('ASSIGNED'),
-        transportersApi.drivers(transporterId),
+        taApi.getJobConfigs('PENDING').catch(() => []),
+        taApi.getJobConfigs('ASSIGNED').catch(() => []),
+        transportersApi.drivers(transporterId).catch(() => []),
         assignmentsApi.list().catch(() => [])
       ]);
-      setJobConfigs([...pendingList, ...assignedList]);
-      setDrivers(drs);
-      setAssignmentsList(activeAssigns);
+      setJobConfigs([...(Array.isArray(pendingList) ? pendingList : []), ...(Array.isArray(assignedList) ? assignedList : [])]);
+      setDrivers(Array.isArray(drs) ? drs : []);
+      setAssignmentsList(Array.isArray(activeAssigns) ? activeAssigns : []);
     } catch (err) {
       console.error('Failed to load:', err);
     } finally {
@@ -257,9 +257,6 @@ export const TransporterPOs: React.FC = () => {
       if (activeTab === 'PENDING' && jc.status !== 'PENDING') return false;
       if (activeTab === 'ASSIGNED' && jc.status !== 'ASSIGNED') return false;
 
-      // ContractPoContext sync
-      if (selectedPoId !== 'ALL' && activePoObject && jc.sap_po_no !== activePoObject.sap_po_no) return false;
-
       // Text search
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
@@ -272,7 +269,7 @@ export const TransporterPOs: React.FC = () => {
 
       return true;
     });
-  }, [jobConfigs, activeTab, selectedPoId, activePoObject, searchTerm]);
+  }, [jobConfigs, activeTab, searchTerm]);
 
   // Paginated list
   const paginatedJobConfigs = useMemo(() => {
@@ -889,6 +886,7 @@ export const TransporterPOs: React.FC = () => {
         onChange={(id) => {
           setActiveTab(id as any);
           setCurrentPage(1);
+          loadData();
         }} 
       />
 

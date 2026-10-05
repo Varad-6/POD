@@ -1,27 +1,15 @@
-parameters:
-  - name: status
-    optional: true
+parameters: []
 
 result:
-  invoices_list: <? inv_res.body ?>
-  total_invoices: <? inv_res.body.length ?>
+  summary: <? inv_res.body.summary ?>
+  total_count: <? inv_res.body.total_count ?>
 
 action_groups:
-  - condition: status != null
-    actions:
+  - actions:
       - type: api-request
         system_alias: PodzoneService
         method: GET
-        path: /api/v3/delivery-invoices?status=<? status ?>
-        timeout: 10
-        result_variable: inv_res
-
-  - condition: status == null
-    actions:
-      - type: api-request
-        system_alias: PodzoneService
-        method: GET
-        path: /api/v3/delivery-invoices?status=LEDGER
+        path: /api/v3/joule/invoices
         timeout: 10
         result_variable: inv_res
 

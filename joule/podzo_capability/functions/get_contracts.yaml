@@ -1,15 +1,18 @@
 parameters: []
 
 result:
-  contracts_list: <? contracts_res.body ?>
-  total_count: <? contracts_res.body.length ?>
+  summary: <? contracts_res.body.summary ?>
+  total_count: <? contracts_res.body.total_count ?>
+  active_count: <? contracts_res.body.active_count ?>
+  contract_no: <? contracts_res.body.sample_contract_no ?>
+  customer_name: <? contracts_res.body.sample_customer_name ?>
 
 action_groups:
   - actions:
       - type: api-request
         system_alias: PodzoneService
         method: GET
-        path: /api/v3/contracts
+        path: /api/v3/joule/contracts
         timeout: 10
         result_variable: contracts_res
 
@@ -18,4 +21,4 @@ action_groups:
       - type: message
         message:
           type: text
-          content: Unable to retrieve active contracts from PODZO system at the moment. Please verify system connectivity.
+          content: Unable to retrieve active contracts from PODZO.

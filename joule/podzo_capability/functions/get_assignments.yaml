@@ -1,27 +1,19 @@
-parameters:
-  - name: status
-    optional: true
+parameters: []
 
 result:
-  assignments_list: <? asgn_res.body ?>
-  total_assignments: <? asgn_res.body.length ?>
+  summary: <? asgn_res.body.summary ?>
+  total_count: <? asgn_res.body.total_count ?>
+  assignment_id: <? asgn_res.body.sample_assignment_id ?>
+  driver_name: <? asgn_res.body.sample_driver_name ?>
+  vehicle_reg: <? asgn_res.body.sample_vehicle_reg ?>
+  status: <? asgn_res.body.sample_status ?>
 
 action_groups:
-  - condition: status != null && status != ""
-    actions:
+  - actions:
       - type: api-request
         system_alias: PodzoneService
         method: GET
-        path: /api/v3/assignments?status=<? status ?>
-        timeout: 10
-        result_variable: asgn_res
-
-  - condition: status == null || status == ""
-    actions:
-      - type: api-request
-        system_alias: PodzoneService
-        method: GET
-        path: /api/v3/assignments
+        path: /api/v3/joule/assignments
         timeout: 10
         result_variable: asgn_res
 

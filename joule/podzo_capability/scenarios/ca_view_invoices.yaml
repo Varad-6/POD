@@ -1,15 +1,13 @@
 description: |
-  Displays freight delivery invoice ledger including MIRO status.
+  Displays all freight delivery invoices in the ledger with PO, driver, amount, and MIRO status.
 
-slots:
-  - name: status
-    description: Filter status
+slots: []
 
 response_context:
-  - value: $target_result.total_invoices
-    description: Invoices count
-  - value: $target_result.invoices_list
-    description: Delivery invoices list
+  - value: $target_result.total_count
+    description: Total freight invoices found
+  - value: $target_result.summary
+    description: Freight delivery invoice ledger
 
 target:
   name: get_invoices

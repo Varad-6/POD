@@ -41,14 +41,6 @@ export const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     loadStats();
-
-    const handleDataRefreshed = () => {
-      loadStats();
-    };
-    window.addEventListener('pod_data_refreshed', handleDataRefreshed);
-    return () => {
-      window.removeEventListener('pod_data_refreshed', handleDataRefreshed);
-    };
   }, []);
 
   const openPOs = purchaseOrders.filter(p => p.status === 'OPEN');

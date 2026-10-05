@@ -1,14 +1,20 @@
 description: |
-  Provides an executive operations KPI summary across active transport assignments, pending review queues, and live weighbridge runs.
+  Provides operations KPI summary across active transport assignments, contracts, POs, and exceptions.
 
 slots: []
 
 response_context:
-  - value: $target_result.total_assignments
-    description: Total active haulage runs in progress
-  - value: $target_result.assignments_list
-    description: High-level assignment metrics and staging progress
+  - value: $target_result.summary
+    description: Operations KPI overview summary
+  - value: $target_result.total_contracts
+    description: Active outline agreements
+  - value: $target_result.total_pos
+    description: Total purchase orders
+  - value: $target_result.open_pos
+    description: Open purchase orders
+  - value: $target_result.active_assignments
+    description: Active transport dispatches
 
 target:
-  name: get_assignments
+  name: get_dashboard
   type: function

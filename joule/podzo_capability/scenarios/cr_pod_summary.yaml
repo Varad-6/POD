@@ -1,15 +1,17 @@
 description: |
   Displays delivered and cleared consignments with stamped POD.
 
-slots:
-  - name: status
-    description: Clearance status
+slots: []
 
 response_context:
-  - value: $target_result.total_assignments
-    description: Cleared deliveries count
-  - value: $target_result.assignments_list
-    description: Cleared consignments list
+  - value: $target_result.assignment_id
+    description: Cleared assignment ID
+  - value: $target_result.driver_name
+    description: Driver name
+  - value: $target_result.vehicle_reg
+    description: Vehicle registration
+  - value: $target_result.status
+    description: Clearance status
 
 target:
   name: get_assignments

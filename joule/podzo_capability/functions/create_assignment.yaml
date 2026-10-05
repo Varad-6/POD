@@ -1,19 +1,17 @@
 parameters:
-  - name: job_config_id
-    optional: false
   - name: driver_id
-    optional: false
-  - name: vehicle_id
-    optional: false
-  - name: scheduled_date
-    optional: false
-  - name: license_no
     optional: true
-  - name: gstin
+  - name: vehicle_id
+    optional: true
+  - name: po_id
+    optional: true
+  - name: scheduled_date
     optional: true
 
 result:
   assignment_id: <? cr_res.body.id ?>
+  driver_name: <? cr_res.body.driver_name ?>
+  vehicle_reg: <? cr_res.body.vehicle_reg ?>
   message: <? cr_res.body.message ?>
   status: <? cr_res.status_code ?>
 
@@ -26,12 +24,10 @@ action_groups:
         headers:
           Content-Type: application/json
         body:
-          job_config_id: <? job_config_id ?>
           driver_id: <? driver_id ?>
           vehicle_id: <? vehicle_id ?>
+          po_id: <? po_id ?>
           scheduled_date: <? scheduled_date ?>
-          license_no: <? license_no ?>
-          gstin: <? gstin ?>
         timeout: 10
         result_variable: cr_res
 
@@ -40,4 +36,4 @@ action_groups:
       - type: message
         message:
           type: text
-          content: Failed to assign driver and vehicle to job.
+          content: Failed to assign driver and vehicle to transport run.

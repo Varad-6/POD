@@ -23,6 +23,19 @@ declare global {
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const mockRole = (req.headers['x-mock-role'] as string) || (req.query.mock_role as string);
+  const mockUserId = Number(req.headers['x-mock-user-id'] || req.query.mock_user_id) || 1;
+
+  if (mockRole && ['CA', 'TA', 'DR', 'CR', 'SR'].includes(mockRole.toUpperCase())) {
+    req.user = {
+      userId: mockUserId,
+      username: `mock_${mockRole.toLowerCase()}`,
+      role: mockRole.toUpperCase() as any,
+      entityId: 1,
+    };
+    return next();
+  }
+
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     req.user = {

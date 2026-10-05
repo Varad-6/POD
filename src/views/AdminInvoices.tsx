@@ -45,8 +45,8 @@ export const AdminInvoices: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const loadData = async (manual = false) => {
-    setLoading(true);
+  const loadData = async (manual = false, isSilent = false) => {
+    if (!isSilent) setLoading(true);
     setErrorMsg('');
     try {
       if (manual) await delay(650);
@@ -57,7 +57,7 @@ export const AdminInvoices: React.FC = () => {
     } catch (err) {
       console.error('Failed to load invoices:', err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 

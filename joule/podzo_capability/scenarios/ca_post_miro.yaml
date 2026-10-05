@@ -3,7 +3,7 @@ description: |
 
 slots:
   - name: invoice_id
-    description: The internal ID of the delivery invoice to post to SAP MIRO
+    description: Delivery invoice ID for SAP MIRO
 
 response_context:
   - value: $target_result.sap_ref

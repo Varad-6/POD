@@ -49,14 +49,6 @@ export const AdminApprovals: React.FC = () => {
 
   useEffect(() => {
     loadReviews();
-
-    const handleDataRefreshed = () => {
-      loadReviews();
-    };
-    window.addEventListener('pod_data_refreshed', handleDataRefreshed);
-    return () => {
-      window.removeEventListener('pod_data_refreshed', handleDataRefreshed);
-    };
   }, [activeTab]);
 
   const handleApprove = async () => {

@@ -1,25 +1,23 @@
 description: |
-  Pairs a registered fleet driver and truck vehicle to an accepted transport job run.
+  Pairs a fleet driver and vehicle to a transport run.
 
 slots:
-  - name: job_config_id
-    description: The Job Configuration ID to execute
   - name: driver_id
-    description: The registered fleet driver ID
+    description: Driver name or ID
   - name: vehicle_id
-    description: The registered fleet vehicle ID
-  - name: scheduled_date
-    description: The planned dispatch calendar date (e.g. 2026-10-08)
-  - name: license_no
-    description: Driver official heavy vehicle license number
-  - name: gstin
-    description: Carrier legal GSTIN or tax entity registration
+    description: Vehicle registration or ID
+  - name: po_id
+    description: Target Purchase Order Number
 
 response_context:
   - value: $target_result.assignment_id
-    description: Created Transport Assignment ID
+    description: Assignment ID
+  - value: $target_result.driver_name
+    description: Assigned driver
+  - value: $target_result.vehicle_reg
+    description: Assigned vehicle
   - value: $target_result.message
-    description: Driver and vehicle dispatch confirmation message
+    description: Dispatch confirmation
 
 target:
   name: create_assignment

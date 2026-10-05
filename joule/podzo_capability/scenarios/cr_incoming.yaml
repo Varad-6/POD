@@ -1,15 +1,13 @@
 description: |
-  Displays in-transit consignments en route to customer facility.
+  Displays all in-transit consignments en route to customer facility with driver, truck, and PO details.
 
-slots:
-  - name: status
-    description: Status filter
+slots: []
 
 response_context:
-  - value: $target_result.total_assignments
-    description: Trucks en route count
-  - value: $target_result.assignments_list
-    description: En-route deliveries list
+  - value: $target_result.total_count
+    description: Total active consignments
+  - value: $target_result.summary
+    description: List of active consignments
 
 target:
   name: get_assignments

@@ -1,0 +1,25 @@
+parameters: []
+
+result:
+  summary: <? dash_res.body.summary ?>
+  total_contracts: <? dash_res.body.total_contracts ?>
+  total_pos: <? dash_res.body.total_pos ?>
+  open_pos: <? dash_res.body.open_pos ?>
+  active_assignments: <? dash_res.body.active_assignments ?>
+  open_reviews: <? dash_res.body.open_reviews ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/joule/dashboard
+        timeout: 10
+        result_variable: dash_res
+
+  - condition: dash_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Could not load operations dashboard summary.

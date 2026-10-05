@@ -4,10 +4,10 @@ description: |
 slots: []
 
 response_context:
-  - value: $target_result.total_count
-    description: Total active contracts
-  - value: $target_result.contracts_list
-    description: Active outline agreements
+  - value: $target_result.contract_no
+    description: Sample outline agreement
+  - value: $target_result.customer_name
+    description: Sample customer name
 
 target:
   name: get_contracts

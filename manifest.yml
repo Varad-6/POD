@@ -1,12 +1,11 @@
 ---
 applications:
-  # ── 1. Backend Server ───────────────────────────────────────────────
+  # ── 1. Backend Server (Enhanced for OCR & Database) ─────────────────
   - name: podzone-srv
     path: .
-    memory: 256M
-    disk_quota: 512M
-    routes:
-      - route: podz-srv-abhiyanta.cfapps.eu10-005.hana.ondemand.com
+    memory: 512M
+    disk_quota: 1024M
+    random-route: true
     command: npm run server
     env:
       NODE_ENV: production
@@ -14,10 +13,8 @@ applications:
   # ── 2. Frontend Work Zone Portal App ────────────────────────────────
   - name: podzone
     path: ./dist
-    memory: 128M
-    disk_quota: 256M
-    routes:
-      - route: podz-ui-abhiyanta.cfapps.eu10-005.hana.ondemand.com
-      - route: podz-ui-resplendent-hyena-wl.cfapps.eu10-005.hana.ondemand.com
+    memory: 256M
+    disk_quota: 512M
+    random-route: true
     buildpacks:
       - staticfile_buildpack

@@ -71,8 +71,8 @@ export const AdminContracts: React.FC = () => {
   const [showAssignForm, setShowAssignForm] = useState(false);
 
   // Fetch contracts on load
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const data = await caApi.getContracts();
       setContracts(data);
@@ -80,23 +80,37 @@ export const AdminContracts: React.FC = () => {
       const target = targetContractId ? data.find(c => c.id === targetContractId) : null;
       if (target) {
         handleContractSelect(target);
-      } else {
+      } else if (!isSilent && !selectedContract) {
         setSelectedContract(null);
         setPurchaseOrders([]);
         setSelectedPOsToAssign([]);
       }
 
+      // If a contract is currently selected, re-fetch its live PO list
+      if (selectedContractRef.current) {
+        const detail = await caApi.getContractDetails(selectedContractRef.current.id);
+        setSelectedContract(prev => prev ? { ...prev, ...detail } : detail);
+        if (detail.purchase_orders) {
+          setPurchaseOrders(detail.purchase_orders);
+        }
+      }
+
       const transList = await transportersApi.list();
       setTransporters(transList);
-      if (transList.length > 0) {
+      if (transList.length > 0 && !targetTransporterId) {
         setTargetTransporterId(transList[0].id.toString());
       }
     } catch (err) {
       console.error('Failed to load contracts data:', err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
+
+  const selectedContractRef = React.useRef(selectedContract);
+  useEffect(() => {
+    selectedContractRef.current = selectedContract;
+  }, [selectedContract]);
 
   useEffect(() => {
     loadData();
@@ -259,7 +273,7 @@ export const AdminContracts: React.FC = () => {
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={loadData}
+                onClick={() => loadData(false)}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <RefreshCw size={14} className={loading ? 'spin' : ''} />

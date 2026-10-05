@@ -5,7 +5,7 @@ slots:
   - name: assignment_id
     description: The approved haulage assignment ID
   - name: invoice_no
-    description: Unique freight invoice reference number (e.g. INV-2026-0015)
+    description: Unique freight invoice reference
   - name: file_url
     description: Scanned invoice PDF document URL
 

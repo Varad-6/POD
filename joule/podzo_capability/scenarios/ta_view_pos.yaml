@@ -1,13 +1,17 @@
 description: |
-  Displays purchase orders allocated to transporter vendor.
+  Displays all purchase orders allocated to transporter vendor with full details.
 
 slots: []
 
 response_context:
   - value: $target_result.total_count
-    description: Available PO count
-  - value: $target_result.purchase_orders
-    description: Purchase orders list
+    description: Total purchase orders found
+  - value: $target_result.summary
+    description: Complete list of purchase orders
+  - value: $target_result.open_count
+    description: Open purchase orders count
+  - value: $target_result.assigned_count
+    description: Assigned purchase orders count
 
 target:
   name: get_purchase_orders
