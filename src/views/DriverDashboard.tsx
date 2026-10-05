@@ -249,7 +249,7 @@ export const DriverDashboard: React.FC = () => {
       }
     } catch (err: any) {
       console.error('Failed to upload POD/Invoice:', err);
-      setUploadError('Unable to process the invoice. Please verify that the file is readable and try again.');
+      setUploadError(err.message || 'Unable to process the invoice. Please verify that the file is readable and try again.');
     } finally {
       setIsSubmitting(false);
       setOcrStep('IDLE');
@@ -680,7 +680,7 @@ export const DriverDashboard: React.FC = () => {
                       <RefreshCw size={16} className="spin" color="var(--color-brand-blue-600)" />
                       <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-brand-blue-700)' }}>
                         {ocrStep === 'UPLOADING' && 'Uploading Invoice Document...'}
-                        {ocrStep === 'SCANNING' && 'Scanning Document with PaddleOCR Engine...'}
+                        {ocrStep === 'SCANNING' && 'Scanning Invoice Document...'}
                         {ocrStep === 'EXTRACTING' && 'Extracting Structured Line Items & Tax Metadata...'}
                         {ocrStep === 'PROCESSING' && 'Verifying Against SAP PO & Destination Weighment...'}
                       </div>

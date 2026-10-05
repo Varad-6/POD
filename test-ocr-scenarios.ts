@@ -171,7 +171,7 @@ async function runTests() {
         }
       }
 
-      const isLowConfidence = confidence < 70.0 || extractedInvoice.processingStatus === 'REVIEW_REQUIRED';
+      const isLowConfidence = (confidence !== null && confidence !== undefined && confidence < 70.0) || extractedInvoice.processingStatus === 'REVIEW_REQUIRED';
 
       if (isDuplicate) {
         matchStatus = 'MISMATCH';

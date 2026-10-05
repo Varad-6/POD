@@ -1,21 +1,15 @@
 /**
  * Centralized OCR Service Orchestrator
- * Integrates Python PyMuPDF/PaddleOCR layout engine & Tesseract image fallback
+ * Active Provider: OpenAI API (Vision & Structured Document Understanding)
+ * Tesseract is deprecated and removed from active pipeline.
  */
-import { spawn } from 'child_process';
 import { existsSync, statSync, readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { createHash } from 'crypto';
-import { ExtractedInvoiceData, IOCRProvider } from './types.js';
-import { TesseractProvider } from './TesseractProvider.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { ExtractedInvoiceData } from './types.js';
+import { OpenAIProvider } from './OpenAIProvider.js';
 
 export class OCRService {
-  private static tesseractProvider = new TesseractProvider();
-  private static pythonScriptPath = join(__dirname, 'python_ocr_engine.py');
+  private static openAIProvider = new OpenAIProvider();
 
   /**
    * Validate file before processing
@@ -45,6 +39,7 @@ export class OCRService {
 
   /**
    * Main entry point to process any invoice file
+   * Active Path: OpenAI API
    */
   static async processInvoice(filePath: string, mimeType: string, originalFileName?: string): Promise<ExtractedInvoiceData> {
     const validation = this.validateFile(filePath, mimeType);
@@ -63,9 +58,9 @@ export class OCRService {
         totalAmount: null,
         currency: 'ZAR',
         lineItems: [],
-        ocrProvider: 'None',
+        ocrProvider: 'OPENAI',
         rawText: '',
-        confidence: 0,
+        confidence: null as any,
         confidenceFields: {},
         processingStatus: 'FAILED',
         processedAt: new Date().toISOString(),
@@ -77,60 +72,7 @@ export class OCRService {
       };
     }
 
-    const isPdf = mimeType.toLowerCase().includes('pdf') || filePath.toLowerCase().endsWith('.pdf');
-
-    if (isPdf) {
-      try {
-        const pythonResult = await this.runPythonEngine(filePath);
-        if (pythonResult && !pythonResult.error) {
-          if (originalFileName) pythonResult.originalFileName = originalFileName;
-          return pythonResult;
-        }
-        console.warn('[OCRService] Python engine warning:', pythonResult?.error);
-      } catch (err: any) {
-        console.error('[OCRService] Python OCR failed, attempting fallback:', err?.message || err);
-      }
-    }
-
-    // Raster image or fallback
-    return await this.tesseractProvider.extract(filePath, mimeType, originalFileName);
-  }
-
-  /**
-   * Spawn isolated Python process for high-fidelity PyMuPDF/PaddleOCR layout extraction
-   */
-  private static runPythonEngine(filePath: string): Promise<ExtractedInvoiceData> {
-    return new Promise((resolve, reject) => {
-      const pythonExe = process.platform === 'win32' ? 'python' : 'python3';
-      const pyProcess = spawn(pythonExe, [this.pythonScriptPath, filePath]);
-
-      let stdout = '';
-      let stderr = '';
-
-      pyProcess.stdout.on('data', (chunk) => {
-        stdout += chunk.toString();
-      });
-
-      pyProcess.stderr.on('data', (chunk) => {
-        stderr += chunk.toString();
-      });
-
-      pyProcess.on('close', (code) => {
-        if (code !== 0 && !stdout.trim()) {
-          return reject(new Error(`Python OCR exited with code ${code}: ${stderr}`));
-        }
-
-        try {
-          const parsed = JSON.parse(stdout.trim());
-          resolve(parsed);
-        } catch (parseErr) {
-          reject(new Error(`Failed to parse Python OCR output: ${stdout.slice(0, 200)}`));
-        }
-      });
-
-      pyProcess.on('error', (err) => {
-        reject(err);
-      });
-    });
+    // Active Demo OCR Provider: OpenAI API (No Tesseract in active path)
+    return await this.openAIProvider.extract(filePath, mimeType, originalFileName);
   }
 }
