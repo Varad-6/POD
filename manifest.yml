@@ -4,10 +4,10 @@ applications:
     path: .
     memory: 256M
     disk_quota: 512M
-    random-route: true
+    routes:
+      - route: podz-srv-abhiyanta.cfapps.eu10-005.hana.ondemand.com
     command: npm run server
     env:
-      PORT: 3001
       NODE_ENV: production
 
   # ── 2. Frontend Web Assets (HTML/JS/CSS Host) ──────────────────────
@@ -15,6 +15,8 @@ applications:
     path: ./dist
     memory: 128M
     disk_quota: 256M
-    random-route: true
+    routes:
+      - route: podz-ui-abhiyanta.cfapps.eu10-005.hana.ondemand.com
+      - route: podz-ui-resplendent-hyena-wl.cfapps.eu10-005.hana.ondemand.com
     buildpacks:
       - staticfile_buildpack

@@ -291,7 +291,7 @@ export const AdminContracts: React.FC = () => {
               data={filteredContracts}
               onRowClick={(c) => handleContractSelect(c)}
               getRowStyle={(c) => ({
-                backgroundColor: selectedContract?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent',
+                backgroundColor: (selectedContract as ContractV3 | null)?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent',
                 cursor: 'pointer'
               })}
               columns={[

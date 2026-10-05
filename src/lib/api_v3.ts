@@ -2,7 +2,12 @@
  * Ikwezi Transporter Portal — API Client V3
  */
 
-const API_BASE = 'http://localhost:3001/api/v3';
+export const API_HOST = (import.meta as any).env?.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? 'https://podz-srv-abhiyanta.cfapps.eu10-005.hana.ondemand.com'
+    : 'http://localhost:3001');
+
+export const API_BASE = `${API_HOST}/api/v3`;
 
 function getToken(): string | null {
   return localStorage.getItem('podzo_token_v3');

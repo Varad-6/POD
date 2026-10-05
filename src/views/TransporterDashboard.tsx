@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { KPISummaryBar } from '../components/KPISummaryBar';
 import { useAuthV3 } from '../contexts/AuthContextV3';
+import { API_BASE } from '../lib/api_v3';
 import { Truck, FileText, ClipboardList, Receipt, ArrowRight, ChevronRight, RefreshCw } from 'lucide-react';
 
 // ─── Dashboard Navigation Card ────────────────────────────────────────────────
@@ -85,10 +86,10 @@ export const TransporterDashboard: React.FC = () => {
     setLoading(true);
     try {
       const [jobsRes, assignsRes] = await Promise.all([
-        fetch('http://localhost:3001/api/v3/job-configs', {
+        fetch(`${API_BASE}/job-configs`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
         }),
-        fetch('http://localhost:3001/api/v3/assignments', {
+        fetch(`${API_BASE}/assignments`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
         })
       ]);

@@ -3,7 +3,8 @@
  * Centralized Fetch wrapper with JWT injection
  */
 
-const API_BASE = 'http://localhost:3001/api/v2';
+import { API_HOST } from './api_v3';
+const API_BASE = `${API_HOST}/api/v2`;
 
 function getToken(): string | null {
   return localStorage.getItem('ikwezi_token');

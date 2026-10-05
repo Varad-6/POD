@@ -5,6 +5,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { Table, Column } from '../components/Table';
 import { formatCurrency, formatDate } from '../utils/format';
+import { API_BASE } from '../lib/api_v3';
 
 export const TransporterInvoices: React.FC = () => {
   const [ledgerList, setLedgerList] = useState<any[]>([]);
@@ -13,7 +14,7 @@ export const TransporterInvoices: React.FC = () => {
   const loadInvoices = async () => {
     setLoading(true);
     try {
-      const resLedger = await fetch('http://localhost:3001/api/v3/delivery-invoices?status=LEDGER', {
+      const resLedger = await fetch(`${API_BASE}/delivery-invoices?status=LEDGER`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3')}` }
       });
       const dataLedger = await resLedger.json();
