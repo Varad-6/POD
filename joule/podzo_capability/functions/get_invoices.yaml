@@ -1,0 +1,33 @@
+parameters:
+  - name: status
+    optional: true
+
+result:
+  invoices_list: <? inv_res.body ?>
+  total_invoices: <? inv_res.body.length ?>
+
+action_groups:
+  - condition: status != null
+    actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/delivery-invoices?status=<? status ?>
+        timeout: 10
+        result_variable: inv_res
+
+  - condition: status == null
+    actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/delivery-invoices?status=LEDGER
+        timeout: 10
+        result_variable: inv_res
+
+  - condition: inv_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Could not fetch freight invoices from PODZO.

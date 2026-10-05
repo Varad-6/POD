@@ -1,0 +1,21 @@
+parameters: []
+
+result:
+  transporters_list: <? trans_res.body ?>
+  count: <? trans_res.body.length ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/transporters
+        timeout: 10
+        result_variable: trans_res
+
+  - condition: trans_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Unable to load the approved transporters list from the system.

@@ -1,0 +1,27 @@
+parameters:
+  - name: invoice_id
+    optional: false
+
+result:
+  message: <? miro_res.body.message ?>
+  sap_ref: <? miro_res.body.sap_ref ?>
+  posted_date: <? miro_res.body.posted_date ?>
+  status: <? miro_res.body.status ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: POST
+        path: /api/v3/miro/<? invoice_id ?>/post
+        headers:
+          Content-Type: application/json
+        timeout: 10
+        result_variable: miro_res
+
+  - condition: miro_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Failed to post MIRO invoice to SAP.

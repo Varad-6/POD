@@ -1,0 +1,14 @@
+description: |
+  Global guard scenario that handles unsupported queries and guides the user.
+
+slots: []
+
+response_context:
+  - value: $target_result.total_count
+    description: Total active contracts
+  - value: $target_result.contracts_list
+    description: Active outline agreements
+
+target:
+  name: get_contracts
+  type: function

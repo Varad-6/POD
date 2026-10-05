@@ -1,0 +1,33 @@
+parameters:
+  - name: status
+    optional: true
+
+result:
+  assignments_list: <? asgn_res.body ?>
+  total_assignments: <? asgn_res.body.length ?>
+
+action_groups:
+  - condition: status != null && status != ""
+    actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/assignments?status=<? status ?>
+        timeout: 10
+        result_variable: asgn_res
+
+  - condition: status == null || status == ""
+    actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/assignments
+        timeout: 10
+        result_variable: asgn_res
+
+  - condition: asgn_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Could not retrieve transport assignments from PODZO.

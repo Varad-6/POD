@@ -1,0 +1,18 @@
+description: |
+  Posts a verified freight delivery invoice directly into SAP MIRO financial ledger to authorize transporter payment.
+
+slots:
+  - name: invoice_id
+    description: The internal ID of the delivery invoice to post to SAP MIRO
+
+response_context:
+  - value: $target_result.sap_ref
+    description: Generated SAP MIRO document reference number
+  - value: $target_result.posted_date
+    description: Financial posting timestamp
+  - value: $target_result.message
+    description: Posting status confirmation
+
+target:
+  name: post_miro
+  type: function

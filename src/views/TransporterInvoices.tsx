@@ -13,7 +13,9 @@ export const TransporterInvoices: React.FC = () => {
   const loadInvoices = async () => {
     setLoading(true);
     try {
-      const resLedger = await fetch('http://localhost:3001/api/v3/delivery-invoices?status=LEDGER', {
+      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      const host = isLocal ? 'http://localhost:3001' : 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com';
+      const resLedger = await fetch(`${host}/api/v3/delivery-invoices?status=LEDGER`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3')}` }
       });
       const dataLedger = await resLedger.json();

@@ -1,14 +1,14 @@
-_schema-version: "3.1"
-ID: PODZ
+_schema-version: "3.2"
+ID: podzone
 version: 1.0.0
-description: "lets make delivery simple"
+description: "PODZO Transporter & POD Execution Portal for SAP Build Work Zone"
 
 parameters:
   enable-parallel-deployments: true
 
 modules:
   # ── 1. Backend API Service ──────────────────────────────────────────
-  - name: PODZ-srv
+  - name: podzone-srv
     type: nodejs
     path: .
     parameters:
@@ -16,7 +16,7 @@ modules:
       memory: 256M
       disk-quota: 512M
     provides:
-      - name: PODZ-srv-api
+      - name: podzone-srv-api
         properties:
           srv-url: ${default-url}
     properties:
@@ -28,8 +28,8 @@ modules:
         - dist
         - e2e_live_test.spec.ts
 
-  # ── 2. Frontend Application (Static HTML Host) ─────────────────────
-  - name: PODZ-ui
+  # ── 2. Frontend Work Zone Portal App ────────────────────────────────
+  - name: podzone
     type: html5
     path: .
     build-parameters:
@@ -43,7 +43,7 @@ modules:
       memory: 128M
       disk-quota: 256M
     requires:
-      - name: PODZ-srv-api
+      - name: podzone-srv-api
         group: dest
         properties:
           name: srv-api

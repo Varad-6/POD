@@ -1,0 +1,26 @@
+description: |
+  Distributes an approved SAP Purchase Order to a selected transporter vendor with scheduled pickup and delivery SLA windows.
+
+slots:
+  - name: po_id
+    description: The internal ID or SAP PO Number of the Purchase Order to distribute
+  - name: transporter_id
+    description: The ID of the transporter vendor assigned to execute the transport run
+  - name: availability_window_start
+    description: Loading gate availability start time (e.g. 06:00)
+  - name: availability_window_end
+    description: Loading gate availability end time (e.g. 18:00)
+  - name: requested_pickup_datetime
+    description: Requested pickup timestamp at the mine siding (e.g. 2026-10-08T08:00)
+  - name: expected_delivery_datetime
+    description: Expected arrival and delivery timestamp at the customer receiving gate (e.g. 2026-10-08T16:00)
+
+response_context:
+  - value: $target_result.job_config_id
+    description: Created Transport Execution Job Config ID
+  - value: $target_result.message
+    description: Server confirmation message
+
+target:
+  name: distribute_po
+  type: function

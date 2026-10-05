@@ -1,0 +1,34 @@
+parameters:
+  - name: assignment_id
+    optional: false
+  - name: invoice_no
+    optional: false
+  - name: file_url
+    optional: true
+
+result:
+  invoice_id: <? sub_res.body.id ?>
+  message: <? sub_res.body.message ?>
+  status: <? sub_res.status_code ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: POST
+        path: /api/v3/delivery-invoices
+        headers:
+          Content-Type: application/json
+        body:
+          assignment_id: <? assignment_id ?>
+          invoice_no: <? invoice_no ?>
+          file_url: <? file_url ?>
+        timeout: 10
+        result_variable: sub_res
+
+  - condition: sub_res.status_code != 201 && sub_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Freight invoice submission failed.

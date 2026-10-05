@@ -1,0 +1,20 @@
+description: |
+  Audits and resolves a flagged Review Queue item unblocking MIRO posting.
+
+slots:
+  - name: review_id
+    description: Review item ID
+  - name: action
+    description: Resolution action
+  - name: resolution_notes
+    description: Audit resolution notes
+
+response_context:
+  - value: $target_result.success
+    description: Resolution status
+  - value: $target_result.message
+    description: Result message
+
+target:
+  name: resolve_review_queue
+  type: function

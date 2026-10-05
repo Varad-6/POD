@@ -1,0 +1,21 @@
+parameters: []
+
+result:
+  vehicles_list: <? veh_res.body ?>
+  count: <? veh_res.body.length ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/transporters/my/vehicles
+        timeout: 10
+        result_variable: veh_res
+
+  - condition: veh_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Unable to load your registered fleet vehicles.

@@ -1,0 +1,7 @@
+{
+  "xsappname": "podzone",
+  "tenant-mode": "dedicated",
+  "description": "Security configuration for PODZO Work Zone App",
+  "scopes": [],
+  "role-templates": []
+}

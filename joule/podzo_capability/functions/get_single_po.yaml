@@ -1,0 +1,28 @@
+parameters:
+  - name: po_id
+    optional: false
+
+result:
+  po_details: <? po_res.body ?>
+  sap_po_no: <? po_res.body.sap_po_no ?>
+  material: <? po_res.body.material ?>
+  target_qty: <? po_res.body.target_qty ?>
+  rate: <? po_res.body.rate ?>
+  uom: <? po_res.body.uom ?>
+  status: <? po_res.body.status ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/purchase-orders/<? po_id ?>
+        timeout: 10
+        result_variable: po_res
+
+  - condition: po_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Purchase Order #<? po_id ?> could not be found or is unavailable.

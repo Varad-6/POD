@@ -1,0 +1,21 @@
+parameters: []
+
+result:
+  drivers_list: <? drv_res.body ?>
+  count: <? drv_res.body.length ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/transporters/my/drivers
+        timeout: 10
+        result_variable: drv_res
+
+  - condition: drv_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Unable to load your registered fleet drivers.

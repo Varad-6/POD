@@ -289,9 +289,9 @@ export const AdminContracts: React.FC = () => {
 
             <Table<ContractV3>
               data={filteredContracts}
-              onRowClick={(c) => handleContractSelect(c)}
-              getRowStyle={(c) => ({
-                backgroundColor: selectedContract?.id === c.id ? 'var(--color-brand-blue-50)' : 'transparent',
+              onRowClick={(c: ContractV3) => handleContractSelect(c)}
+              getRowStyle={(c: ContractV3) => ({
+                backgroundColor: (selectedContract as any)?.id === (c as any)?.id ? 'var(--color-brand-blue-50)' : 'transparent',
                 cursor: 'pointer'
               })}
               columns={[

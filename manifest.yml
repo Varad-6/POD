@@ -1,17 +1,17 @@
+---
 applications:
   # ── 1. Backend Server ───────────────────────────────────────────────
-  - name: PODZ-srv
+  - name: podzone-srv
     path: .
     memory: 256M
     disk_quota: 512M
     random-route: true
     command: npm run server
     env:
-      PORT: 3001
       NODE_ENV: production
 
-  # ── 2. Frontend Web Assets (HTML/JS/CSS Host) ──────────────────────
-  - name: PODZ-ui
+  # ── 2. Frontend Work Zone Portal App ────────────────────────────────
+  - name: podzone
     path: ./dist
     memory: 128M
     disk_quota: 256M

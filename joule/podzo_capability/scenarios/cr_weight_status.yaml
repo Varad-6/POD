@@ -1,0 +1,20 @@
+description: |
+  Displays quad-gate weighbridge reconciliation details and payload variance for a specific assignment run.
+
+slots:
+  - name: po_id
+    description: Target Purchase Order or Assignment ID to inspect
+
+response_context:
+  - value: $target_result.sap_po_no
+    description: SAP Purchase Order Number
+  - value: $target_result.material
+    description: Consignment material description
+  - value: $target_result.target_qty
+    description: Target payload tons
+  - value: $target_result.status
+    description: Current workflow clearance status
+
+target:
+  name: get_single_po
+  type: function

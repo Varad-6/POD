@@ -1,0 +1,43 @@
+parameters:
+  - name: job_config_id
+    optional: false
+  - name: driver_id
+    optional: false
+  - name: vehicle_id
+    optional: false
+  - name: scheduled_date
+    optional: false
+  - name: license_no
+    optional: true
+  - name: gstin
+    optional: true
+
+result:
+  assignment_id: <? cr_res.body.id ?>
+  message: <? cr_res.body.message ?>
+  status: <? cr_res.status_code ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: POST
+        path: /api/v3/assignments
+        headers:
+          Content-Type: application/json
+        body:
+          job_config_id: <? job_config_id ?>
+          driver_id: <? driver_id ?>
+          vehicle_id: <? vehicle_id ?>
+          scheduled_date: <? scheduled_date ?>
+          license_no: <? license_no ?>
+          gstin: <? gstin ?>
+        timeout: 10
+        result_variable: cr_res
+
+  - condition: cr_res.status_code != 201 && cr_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Failed to assign driver and vehicle to job.

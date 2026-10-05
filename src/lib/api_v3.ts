@@ -2,7 +2,9 @@
  * Ikwezi Transporter Portal — API Client V3
  */
 
-const API_BASE = 'http://localhost:3001/api/v3';
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const PROD_API_HOST = 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com';
+const API_BASE = isLocal ? 'http://localhost:3001/api/v3' : `${PROD_API_HOST}/api/v3`;
 
 function getToken(): string | null {
   return localStorage.getItem('podzo_token_v3');

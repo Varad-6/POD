@@ -1,0 +1,42 @@
+parameters:
+  - name: po_id
+    optional: false
+  - name: transporter_id
+    optional: false
+  - name: availability_window_start
+    optional: true
+  - name: availability_window_end
+    optional: true
+  - name: requested_pickup_datetime
+    optional: true
+  - name: expected_delivery_datetime
+    optional: true
+
+result:
+  job_config_id: <? dist_res.body.id ?>
+  message: <? dist_res.body.message ?>
+  status: <? dist_res.status_code ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: POST
+        path: /api/v3/po/<? po_id ?>/distribute
+        headers:
+          Content-Type: application/json
+        body:
+          transporter_id: <? transporter_id ?>
+          availability_window_start: <? availability_window_start ?>
+          availability_window_end: <? availability_window_end ?>
+          requested_pickup_datetime: <? requested_pickup_datetime ?>
+          expected_delivery_datetime: <? expected_delivery_datetime ?>
+        timeout: 10
+        result_variable: dist_res
+
+  - condition: dist_res.status_code != 201 && dist_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Purchase Order distribution could not be completed.

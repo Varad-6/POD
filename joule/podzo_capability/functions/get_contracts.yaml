@@ -1,0 +1,21 @@
+parameters: []
+
+result:
+  contracts_list: <? contracts_res.body ?>
+  total_count: <? contracts_res.body.length ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/contracts
+        timeout: 10
+        result_variable: contracts_res
+
+  - condition: contracts_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Unable to retrieve active contracts from PODZO system at the moment. Please verify system connectivity.

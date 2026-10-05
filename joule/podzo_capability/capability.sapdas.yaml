@@ -1,0 +1,11 @@
+schema_version: 3.26.0
+
+metadata:
+  namespace: joule.ext
+  name: podzo_capability
+  version: 1.0.0
+  display_name: PODZO Transport & POD Execution Capability
+
+system_aliases:
+  PodzoneService:
+    destination: podzone_destination

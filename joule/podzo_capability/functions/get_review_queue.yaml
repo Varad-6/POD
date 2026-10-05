@@ -1,0 +1,33 @@
+parameters:
+  - name: status
+    optional: true
+
+result:
+  review_items: <? rq_res.body ?>
+  total_open: <? rq_res.body.length ?>
+
+action_groups:
+  - condition: status != null
+    actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/review-queue?status=<? status ?>
+        timeout: 10
+        result_variable: rq_res
+
+  - condition: status == null
+    actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/review-queue?status=OPEN
+        timeout: 10
+        result_variable: rq_res
+
+  - condition: rq_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Unable to load review queue items.

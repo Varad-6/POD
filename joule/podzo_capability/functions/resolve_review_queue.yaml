@@ -1,0 +1,32 @@
+parameters:
+  - name: review_id
+    optional: false
+  - name: action
+    optional: false
+  - name: resolution_notes
+    optional: true
+
+result:
+  message: <? res_res.body.message ?>
+  success: <? res_res.body.success ?>
+
+action_groups:
+  - actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: PATCH
+        path: /api/v3/review-queue/<? review_id ?>/resolve
+        headers:
+          Content-Type: application/json
+        body:
+          action: <? action ?>
+          resolution_notes: <? resolution_notes ?>
+        timeout: 10
+        result_variable: res_res
+
+  - condition: res_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Failed to resolve review item.

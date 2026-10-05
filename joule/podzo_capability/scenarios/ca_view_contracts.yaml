@@ -1,0 +1,14 @@
+description: |
+  Displays all active SAP S/4HANA Outline Agreements (Contracts) with customer names, valid dates, and target volumes.
+
+slots: []
+
+response_context:
+  - value: $target_result.total_count
+    description: Total number of active contracts
+  - value: $target_result.contracts_list
+    description: List of active outline agreements
+
+target:
+  name: get_contracts
+  type: function

@@ -1,0 +1,14 @@
+description: |
+  Provides an executive operations KPI summary across active transport assignments, pending review queues, and live weighbridge runs.
+
+slots: []
+
+response_context:
+  - value: $target_result.total_assignments
+    description: Total active haulage runs in progress
+  - value: $target_result.assignments_list
+    description: High-level assignment metrics and staging progress
+
+target:
+  name: get_assignments
+  type: function

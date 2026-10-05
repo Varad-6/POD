@@ -1,0 +1,33 @@
+parameters:
+  - name: contract_id
+    optional: true
+
+result:
+  purchase_orders: <? pos_res.body ?>
+  total_count: <? pos_res.body.length ?>
+
+action_groups:
+  - condition: contract_id != null && contract_id != ""
+    actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/purchase-orders?contract_id=<? contract_id ?>
+        timeout: 10
+        result_variable: pos_res
+
+  - condition: contract_id == null || contract_id == ""
+    actions:
+      - type: api-request
+        system_alias: PodzoneService
+        method: GET
+        path: /api/v3/purchase-orders
+        timeout: 10
+        result_variable: pos_res
+
+  - condition: pos_res.status_code != 200
+    actions:
+      - type: message
+        message:
+          type: text
+          content: Could not fetch purchase orders from PODZO. Please check your permissions or network connection.

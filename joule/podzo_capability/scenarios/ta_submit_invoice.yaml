@@ -1,0 +1,20 @@
+description: |
+  Submits a finalized freight delivery invoice for an approved and verified haulage assignment to Company Admin for MIRO processing.
+
+slots:
+  - name: assignment_id
+    description: The approved haulage assignment ID
+  - name: invoice_no
+    description: Unique freight invoice reference number (e.g. INV-2026-0015)
+  - name: file_url
+    description: Scanned invoice PDF document URL
+
+response_context:
+  - value: $target_result.invoice_id
+    description: Created delivery invoice record ID
+  - value: $target_result.message
+    description: Submission confirmation message
+
+target:
+  name: submit_invoice
+  type: function

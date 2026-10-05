@@ -1,0 +1,16 @@
+description: |
+  Fetches open exception items in the PODZO Review Queue blocking MIRO.
+
+slots:
+  - name: status
+    description: Status filter
+
+response_context:
+  - value: $target_result.total_open
+    description: Open exceptions count
+  - value: $target_result.review_items
+    description: Flagged exception items
+
+target:
+  name: get_review_queue
+  type: function

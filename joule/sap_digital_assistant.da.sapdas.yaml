@@ -1,0 +1,6 @@
+# Mounts PODZO capabilities into the tenant's default Joule assistant
+schema_version: 1.0.0
+name: sap_digital_assistant
+capabilities:
+  - type: local
+    folder: podzo_capability
