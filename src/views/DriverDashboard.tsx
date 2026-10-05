@@ -680,7 +680,7 @@ export const DriverDashboard: React.FC = () => {
                       <RefreshCw size={16} className="spin" color="var(--color-brand-blue-600)" />
                       <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-brand-blue-700)' }}>
                         {ocrStep === 'UPLOADING' && 'Uploading Invoice Document...'}
-                        {ocrStep === 'SCANNING' && 'Scanning Document with PaddleOCR Engine...'}
+                        {ocrStep === 'SCANNING' && 'Scanning Invoice Document...'}
                         {ocrStep === 'EXTRACTING' && 'Extracting Structured Line Items & Tax Metadata...'}
                         {ocrStep === 'PROCESSING' && 'Verifying Against SAP PO & Destination Weighment...'}
                       </div>

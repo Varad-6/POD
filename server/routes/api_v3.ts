@@ -1894,7 +1894,7 @@ router.post('/assignments/:id/pod-upload', requireAuth, upload.any(), async (req
       }
 
       // Check 7: Low Confidence / Blurry
-      const isLowConfidence = confidence < 70.0 || extractedInvoice.processingStatus === 'REVIEW_REQUIRED';
+      const isLowConfidence = (confidence !== null && confidence !== undefined && confidence < 70.0) || extractedInvoice.processingStatus === 'REVIEW_REQUIRED';
 
       // ── Combine into existing match status & flag reasons ──
       if (isDuplicate) {

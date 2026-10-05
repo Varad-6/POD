@@ -23,8 +23,31 @@ import dashboardRoutes   from './routes/dashboard.js';
 import authRoutesV3      from './routes/auth_v3.js';
 import apiRoutesV3       from './routes/api_v3.js';
 
+import { existsSync, readFileSync } from 'fs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname  = dirname(__filename);
+
+// Load server-side environment variables from .env if present
+const envPath = join(__dirname, '../.env');
+if (existsSync(envPath)) {
+  try {
+    const envContent = readFileSync(envPath, 'utf8');
+    for (const line of envContent.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const idx = trimmed.indexOf('=');
+        if (idx !== -1) {
+          const key = trimmed.slice(0, idx).trim();
+          const val = trimmed.slice(idx + 1).trim();
+          if (key && !process.env[key]) {
+            process.env[key] = val;
+          }
+        }
+      }
+    }
+  } catch (_) {}
+}
 
 // Initialize databases
 try {
