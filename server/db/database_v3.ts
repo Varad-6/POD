@@ -61,6 +61,21 @@ export function initDb(): Database.Database {
   addColumnIfNotExists('purchase_orders', 'po_item_no', 'INTEGER DEFAULT 10');
   addColumnIfNotExists('miro_invoices', 'paid_amount', 'REAL DEFAULT 0.0');
 
+  // OCR Metadata extensions on pod_documents
+  addColumnIfNotExists('pod_documents', 'ocr_invoice_no', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'ocr_vendor_name', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'ocr_po_no', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'ocr_material', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'ocr_quantity', 'REAL');
+  addColumnIfNotExists('pod_documents', 'ocr_total_amount', 'REAL');
+  addColumnIfNotExists('pod_documents', 'ocr_tax_amount', 'REAL');
+  addColumnIfNotExists('pod_documents', 'ocr_line_items_json', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'ocr_raw_text', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'file_hash', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'ocr_provider', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'ocr_processing_status', "TEXT DEFAULT 'EXTRACTED'");
+  addColumnIfNotExists('pod_documents', 'ocr_processed_at', 'TEXT');
+
   // Ensure job_config_pos junction table exists
   instance.exec(`
     CREATE TABLE IF NOT EXISTS job_config_pos (

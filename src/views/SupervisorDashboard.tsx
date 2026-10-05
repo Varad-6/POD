@@ -131,6 +131,7 @@ export const SupervisorDashboard: React.FC = () => {
     }
     setIsSubmitting(true);
     try {
+      await new Promise(r => setTimeout(r, 1000));
       await drApi.otpVerify(selectedAssignment.id, 'PICKUP', otpCode);
       await srApi.gateCheck(selectedAssignment.id, { license_valid: licenseValid, prdp_valid: prdpValid, bilty_valid: biltyValid, material_match: materialMatch });
       setOtpCode('');
@@ -162,6 +163,7 @@ export const SupervisorDashboard: React.FC = () => {
 
     setIsSubmitting(true);
     try {
+      await new Promise(r => setTimeout(r, 1200));
       await drApi.logWeight(selectedAssignment.id, {
         stage: currentStage,
         weight_kg: parseFloat(weightKg),
@@ -187,6 +189,7 @@ export const SupervisorDashboard: React.FC = () => {
     if (!selectedAssignment) return;
     setIsSubmitting(true);
     try {
+      await new Promise(r => setTimeout(r, 900));
       await srApi.biltyUpload(selectedAssignment.id, { bilty_no: biltyNo, bilty_date: biltyDate, upload_url: uploadUrl });
       const updatedList = await assignmentsApi.list();
       const updated = updatedList.find(a => a.id === selectedAssignment.id);
@@ -203,6 +206,7 @@ export const SupervisorDashboard: React.FC = () => {
     if (!selectedAssignment) return;
     setIsSubmitting(true);
     try {
+      await new Promise(r => setTimeout(r, 1100));
       await srApi.authorizeJourney(selectedAssignment.id);
       const updatedList = await assignmentsApi.list();
       const updated = updatedList.find(a => a.id === selectedAssignment.id);

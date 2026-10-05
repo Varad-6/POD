@@ -240,7 +240,7 @@ CREATE TABLE IF NOT EXISTS pod_documents (
   ocr_waybill_extracted  TEXT,
   ocr_weight_extracted   REAL,
   ocr_confidence_pct     REAL,
-  match_status           TEXT NOT NULL CHECK(match_status IN ('MATCH', 'MISMATCH', 'PENDING')) DEFAULT 'PENDING'
+  match_status           TEXT NOT NULL CHECK(match_status IN ('MATCH', 'MISMATCH', 'PENDING', 'LOW_CONFIDENCE')) DEFAULT 'PENDING'
 );
 
 CREATE TABLE IF NOT EXISTS variance_checks (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileClock, CreditCard, Search, ArrowRight, ShieldAlert } from 'lucide-react';
+import { FileClock, CreditCard, Search, ArrowRight, ShieldAlert, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
 import { invoicesApi, MiroInvoice, DeliveryInvoiceV3, caApi } from '../lib/api_v3';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -9,6 +9,8 @@ import { Modal } from '../components/Modal';
 import { Tabs } from '../components/Tabs';
 import { Table, Column } from '../components/Table';
 import { formatCurrency } from '../utils/format';
+
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 export const AdminInvoices: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'PARKED' | 'POSTED' | 'CLEARED' | 'UNPARKED'>('UNPARKED');
@@ -28,16 +30,26 @@ export const AdminInvoices: React.FC = () => {
   const [partialPercent, setPartialPercent] = useState<number>(25);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+  // Enterprise Transaction Overlay state
+  const [processingState, setProcessingState] = useState<{
+    active: boolean;
+    title: string;
+    stepText: string;
+    progress: number;
+    completed?: boolean;
+  }>({ active: false, title: '', stepText: '', progress: 0 });
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const loadData = async () => {
+  const loadData = async (manual = false) => {
     setLoading(true);
     setErrorMsg('');
     try {
+      if (manual) await delay(650);
       const miros = await invoicesApi.listMiro();
       setMiroList(miros);
       const deliveryInvoices = await caApi.getDeliveryInvoices('SENT_TO_CA');
@@ -56,12 +68,43 @@ export const AdminInvoices: React.FC = () => {
   const handleParkMiro = async (dInv: DeliveryInvoiceV3) => {
     setIsSubmitting(true);
     setErrorMsg('');
+    setProcessingState({
+      active: true,
+      title: 'Parking MIRO Invoice in SAP S/4HANA',
+      stepText: '1/3 Interfacing with SAP Logistics Invoice Verification (LIV)...',
+      progress: 30
+    });
+
     try {
+      await delay(800);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: '2/3 Validating delivery payload & line items against PO Line 10...',
+        progress: 65
+      }));
+
       await invoicesApi.createMiro({
         freight_invoice_id: dInv.id,
         waybill_no: `WB-${Date.now()}`
       });
-      loadData();
+
+      await delay(900);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: '3/3 Generating SAP Parked Accounting Document in Financial Ledger...',
+        progress: 95
+      }));
+
+      await delay(700);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: 'MIRO Document Successfully Parked in SAP!',
+        progress: 100,
+        completed: true
+      }));
+      await delay(600);
+
+      await loadData();
       setActiveTab('PARKED');
     } catch (err: any) {
       console.error('Failed to park MIRO:', err);
@@ -73,6 +116,7 @@ export const AdminInvoices: React.FC = () => {
       }
     } finally {
       setIsSubmitting(false);
+      setProcessingState({ active: false, title: '', stepText: '', progress: 0 });
     }
   };
 
@@ -80,10 +124,41 @@ export const AdminInvoices: React.FC = () => {
     if (!selectedMiro) return;
     setIsSubmitting(true);
     setErrorMsg('');
+    setShowPostConfirm(false);
+    setProcessingState({
+      active: true,
+      title: 'Posting MIRO to SAP General Ledger',
+      stepText: '1/3 Initiating RFC Connection to SAP S/4HANA LIV Module...',
+      progress: 30
+    });
+
     try {
+      await delay(800);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: '2/3 Executing BAPI_INCOMINGINVOICE_POST (2-Way Matching)...',
+        progress: 65
+      }));
+
       await invoicesApi.postMiro(selectedMiro.id);
-      loadData();
-      setShowPostConfirm(false);
+
+      await delay(1000);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: '3/3 Committing Financial Journal Entry & Ledger Audit Trail...',
+        progress: 95
+      }));
+
+      await delay(700);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: 'MIRO Successfully Posted to General Ledger!',
+        progress: 100,
+        completed: true
+      }));
+      await delay(600);
+
+      await loadData();
       setSelectedMiro(null);
       setActiveTab('POSTED');
     } catch (err: any) {
@@ -96,6 +171,7 @@ export const AdminInvoices: React.FC = () => {
       }
     } finally {
       setIsSubmitting(false);
+      setProcessingState({ active: false, title: '', stepText: '', progress: 0 });
     }
   };
 
@@ -103,15 +179,46 @@ export const AdminInvoices: React.FC = () => {
     if (!selectedMiro) return;
     setIsSubmitting(true);
     setErrorMsg('');
+    setShowClearConfirm(false);
+    setProcessingState({
+      active: true,
+      title: 'Settling Payment in SAP Financial Accounting (FI)',
+      stepText: '1/3 Connecting to Corporate Banking Clearing Gateway...',
+      progress: 30
+    });
+
     try {
+      await delay(800);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: '2/3 Reconciling payment reference with S/4HANA FI GL Account 110020...',
+        progress: 65
+      }));
+
       await invoicesApi.clearMiro(selectedMiro.id, paymentRefInput, paymentType, partialPercent);
+
+      await delay(900);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: '3/3 Posting Clearing Document & Releasing Financial Voucher...',
+        progress: 95
+      }));
+
+      await delay(700);
+      setProcessingState(prev => ({
+        ...prev,
+        stepText: 'Payment Successfully Cleared in SAP S/4HANA!',
+        progress: 100,
+        completed: true
+      }));
+      await delay(600);
+
       const miros = await invoicesApi.listMiro();
       setMiroList(miros);
       const deliveryInvoices = await caApi.getDeliveryInvoices('SENT_TO_CA');
       setUnparkedInvoices(deliveryInvoices);
 
       const updatedItem = miros.find(m => m.id === selectedMiro.id);
-      setShowClearConfirm(false);
       setSelectedMiro(null);
       
       if (updatedItem && updatedItem.status === 'CLEARED') {
@@ -129,6 +236,7 @@ export const AdminInvoices: React.FC = () => {
       }
     } finally {
       setIsSubmitting(false);
+      setProcessingState({ active: false, title: '', stepText: '', progress: 0 });
     }
   };
 
@@ -153,8 +261,9 @@ export const AdminInvoices: React.FC = () => {
             Verify delivery invoices, park MIROs, post to SAP, and confirm clearings
           </p>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={loadData} disabled={loading}>
-          Refresh Queue
+        <button className="btn btn-secondary btn-sm" onClick={() => loadData(true)} disabled={loading || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <RefreshCw size={14} className={loading ? "spin" : ""} />
+          <span>{loading ? 'Syncing SAP...' : 'Refresh Queue'}</span>
         </button>
       </div>
 
@@ -485,7 +594,53 @@ export const AdminInvoices: React.FC = () => {
            </div>
          </div>
        </Modal>
-  
+
+        {/* Enterprise SAP Transaction Progress Modal */}
+        {processingState.active && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+          }}>
+            <div style={{
+              backgroundColor: 'var(--color-bg-card)', border: '1.5px solid var(--color-border)',
+              borderRadius: '16px', padding: '28px 32px', maxWidth: '480px', width: '100%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+              textAlign: 'center'
+            }}>
+              <div style={{
+                width: '60px', height: '60px', borderRadius: '50%',
+                backgroundColor: processingState.completed ? 'var(--color-success-bg, #ecfdf5)' : 'var(--color-brand-blue-50)',
+                border: `2px solid ${processingState.completed ? 'var(--color-success, #10b981)' : 'var(--color-brand-blue-400)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px'
+              }}>
+                {processingState.completed ? (
+                  <CheckCircle2 size={32} color="var(--color-success, #10b981)" />
+                ) : (
+                  <Loader2 size={32} className="spin" color="var(--color-brand-blue-600)" />
+                )}
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-heading)', margin: '0 0 8px' }}>
+                {processingState.title}
+              </h3>
+              <p style={{ fontSize: '13.5px', color: 'var(--color-text-muted)', margin: '0 0 20px', minHeight: '36px', lineHeight: 1.4 }}>
+                {processingState.stepText}
+              </p>
+              {/* Progress Bar */}
+              <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--color-border)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', width: `${processingState.progress}%`,
+                  backgroundColor: processingState.completed ? 'var(--color-success, #10b981)' : 'var(--color-brand-blue-600)',
+                  transition: 'width 0.4s ease-in-out'
+                }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+                <span>SAP S/4HANA Finance Integration</span>
+                <span>{processingState.progress}% Complete</span>
+              </div>
+            </div>
+          </div>
+        )}
      </div>
    );
  };

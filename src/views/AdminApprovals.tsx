@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClipboardCheck, AlertTriangle, CheckCircle2, ShieldCheck, Scale, RefreshCw } from 'lucide-react';
+import { ClipboardCheck, AlertTriangle, CheckCircle2, ShieldCheck, Scale, RefreshCw, Loader2 } from 'lucide-react';
 import { caApi, ReviewQueueItemV3 } from '../lib/api_v3';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
@@ -16,6 +16,16 @@ export const AdminApprovals: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'OPEN' | 'RESOLVED'>('OPEN');
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  // Enterprise Transaction Overlay state
+  const [processingState, setProcessingState] = useState<{
+    active: boolean;
+    title: string;
+    stepText: string;
+    progress: number;
+    completed?: boolean;
+  }>({ active: false, title: '', stepText: '', progress: 0 });
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
