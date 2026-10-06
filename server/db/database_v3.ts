@@ -74,7 +74,35 @@ export function initDb(): Database.Database {
   addColumnIfNotExists('pod_documents', 'file_hash', 'TEXT');
   addColumnIfNotExists('pod_documents', 'ocr_provider', 'TEXT');
   addColumnIfNotExists('pod_documents', 'ocr_processing_status', "TEXT DEFAULT 'EXTRACTED'");
-  addColumnIfNotExists('pod_documents', 'ocr_processed_at', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'scanned_pod_url', 'TEXT');
+
+  // Migration for review_queue to remove any legacy CHECK constraint restrictions
+  try {
+    const tableSql = (instance.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='review_queue'").get() as any)?.sql || '';
+    if (tableSql.includes('CHECK') && !tableSql.includes('AWAITING_CA_VERIFY')) {
+      console.log('[DB V3] Migrating review_queue table schema to support all verification reasons...');
+      instance.exec(`
+        CREATE TABLE IF NOT EXISTS review_queue_new (
+          id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+          assignment_id       INTEGER NOT NULL REFERENCES transport_assignments(id),
+          flag_reason         TEXT NOT NULL,
+          status              TEXT NOT NULL DEFAULT 'OPEN',
+          resolved_by_role    TEXT,
+          resolved_by_user_id INTEGER REFERENCES users(id),
+          resolution_notes    TEXT,
+          blocks_miro_bool    INTEGER NOT NULL DEFAULT 1,
+          created_at          TEXT NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT OR IGNORE INTO review_queue_new (id, assignment_id, flag_reason, status, resolved_by_role, resolved_by_user_id, resolution_notes, blocks_miro_bool, created_at)
+        SELECT id, assignment_id, flag_reason, status, resolved_by_role, resolved_by_user_id, resolution_notes, blocks_miro_bool, created_at FROM review_queue;
+        DROP TABLE review_queue;
+        ALTER TABLE review_queue_new RENAME TO review_queue;
+      `);
+      console.log('[DB V3] review_queue migrated successfully.');
+    }
+  } catch (err) {
+    console.warn('[DB V3] review_queue migration check warning:', err);
+  }
 
   // Ensure job_config_pos junction table exists
   instance.exec(`

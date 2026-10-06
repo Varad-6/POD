@@ -48,6 +48,31 @@ export const AdminApprovals: React.FC = () => {
 
   useEffect(() => {
     loadReviews();
+    const interval = setInterval(() => {
+      // Background silent refetch without showing full screen spinner
+      caApi.getReviewQueue(activeTab).then(data => {
+        const validData = Array.isArray(data) ? data.filter(d => d && d.id !== 0) : [];
+        setReviews(validData);
+        setSelectedReview(prev => {
+          if (!prev && validData.length > 0) return validData[0];
+          if (prev) {
+            const found = validData.find(d => d.id === prev.id);
+            return found || (validData.length > 0 ? validData[0] : null);
+          }
+          return null;
+        });
+      }).catch(() => {});
+    }, 3000);
+
+    const onRefresh = () => loadReviews();
+    window.addEventListener('pod_data_refreshed', onRefresh);
+    window.addEventListener('focus', onRefresh);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('pod_data_refreshed', onRefresh);
+      window.removeEventListener('focus', onRefresh);
+    };
   }, [activeTab]);
 
   const handleApprove = async () => {

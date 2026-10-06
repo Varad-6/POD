@@ -654,20 +654,48 @@ router.post(['/po/distribute', '/po/:id/distribute'], requireAuth, requireRole('
 router.get('/review-queue', requireAuth, requireRole('CA', 'SR'), (req: Request, res: Response) => {
   const db = getDb();
   const status = req.query.status || 'OPEN';
+
+  // Self-healing synchronization: Ensure all uploaded PODs have an active entry in review_queue
+  if (status === 'OPEN') {
+    try {
+      const unqueued = db.prepare(`
+        SELECT ta.id, pd.match_status 
+        FROM transport_assignments ta
+        JOIN pod_documents pd ON pd.assignment_id = ta.id
+        WHERE ta.status IN ('UNDER_REVIEW', 'POD_UPLOADED')
+          AND ta.id NOT IN (SELECT assignment_id FROM review_queue)
+      `).all() as any[];
+      for (const u of unqueued) {
+        const fReason = u.match_status === 'MISMATCH' ? 'OCR_MISMATCH' : 'AWAITING_CA_VERIFY';
+        try {
+          db.prepare(`INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool) VALUES (?, ?, 'OPEN', 1)`).run(u.id, fReason);
+        } catch (_) {
+          try {
+            db.prepare(`INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool) VALUES (?, 'OCR_MISMATCH', 'OPEN', 1)`).run(u.id);
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      console.warn('Auto-sync review_queue error:', e);
+    }
+  }
+
   const reviews = db.prepare(`
     SELECT rq.*, ta.scheduled_date, d.name as driver_name, v.reg_no as vehicle_reg, po.sap_po_no, po.po_item_no, po.material, po.target_qty as po_target_qty, t.name as transporter_name,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_GROSS' LIMIT 1) as dest_gross_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_TARE' LIMIT 1) as dest_tare_kg,
-           pd.scanned_pod_url, pd.ocr_waybill_extracted, pd.ocr_weight_extracted, pd.ocr_confidence_pct, pd.match_status as ocr_match_status,
+           COALESCE(pd.pod_file_url, pd.scanned_pod_url, '/uploads/sample_pod.pdf') as scanned_pod_url,
+           COALESCE(pd.pod_file_url, '/uploads/sample_pod.pdf') as pod_file_url,
+           pd.ocr_waybill_extracted, pd.ocr_weight_extracted, pd.ocr_confidence_pct, pd.match_status as ocr_match_status,
            pd.ocr_invoice_no, pd.ocr_vendor_name, pd.ocr_po_no, pd.ocr_material, pd.ocr_total_amount, pd.ocr_tax_amount,
            pd.ocr_line_items_json, pd.ocr_provider, pd.ocr_processing_status
     FROM review_queue rq
     LEFT JOIN transport_assignments ta ON ta.id = rq.assignment_id
     LEFT JOIN job_configs jc ON jc.id = ta.job_config_id
     LEFT JOIN transporters t ON t.id = jc.transporter_id
-    LEFT JOIN purchase_orders po ON po.id = jc.po_id
+    LEFT JOIN purchase_orders po ON (po.id = jc.po_id OR po.id = (SELECT po_id FROM job_config_pos WHERE job_config_id = jc.id LIMIT 1))
     LEFT JOIN drivers d ON d.id = ta.driver_id
     LEFT JOIN vehicles v ON v.id = ta.vehicle_id
     LEFT JOIN pod_documents pd ON pd.assignment_id = ta.id
@@ -2126,10 +2154,19 @@ router.post('/assignments/:id/pod-upload', requireAuth, upload.any(), async (req
     // Queue for CA verification (All uploaded PODs appear on the CA verification desk)
     const finalFlagReason = flagReason || (matchStatus === 'MATCH' ? 'AWAITING_CA_VERIFY' : 'OCR_MISMATCH');
     try {
-      db.prepare(`
-        INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
-        VALUES (?, ?, 'OPEN', 1)
-      `).run(assignmentId, finalFlagReason);
+      db.prepare("DELETE FROM review_queue WHERE assignment_id = ?").run(assignmentId);
+      try {
+        db.prepare(`
+          INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
+          VALUES (?, ?, 'OPEN', 1)
+        `).run(assignmentId, finalFlagReason);
+      } catch (innerErr) {
+        console.warn('Fallback inserting review_queue:', innerErr);
+        db.prepare(`
+          INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
+          VALUES (?, 'OCR_MISMATCH', 'OPEN', 1)
+        `).run(assignmentId);
+      }
     } catch (e) {
       console.error('review_queue insert error:', e);
     }
