@@ -664,12 +664,12 @@ router.get('/review-queue', requireAuth, requireRole('CA', 'SR'), (req: Request,
            pd.ocr_invoice_no, pd.ocr_vendor_name, pd.ocr_po_no, pd.ocr_material, pd.ocr_total_amount, pd.ocr_tax_amount,
            pd.ocr_line_items_json, pd.ocr_provider, pd.ocr_processing_status
     FROM review_queue rq
-    JOIN transport_assignments ta ON ta.id = rq.assignment_id
-    JOIN job_configs jc ON jc.id = ta.job_config_id
-    JOIN transporters t ON t.id = jc.transporter_id
-    JOIN purchase_orders po ON po.id = jc.po_id
-    JOIN drivers d ON d.id = ta.driver_id
-    JOIN vehicles v ON v.id = ta.vehicle_id
+    LEFT JOIN transport_assignments ta ON ta.id = rq.assignment_id
+    LEFT JOIN job_configs jc ON jc.id = ta.job_config_id
+    LEFT JOIN transporters t ON t.id = jc.transporter_id
+    LEFT JOIN purchase_orders po ON po.id = jc.po_id
+    LEFT JOIN drivers d ON d.id = ta.driver_id
+    LEFT JOIN vehicles v ON v.id = ta.vehicle_id
     LEFT JOIN pod_documents pd ON pd.assignment_id = ta.id
     WHERE rq.status = ?
     ORDER BY rq.id DESC
@@ -747,6 +747,8 @@ router.patch('/review-queue/:id/resolve', requireAuth, requireRole('CA', 'SR'), 
         WHERE ta.id = ?
       `).get(review.assignment_id) as any;
 
+      const rate = assignment?.rate || 151.50;
+
       if (assignment) {
         const weights = db.prepare('SELECT stage, weight_kg FROM weight_logs WHERE assignment_id = ?').all(review.assignment_id) as any[];
         const destGross = weights.find(w => w.stage === 'DEST_GROSS')?.weight_kg || 0;
@@ -760,7 +762,7 @@ router.patch('/review-queue/:id/resolve', requireAuth, requireRole('CA', 'SR'), 
             ? (mineGross - mineTare) 
             : 34000.0;
 
-        const totalValue = (acceptedPayload / 1000) * assignment.rate;
+        const totalValue = (acceptedPayload / 1000) * rate;
 
         const podDoc = db.prepare('SELECT ocr_waybill_extracted FROM pod_documents WHERE assignment_id = ?').get(review.assignment_id) as any;
         const waybillNo = podDoc?.ocr_waybill_extracted || `WB-${review.assignment_id}`;
@@ -768,7 +770,15 @@ router.patch('/review-queue/:id/resolve', requireAuth, requireRole('CA', 'SR'), 
         db.prepare(`
           INSERT OR REPLACE INTO sap_s4_mirror (assignment_id, waybill_no, delivered_qty, rate, total_value, verified_at, synced_at)
           VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        `).run(review.assignment_id, waybillNo, acceptedPayload / 1000, assignment.rate, totalValue);
+        `).run(review.assignment_id, waybillNo, acceptedPayload / 1000, rate, totalValue);
+
+        // Pre-create draft delivery invoice
+        try {
+          db.prepare(`
+            INSERT OR REPLACE INTO delivery_invoices (assignment_id, accepted_payload, rate, total_value, invoice_no, file_url, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'DRAFT')
+          `).run(review.assignment_id, acceptedPayload, rate, totalValue, `INV-${review.assignment_id}`, `/uploads/invoices/inv_${review.assignment_id}.pdf`);
+        } catch (_) {}
       }
 
       db.prepare("UPDATE transport_assignments SET status = 'APPROVED' WHERE id = ?").run(review.assignment_id);
