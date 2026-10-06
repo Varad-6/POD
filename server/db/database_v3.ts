@@ -133,6 +133,89 @@ export function initDb(): Database.Database {
     console.log(`[DB V3] Database already has ${userCount} users, skipping seed.`);
   }
 
+  // Ensure active demonstration trip exists for driver and open review item exists
+  try {
+    const activeDriverTrips = (instance.prepare("SELECT COUNT(*) as c FROM transport_assignments WHERE driver_id = 1 AND status IN ('ASSIGNED', 'MINE_TARE_LOGGED', 'MINE_GROSS_LOGGED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW')").get() as any)?.c || 0;
+    if (activeDriverTrips === 0) {
+      console.log('[DB V3] Seeding ready-to-test demonstration trip for Driver Rajesh Kumar...');
+      // 1. Create or get job config for PO 4500001714 (id 1)
+      let jcId = (instance.prepare("SELECT id FROM job_configs WHERE po_id = 1 LIMIT 1").get() as any)?.id;
+      if (!jcId) {
+        const jcRes = instance.prepare(`
+          INSERT INTO job_configs (po_id, transporter_id, availability_window, availability_window_start, availability_window_end, requested_pickup_datetime, expected_delivery_datetime, final_due_datetime, timebound, status)
+          VALUES (1, 1, '06:00-18:00', '06:00', '18:00', datetime('now', '-1 day'), datetime('now', '+1 day'), datetime('now', '+2 days'), datetime('now', '+7 days'), 'ASSIGNED')
+        `).run();
+        jcId = Number(jcRes.lastInsertRowid);
+        instance.prepare("INSERT OR REPLACE INTO job_config_pos (job_config_id, po_id, planned_qty, uom) VALUES (?, 1, 34.0, 'TO')").run(jcId);
+      }
+
+      // 2. Create transport assignment at DELIVERED state
+      const today = new Date().toISOString().slice(0, 10);
+      const taRes = instance.prepare(`
+        INSERT INTO transport_assignments (job_config_id, driver_id, vehicle_id, location, license_no, gstin, scheduled_date, status)
+        VALUES (?, 1, 1, 'Mine Siding', 'DL-850912-GP', '27AABCS0001A1Z1', ?, 'DELIVERED')
+      `).run(jcId, today);
+      const newTaId = Number(taRes.lastInsertRowid);
+
+      // 3. Seed weight logs
+      instance.prepare("INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail) VALUES (?, 'MINE_TARE', 10000, 'Tare Scale 1')").run(newTaId);
+      instance.prepare("INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail) VALUES (?, 'MINE_GROSS', 44000, 'Gross Scale 1')").run(newTaId);
+      instance.prepare("INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail) VALUES (?, 'DEST_GROSS', 44000, 'Dest Gross Scale')").run(newTaId);
+      instance.prepare("INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail) VALUES (?, 'DEST_TARE', 10000, 'Dest Tare Scale')").run(newTaId);
+
+      // 4. Seed OTP
+      instance.prepare("INSERT INTO otp_verifications (assignment_id, stage, otp_code, status) VALUES (?, 'PICKUP', '4821', 'VERIFIED')").run(newTaId);
+      instance.prepare("INSERT INTO otp_verifications (assignment_id, stage, otp_code, status) VALUES (?, 'DELIVERY', '9142', 'VERIFIED')").run(newTaId);
+
+      // 5. Seed Bilty
+      instance.prepare("INSERT INTO bilty_uploads (assignment_id, bilty_no, bilty_date, upload_url) VALUES (?, 'BL-2026-9901', ?, '/uploads/bilty/sample_bilty.pdf')").run(newTaId, today);
+
+      console.log(`[DB V3] Created active test assignment #${newTaId} for Driver Rajesh Kumar.`);
+    }
+
+    // Ensure at least 1 open item in review_queue so Company Admin POD verification desk is never blank
+    const openReviewCount = (instance.prepare("SELECT COUNT(*) as c FROM review_queue WHERE status = 'OPEN'").get() as any)?.c || 0;
+    if (openReviewCount === 0) {
+      let candidateAssignment = instance.prepare(`
+        SELECT ta.id, jc.po_id, po.sap_po_no, po.rate
+        FROM transport_assignments ta
+        JOIN job_configs jc ON jc.id = ta.job_config_id
+        JOIN purchase_orders po ON (po.id = jc.po_id OR po.id = (SELECT po_id FROM job_config_pos WHERE job_config_id = jc.id LIMIT 1))
+        ORDER BY ta.id DESC LIMIT 1
+      `).get() as any;
+
+      if (candidateAssignment) {
+        const assignId = candidateAssignment.id;
+        instance.prepare("UPDATE transport_assignments SET status = 'UNDER_REVIEW' WHERE id = ?").run(assignId);
+        instance.prepare(`
+          INSERT OR REPLACE INTO pod_documents (
+            assignment_id, pod_file_url, scanned_pod_url, ocr_waybill_extracted, ocr_weight_extracted,
+            ocr_confidence_pct, match_status, ocr_invoice_no, ocr_vendor_name,
+            ocr_po_no, ocr_material, ocr_quantity, ocr_total_amount, ocr_tax_amount,
+            ocr_line_items_json, ocr_raw_text, file_hash, ocr_provider,
+            ocr_processing_status, ocr_processed_at
+          ) VALUES (
+            ?, '/test-invoices/invoice_001_full_match.png', '/test-invoices/invoice_001_full_match.png', '4500001714', 34.0,
+            98.5, 'MATCH', 'INV-2026-0001', 'Sipho Transport Services',
+            '4500001714', 'SL BIT 20%ASH (40006653)', 34.0, 5923.65, 772.65,
+            '[{\"itemNumber\":1,\"materialCode\":\"40006653\",\"description\":\"SL BIT 20%ASH (40006653)\",\"quantity\":34,\"uom\":\"TO\",\"unitPrice\":151.5,\"taxRatePct\":15,\"lineTotal\":5151}]',
+            'Sample OCR Invoice Text', 'hash_sample_001', 'OPENAI',
+            'EXTRACTED', datetime('now')
+          )
+        `).run(assignId);
+
+        instance.prepare("DELETE FROM review_queue WHERE assignment_id = ?").run(assignId);
+        instance.prepare(`
+          INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
+          VALUES (?, 'AWAITING_CA_VERIFY', 'OPEN', 1)
+        `).run(assignId);
+        console.log(`[DB V3] Seeded open review queue item for assignment #${assignId}.`);
+      }
+    }
+  } catch (err) {
+    console.warn('[DB V3] Auto-seed active assignment warning:', err);
+  }
+
   return instance;
 }
 
