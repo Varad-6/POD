@@ -16,17 +16,22 @@ export class SAPClient {
   private config: SAPClientConfig;
 
   constructor() {
-    this.config = {
-      baseUrl: process.env.SAP_HOST || process.env.VITE_SAP_S21_BASE_URL || '',
-      client: process.env.SAP_CLIENT || process.env.VITE_SAP_S21_CLIENT || '100',
-      username: process.env.SAP_USER || process.env.VITE_SAP_S21_USERNAME || '',
-      password: process.env.SAP_PASSWORD || process.env.VITE_SAP_S21_PASSWORD || '',
+    this.config = this.loadConfig();
+  }
+
+  private loadConfig(): SAPClientConfig {
+    return {
+      baseUrl: process.env.SAP_HOST || process.env.VITE_SAP_S21_BASE_URL || 'http://192.168.1.55:8000',
+      client: process.env.SAP_CLIENT || process.env.VITE_SAP_S21_CLIENT || '200',
+      username: process.env.SAP_USER || process.env.VITE_SAP_S21_USERNAME || 'INT_VARAD',
+      password: process.env.SAP_PASSWORD || process.env.VITE_SAP_S21_PASSWORD || 'Password@123',
       destinationName: process.env.SAP_DESTINATION || 'SAP_S4H_PROD',
     };
   }
 
   public isConfigured(): boolean {
-    return Boolean(this.config.baseUrl && this.config.baseUrl.startsWith('http'));
+    const cfg = this.loadConfig();
+    return Boolean(cfg.baseUrl && cfg.baseUrl.startsWith('http'));
   }
 
   /**

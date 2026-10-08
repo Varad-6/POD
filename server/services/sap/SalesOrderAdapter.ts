@@ -204,9 +204,9 @@ export class SalesOrderAdapter {
     }
 
     try {
-      // API_SALES_ORDER_SRV/A_SalesOrder?$filter=OverallSDProcessStatus eq 'A' or OverallSDProcessStatus eq 'B'&$expand=to_Item
+      // Fetch the specific POC sales orders from real SAP S/4HANA
       const results = await this.client.get<RawSalesOrder[]>('/sap/opu/odata/sap/API_SALES_ORDER_SRV/A_SalesOrder', {
-        '$filter': "OverallSDProcessStatus eq 'A' or OverallSDProcessStatus eq 'B'",
+        '$filter': "SalesOrder eq '2318' or SalesOrder eq '2320' or SalesOrder eq '2321' or SalesOrder eq '2322' or OverallSDProcessStatus eq 'A' or OverallSDProcessStatus eq 'B'",
         '$expand': 'to_Item',
         '$top': '100',
       });
@@ -218,19 +218,19 @@ export class SalesOrderAdapter {
 
         const items: TransformedSalesOrderItem[] = rawItems.map(item => ({
           item_no: String(item.SalesOrderItem || '10'),
-          material: item.Material || 'Unknown Material',
+          material: item.Material ? `${item.Material} (${item.SalesOrderItemText || 'General Cargo'})` : (item.SalesOrderItemText || 'General Cargo'),
           material_desc: item.SalesOrderItemText || item.Material || '',
           order_qty: Number(item.RequestedQuantity || 0),
-          uom: item.RequestedQuantityUnit || 'TO',
+          uom: item.RequestedQuantityUnit || 'EA',
           net_price: Number(item.NetAmount || 0),
           plant: item.Plant || '1001',
-          storage_location: item.StorageLocation || '',
+          storage_location: item.StorageLocation || 'SL01',
         }));
 
         return {
           sap_so_no: String(so.SalesOrder),
           customer_no: String(so.SoldToParty || 'SAP-CUST-1001'),
-          customer_name: so.SoldToPartyName || `Customer ${so.SoldToParty}`,
+          customer_name: so.SoldToPartyName || `Customer #${so.SoldToParty}`,
           created_date: so.CreationDate || new Date().toISOString().slice(0, 10),
           delivery_date: so.RequestedDeliveryDate || new Date().toISOString().slice(0, 10),
           overall_status: so.OverallSDProcessStatus || 'A',

@@ -181,25 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
                   </div>
                 </div>
 
-                {/* Group 2: PROCUREMENT / SALES */}
-                <div>
-                  {!isEffectiveCollapsed && (
-                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                      SALES & DISTRIBUTION
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <NavLink 
-                      to="/admin/sales-orders" 
-                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "SAP Sales Orders" : undefined}
-                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
-                    >
-                      <FileSignature size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>SAP Sales Orders</span>}
-                    </NavLink>
-                  </div>
-                </div>
+
 
                 {/* Group 3: FINANCE */}
                 <div>

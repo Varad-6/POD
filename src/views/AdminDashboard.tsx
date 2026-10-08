@@ -257,8 +257,8 @@ export const AdminDashboard: React.FC = () => {
             ]}
           />
 
-          <div className="responsive-split" style={{ gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-            {/* Main Interactive Table: Live SAP Sales Orders */}
+          <div>
+            {/* Main Interactive Table: Live SAP Sales Orders full width */}
             <Card 
               title="Live SAP Sales Orders" 
               subtitle="Select orders with checkboxes to distribute them as complete units to transport partners, or click any order to inspect its line items."
@@ -273,14 +273,6 @@ export const AdminDashboard: React.FC = () => {
                       <Send size={12} style={{ marginRight: '4px' }} /> Distribute ({selectedSoIds.length})
                     </Button>
                   )}
-                  <Button 
-                    variant="secondary" 
-                    size="sm"
-                    onClick={() => navigate('/admin/sales-orders')}
-                    style={{ fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    View All ({salesOrders.length}) <ArrowRight size={13} />
-                  </Button>
                 </div>
               }
               style={{ padding: 0 }}
@@ -410,62 +402,6 @@ export const AdminDashboard: React.FC = () => {
                   </table>
                 </div>
               )}
-            </Card>
-
-            {/* Side Card: Telemetry & Status Overview */}
-            <Card title="System Telemetry & Actions">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div 
-                  onClick={handleRefreshFromSap}
-                  style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer', padding: '8px', borderRadius: '8px' }}
-                  className="table-row-hover"
-                  title="Click to refresh from S/4HANA"
-                >
-                  <div style={{ backgroundColor: 'var(--color-brand-blue-50)', padding: '8px', borderRadius: '6px', color: 'var(--color-brand-blue-600)' }}>
-                    <Activity size={16} />
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>Live SAP Sales Order Link</p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: 'var(--color-text-muted)' }}>
-                      Connected to S/4HANA OData service. {salesOrders.length} orders loaded.
-                    </p>
-                  </div>
-                </div>
-
-                <div 
-                  onClick={() => navigate('/admin/approvals')}
-                  style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer', padding: '8px', borderRadius: '8px' }}
-                  className="table-row-hover"
-                  title="View Flagged Review Queue"
-                >
-                  <div style={{ backgroundColor: 'var(--color-error-bg)', padding: '8px', borderRadius: '6px', color: 'var(--color-error-text)' }}>
-                    <ClipboardCheck size={16} />
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>Review Queue Alert</p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: 'var(--color-text-muted)' }}>
-                      {reviews.length} items flagged for manual override
-                    </p>
-                  </div>
-                </div>
-
-                <div 
-                  onClick={() => navigate('/admin/invoices')}
-                  style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', cursor: 'pointer', padding: '8px', borderRadius: '8px' }}
-                  className="table-row-hover"
-                  title="Go to Post Invoice Desk"
-                >
-                  <div style={{ backgroundColor: 'var(--color-success-bg)', padding: '8px', borderRadius: '6px', color: 'var(--color-success-text)' }}>
-                    <FileClock size={16} />
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 600 }}>Post Invoice Desk</p>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: 'var(--color-text-muted)' }}>
-                      {pendingPodVerify.length} deliveries verified and ready to park
-                    </p>
-                  </div>
-                </div>
-              </div>
             </Card>
           </div>
         </>
