@@ -11,7 +11,9 @@ import {
   Square, 
   Send,
   Eye,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  Truck
 } from 'lucide-react';
 
 import { 
@@ -55,6 +57,8 @@ export const AdminDashboard: React.FC = () => {
   const [inspectSo, setInspectSo] = useState<SalesOrderV3 | null>(null);
   const [inspectLoading, setInspectLoading] = useState(false);
   const [inspectDetails, setInspectDetails] = useState<SalesOrderV3 | null>(null);
+  const [inspectTab, setInspectTab] = useState<'SO' | 'DELIVERY'>('SO');
+  const [selectedDeliveryNo, setSelectedDeliveryNo] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -119,12 +123,22 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
-  const handleOpenInspect = async (so: SalesOrderV3) => {
+  const handleOpenInspect = async (so: SalesOrderV3, targetDeliveryNo?: string) => {
     setInspectSo(so);
     setInspectLoading(true);
+    if (targetDeliveryNo) {
+      setInspectTab('DELIVERY');
+      setSelectedDeliveryNo(targetDeliveryNo);
+    } else {
+      setInspectTab('SO');
+      setSelectedDeliveryNo(null);
+    }
     try {
       const detail = await salesOrdersApi.get(so.id);
       setInspectDetails(detail);
+      if (detail.deliveries && detail.deliveries.length > 0 && !targetDeliveryNo) {
+        setSelectedDeliveryNo(detail.deliveries[0].sap_delivery_no);
+      }
     } catch (err) {
       console.error('Failed to fetch SO details:', err);
       setInspectDetails(so);
@@ -373,15 +387,16 @@ export const AdminDashboard: React.FC = () => {
                                   {so.deliveries_summary.split(', ').map(delNo => (
                                     <span 
                                       key={delNo}
-                                      onClick={() => handleOpenInspect(so)}
+                                      onClick={() => handleOpenInspect(so, delNo)}
+                                      title={`View VL03N Delivery #${delNo} Breakdown`}
                                       style={{
-                                        padding: '2px 6px',
+                                        padding: '2px 7px',
                                         borderRadius: '4px',
                                         backgroundColor: '#eff6ff',
                                         border: '1px solid #bfdbfe',
                                         fontFamily: 'monospace',
-                                        fontSize: '11px',
-                                        fontWeight: 600,
+                                        fontSize: '11.5px',
+                                        fontWeight: 700,
                                         color: '#1d4ed8',
                                         cursor: 'pointer'
                                       }}
@@ -451,143 +466,401 @@ export const AdminDashboard: React.FC = () => {
             </div>
           ) : (
             <>
-              {/* Header Box with Customer, Address & Net Value in INR */}
+              {/* Document Type Tabs: VA03 vs VL03N */}
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '12px',
-                padding: '14px 16px',
-                borderRadius: '8px',
-                backgroundColor: 'var(--color-bg-page)',
-                border: '1px solid var(--color-border)',
-                fontSize: '12.5px'
+                display: 'flex',
+                gap: '8px',
+                borderBottom: '1px solid var(--color-border)',
+                paddingBottom: '8px',
+                alignItems: 'center'
               }}>
-                <div>
-                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Sold-To Party (Customer)</span>
-                  <strong style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>{inspectDetails?.customer_name || inspectSo?.customer_name}</strong>
-                  <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                    {inspectDetails?.customer_address || 'Pune, Maharashtra, India'}
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Total Net Value (VA03)</span>
-                  <strong style={{ fontSize: '14px', color: 'var(--color-brand-blue-600)' }}>
-                    {Number(inspectDetails?.total_net_amount ?? inspectSo?.total_net_amount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {inspectDetails?.currency || 'INR'}
-                  </strong>
-                  <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-                    Status: <span style={{ fontWeight: 600 }}>{inspectDetails?.overall_status === 'A' ? 'Active / Open' : 'Processed'}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Logistics Execution Stage</span>
-                  <div style={{ marginTop: '4px' }}>
-                    <StatusBadge status={inspectDetails?.portal_status || inspectSo?.portal_status || 'OPEN'} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Real Outbound Deliveries (VL03N) Breakdown Box */}
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
-                    Outbound Delivery Documents (VL03N)
-                  </h4>
-                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>
-                    {(inspectDetails?.deliveries || []).length} Document(s) Assigned
+                <button
+                  type="button"
+                  onClick={() => setInspectTab('SO')}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: inspectTab === 'SO' ? 'var(--color-brand-blue-600)' : 'var(--color-bg-page)',
+                    color: inspectTab === 'SO' ? '#ffffff' : 'var(--color-text-body)',
+                    fontWeight: 600,
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <FileText size={14} />
+                  Sales Order Cargo (VA03)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setInspectTab('DELIVERY');
+                    if (!selectedDeliveryNo && inspectDetails?.deliveries && inspectDetails.deliveries.length > 0) {
+                      setSelectedDeliveryNo(inspectDetails.deliveries[0].sap_delivery_no);
+                    }
+                  }}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: inspectTab === 'DELIVERY' ? 'var(--color-brand-blue-600)' : 'var(--color-bg-page)',
+                    color: inspectTab === 'DELIVERY' ? '#ffffff' : 'var(--color-text-body)',
+                    fontWeight: 600,
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <Truck size={14} />
+                  Outbound Deliveries (VL03N)
+                  <span style={{
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    fontSize: '11px',
+                    backgroundColor: inspectTab === 'DELIVERY' ? 'rgba(255,255,255,0.25)' : 'var(--color-brand-blue-100, #dbeafe)',
+                    color: inspectTab === 'DELIVERY' ? '#ffffff' : 'var(--color-brand-blue-700, #1d4ed8)',
+                    fontWeight: 700
+                  }}>
+                    {(inspectDetails?.deliveries || []).length}
                   </span>
-                </div>
+                </button>
+              </div>
 
-                {(inspectDetails?.deliveries && inspectDetails.deliveries.length > 0) ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {inspectDetails.deliveries.map(del => (
-                      <div
-                        key={del.id}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          backgroundColor: del.delivery_type === 'COMPLETE' ? '#f0fdf4' : '#eff6ff',
-                          border: `1px solid ${del.delivery_type === 'COMPLETE' ? '#bbf7d0' : '#bfdbfe'}`,
-                          fontSize: '12px',
-                        }}
-                      >
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1e293b' }}>
-                          Delivery #{del.sap_delivery_no}
-                        </span>
-                        <span style={{
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          fontSize: '10.5px',
-                          fontWeight: 700,
-                          backgroundColor: del.delivery_type === 'COMPLETE' ? '#16a34a' : '#2563eb',
-                          color: '#ffffff'
-                        }}>
-                          {del.delivery_type === 'COMPLETE' ? 'Complete Delivery' : 'Partial Delivery'}
-                        </span>
+              {inspectTab === 'SO' ? (
+                <>
+                  {/* Header Box with Customer, Address & Net Value in INR */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: '12px',
+                    padding: '14px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--color-bg-page)',
+                    border: '1px solid var(--color-border)',
+                    fontSize: '12.5px'
+                  }}>
+                    <div>
+                      <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Sold-To Party (Customer)</span>
+                      <strong style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>{inspectDetails?.customer_name || inspectSo?.customer_name}</strong>
+                      <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                        {inspectDetails?.customer_address || 'Pune, Maharashtra, India'}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--color-bg-page)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                    No outbound delivery generated yet in SAP S/4HANA.
-                  </div>
-                )}
-              </div>
+                    </div>
 
-              {/* Real Cargo Line Items Breakdown (VA03) */}
-              <div>
-                <h4 style={{ margin: '4px 0 8px 0', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
-                  Sales Order Cargo Items (VA03)
-                </h4>
-                <div style={{ border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: 'var(--color-bg-page)', borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
-                        <th style={{ padding: '8px 12px' }}>Item #</th>
-                        <th style={{ padding: '8px 12px' }}>Material</th>
-                        <th style={{ padding: '8px 12px' }}>Description</th>
-                        <th style={{ padding: '8px 12px' }}>Order Qty</th>
-                        <th style={{ padding: '8px 12px' }}>Net Price</th>
-                        <th style={{ padding: '8px 12px' }}>Plant</th>
-                        <th style={{ padding: '8px 12px' }}>SLoc</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(inspectDetails?.items && inspectDetails.items.length > 0) ? (
-                        inspectDetails.items.map(itm => (
-                          <tr key={itm.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                            <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 700 }}>#{itm.item_no}</td>
-                            <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--color-brand-blue-600)', fontWeight: 600 }}>
-                              {itm.material}
-                            </td>
-                            <td style={{ padding: '8px 12px', fontWeight: 500 }}>
-                              {itm.material_desc || itm.material}
-                            </td>
-                            <td style={{ padding: '8px 12px', fontWeight: 600 }}>
-                              {itm.order_qty} {itm.uom}
-                            </td>
-                            <td style={{ padding: '8px 12px' }}>
-                              {Number(itm.net_price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR
-                            </td>
-                            <td style={{ padding: '8px 12px' }}>{itm.plant || 'RBP1'}</td>
-                            <td style={{ padding: '8px 12px' }}>{itm.storage_location || 'SL01'}</td>
+                    <div>
+                      <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Total Net Value (VA03)</span>
+                      <strong style={{ fontSize: '14px', color: 'var(--color-brand-blue-600)' }}>
+                        {Number(inspectDetails?.total_net_amount ?? inspectSo?.total_net_amount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {inspectDetails?.currency || 'INR'}
+                      </strong>
+                      <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                        Status: <span style={{ fontWeight: 600 }}>{inspectDetails?.overall_status === 'A' ? 'Active / Open' : 'Processed'}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Logistics Execution Stage</span>
+                      <div style={{ marginTop: '4px' }}>
+                        <StatusBadge status={inspectDetails?.portal_status || inspectSo?.portal_status || 'OPEN'} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Outbound Deliveries Summary in VA03 view */}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                        Linked Outbound Deliveries (VL03N)
+                      </h4>
+                      <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>
+                        Click a delivery to inspect VL03N details
+                      </span>
+                    </div>
+
+                    {(inspectDetails?.deliveries && inspectDetails.deliveries.length > 0) ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {inspectDetails.deliveries.map(del => (
+                          <div
+                            key={del.id}
+                            onClick={() => {
+                              setSelectedDeliveryNo(del.sap_delivery_no);
+                              setInspectTab('DELIVERY');
+                            }}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              backgroundColor: del.delivery_type === 'COMPLETE' ? '#f0fdf4' : '#eff6ff',
+                              border: `1px solid ${del.delivery_type === 'COMPLETE' ? '#bbf7d0' : '#bfdbfe'}`,
+                              fontSize: '12px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1e293b' }}>
+                              Delivery #{del.sap_delivery_no}
+                            </span>
+                            <span style={{
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              backgroundColor: del.delivery_type === 'COMPLETE' ? '#16a34a' : '#2563eb',
+                              color: '#ffffff'
+                            }}>
+                              {del.delivery_type === 'COMPLETE' ? 'Complete Delivery' : 'Partial Delivery'}
+                            </span>
+                            <Eye size={12} color="#64748b" />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--color-bg-page)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                        No outbound delivery generated yet in SAP S/4HANA.
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Real Cargo Line Items Breakdown (VA03) */}
+                  <div>
+                    <h4 style={{ margin: '4px 0 8px 0', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                      Sales Order Cargo Items (VA03)
+                    </h4>
+                    <div style={{ border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                        <thead>
+                          <tr style={{ backgroundColor: 'var(--color-bg-page)', borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                            <th style={{ padding: '8px 12px' }}>Item #</th>
+                            <th style={{ padding: '8px 12px' }}>Material</th>
+                            <th style={{ padding: '8px 12px' }}>Description</th>
+                            <th style={{ padding: '8px 12px' }}>Order Qty</th>
+                            <th style={{ padding: '8px 12px' }}>Net Price</th>
+                            <th style={{ padding: '8px 12px' }}>Plant</th>
+                            <th style={{ padding: '8px 12px' }}>SLoc</th>
                           </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={7} style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-                            No line items registered.
-                          </td>
-                        </tr>
+                        </thead>
+                        <tbody>
+                          {(inspectDetails?.items && inspectDetails.items.length > 0) ? (
+                            inspectDetails.items.map(itm => (
+                              <tr key={itm.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 700 }}>#{itm.item_no}</td>
+                                <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--color-brand-blue-600)', fontWeight: 600 }}>
+                                  {itm.material}
+                                </td>
+                                <td style={{ padding: '8px 12px', fontWeight: 500 }}>
+                                  {itm.material_desc || itm.material}
+                                </td>
+                                <td style={{ padding: '8px 12px', fontWeight: 600 }}>
+                                  {itm.order_qty} {itm.uom}
+                                </td>
+                                <td style={{ padding: '8px 12px' }}>
+                                  {Number(itm.net_price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR
+                                </td>
+                                <td style={{ padding: '8px 12px' }}>{itm.plant || 'RBP1'}</td>
+                                <td style={{ padding: '8px 12px' }}>{itm.storage_location || 'SL01'}</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={7} style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                No line items registered.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Outbound Delivery (VL03N) Tab */
+                (() => {
+                  const delList = inspectDetails?.deliveries || [];
+                  const activeDelivery = delList.find(d => d.sap_delivery_no === selectedDeliveryNo) || delList[0];
+
+                  if (!activeDelivery) {
+                    return (
+                      <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                        No Outbound Delivery document exists for this Sales Order.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                      {/* Delivery Selector Pills if multiple */}
+                      {delList.length > 1 && (
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {delList.map(del => {
+                            const isSelected = (del.sap_delivery_no === (selectedDeliveryNo || activeDelivery.sap_delivery_no));
+                            return (
+                              <button
+                                key={del.id}
+                                type="button"
+                                onClick={() => setSelectedDeliveryNo(del.sap_delivery_no)}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  border: isSelected ? '2px solid #2563eb' : '1px solid var(--color-border)',
+                                  backgroundColor: isSelected ? '#eff6ff' : 'var(--color-bg-page)',
+                                  fontWeight: 600,
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}
+                              >
+                                <span>Delivery #{del.sap_delivery_no}</span>
+                                <span style={{
+                                  fontSize: '10px',
+                                  padding: '1px 5px',
+                                  borderRadius: '4px',
+                                  backgroundColor: del.delivery_type === 'COMPLETE' ? '#16a34a' : '#2563eb',
+                                  color: '#ffffff',
+                                  fontWeight: 700
+                                }}>
+                                  {del.delivery_type === 'COMPLETE' ? 'Complete' : 'Partial'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+
+                      {/* Authentic SAP VL03N Delivery Header Box */}
+                      <div style={{
+                        padding: '14px 16px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--color-bg-page)',
+                        border: '1px solid var(--color-border)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '12px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: '10px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ fontSize: '16px', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-brand-blue-700, #1d4ed8)' }}>
+                              Outbound Delivery #{activeDelivery.sap_delivery_no}
+                            </span>
+                            <span style={{
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              backgroundColor: activeDelivery.delivery_type === 'COMPLETE' ? '#16a34a' : '#2563eb',
+                              color: '#ffffff'
+                            }}>
+                              {activeDelivery.delivery_type === 'COMPLETE' ? 'Complete Delivery' : 'Partial Delivery'}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
+                            Tcode: VL03N
+                          </span>
+                        </div>
+
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                          gap: '12px',
+                          fontSize: '12.5px'
+                        }}>
+                          <div>
+                            <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Ship-To Party</span>
+                            <strong style={{ fontSize: '13px', color: 'var(--color-text-heading)' }}>
+                              {activeDelivery.ship_to_party || inspectDetails?.sap_customer_no} — {activeDelivery.ship_to_name || inspectDetails?.customer_name}
+                            </strong>
+                            <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                              {activeDelivery.ship_to_address || inspectDetails?.customer_address || 'Pune, Maharashtra, India'}
+                            </div>
+                          </div>
+
+                          <div>
+                            <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Movement Dates</span>
+                            <div>Doc Date: <strong>{activeDelivery.document_date || '07.10.2026'}</strong></div>
+                            <div style={{ marginTop: '2px' }}>
+                              Planned GI: <strong style={{ color: '#2563eb' }}>{activeDelivery.planned_gi_date || '07.10.2026'}</strong>
+                            </div>
+                            {activeDelivery.actual_gi_date && (
+                              <div style={{ marginTop: '2px', color: '#16a34a', fontWeight: 600 }}>
+                                Actual GI: {activeDelivery.actual_gi_date}
+                              </div>
+                            )}
+                          </div>
+
+                          <div>
+                            <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Weight & Packaging</span>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                              Total Weight: {activeDelivery.total_weight_kg ? `${activeDelivery.total_weight_kg.toLocaleString('en-IN', { minimumFractionDigits: 1 })} KG` : '10.0 KG'}
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                              No. of Packages: <strong>{activeDelivery.no_packages ?? 0}</strong>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* VL03N Delivered Line Items Overview Table */}
+                      <div>
+                        <h4 style={{ margin: '4px 0 8px 0', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                          Item Overview — Delivered Materials (VL03N)
+                        </h4>
+                        <div style={{ border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                            <thead>
+                              <tr style={{ backgroundColor: 'var(--color-bg-page)', borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                                <th style={{ padding: '8px 12px' }}>Item #</th>
+                                <th style={{ padding: '8px 12px' }}>Material</th>
+                                <th style={{ padding: '8px 12px' }}>Description</th>
+                                <th style={{ padding: '8px 12px' }}>Deliv. Qty</th>
+                                <th style={{ padding: '8px 12px' }}>Unit</th>
+                                <th style={{ padding: '8px 12px' }}>Plant</th>
+                                <th style={{ padding: '8px 12px' }}>SLoc</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {(activeDelivery.items && activeDelivery.items.length > 0) ? (
+                                activeDelivery.items.map((itm: any, idx: number) => (
+                                  <tr key={idx} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                                    <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 700 }}>#{itm.item_no}</td>
+                                    <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--color-brand-blue-600)', fontWeight: 600 }}>
+                                      {itm.material}
+                                    </td>
+                                    <td style={{ padding: '8px 12px', fontWeight: 500 }}>
+                                      {itm.material_desc || itm.material}
+                                    </td>
+                                    <td style={{ padding: '8px 12px', fontWeight: 700, color: '#16a34a' }}>
+                                      {itm.deliv_qty}
+                                    </td>
+                                    <td style={{ padding: '8px 12px', fontWeight: 600 }}>
+                                      {itm.uom || 'EA'}
+                                    </td>
+                                    <td style={{ padding: '8px 12px' }}>{itm.plant || 'DSA1'}</td>
+                                    <td style={{ padding: '8px 12px' }}>{itm.storage_location || 'SL01'}</td>
+                                  </tr>
+                                ))
+                              ) : (
+                                <tr>
+                                  <td colSpan={7} style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                                    No item records registered for this delivery document.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
 
               {inspectSo?.portal_status === 'OPEN' && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>

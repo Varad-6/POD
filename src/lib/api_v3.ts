@@ -457,6 +457,16 @@ export interface SalesOrderItemV3 {
   storage_location?: string;
 }
 
+export interface OutboundDeliveryItemV3 {
+  item_no: string;
+  material: string;
+  material_desc: string;
+  deliv_qty: number;
+  uom: string;
+  plant?: string;
+  storage_location?: string;
+}
+
 export interface OutboundDeliveryV3 {
   id: number;
   so_id: number;
@@ -465,6 +475,18 @@ export interface OutboundDeliveryV3 {
   delivery_type: 'COMPLETE' | 'PARTIAL';
   status: string;
   delivered_qty?: number;
+  ship_to_party?: string;
+  ship_to_name?: string;
+  ship_to_address?: string;
+  document_date?: string;
+  planned_gi_date?: string;
+  actual_gi_date?: string;
+  total_weight_kg?: number;
+  net_weight_kg?: number;
+  volume_cd3?: number;
+  no_packages?: number;
+  items_json?: string;
+  items?: OutboundDeliveryItemV3[];
 }
 
 export interface SalesOrderV3 {
@@ -571,6 +593,8 @@ export const salesOrdersApi = {
       body: JSON.stringify({ so_ids: soIds, transporter_id: transporterId }),
     }),
   getDistributions: () => request<SoDistributionV3[]>('/so-distributions'),
+  getDeliveries: () => request<OutboundDeliveryV3[]>('/outbound-deliveries'),
+  getDelivery: (deliveryNo: string | number) => request<OutboundDeliveryV3>(`/outbound-deliveries/${deliveryNo}`),
   assignDriver: (distId: number, driverId: number, vehicleId: number, scheduledDate?: string) =>
     request<{ success: boolean; assignment_id: number; message: string }>(`/so-distributions/${distId}/assign`, {
       method: 'POST',

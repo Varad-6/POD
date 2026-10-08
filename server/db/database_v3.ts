@@ -188,24 +188,47 @@ export function initDb(): Database.Database {
       delivery_type     TEXT NOT NULL CHECK(delivery_type IN ('COMPLETE','PARTIAL')),
       status            TEXT NOT NULL DEFAULT 'OPEN',
       delivered_qty     REAL DEFAULT 0,
+      ship_to_party     TEXT,
+      ship_to_name      TEXT,
+      ship_to_address   TEXT,
+      document_date     TEXT,
+      planned_gi_date   TEXT,
+      actual_gi_date    TEXT,
+      total_weight_kg   REAL DEFAULT 0,
+      net_weight_kg     REAL DEFAULT 0,
+      volume_cd3        REAL DEFAULT 0,
+      no_packages       INTEGER DEFAULT 0,
+      items_json        TEXT,
       created_at        TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
 
+  addColumnIfNotExists('outbound_deliveries', 'ship_to_party', "TEXT");
+  addColumnIfNotExists('outbound_deliveries', 'ship_to_name', "TEXT");
+  addColumnIfNotExists('outbound_deliveries', 'ship_to_address', "TEXT");
+  addColumnIfNotExists('outbound_deliveries', 'document_date', "TEXT");
+  addColumnIfNotExists('outbound_deliveries', 'planned_gi_date', "TEXT");
+  addColumnIfNotExists('outbound_deliveries', 'actual_gi_date', "TEXT");
+  addColumnIfNotExists('outbound_deliveries', 'total_weight_kg', "REAL DEFAULT 0");
+  addColumnIfNotExists('outbound_deliveries', 'net_weight_kg', "REAL DEFAULT 0");
+  addColumnIfNotExists('outbound_deliveries', 'volume_cd3', "REAL DEFAULT 0");
+  addColumnIfNotExists('outbound_deliveries', 'no_packages', "INTEGER DEFAULT 0");
+  addColumnIfNotExists('outbound_deliveries', 'items_json', "TEXT");
+
   // Ensure POC Sales Orders (2318, 2320, 2321, 2322) are seeded if table is empty or update with real SAP master data
   try {
-    console.log('[DB V3] Synchronizing authentic SAP master data & deliveries matching screenshots...');
+    console.log('[DB V3] Synchronizing authentic SAP master data & deliveries matching VL03N screenshots...');
     const insertCustomer = instance.prepare(`
       INSERT OR REPLACE INTO customers (id, name, sap_customer_no, gps_lat, gps_lng, address)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    // Customer 122: DP WORLD PVT LTD, Pune (from Screenshot 5 & 6)
+    // Customer 122: DP WORLD PVT LTD, Pune
     insertCustomer.run(1, 'DP WORLD PVT LTD', '122', 18.5308, 73.8475, '123, Shivajinagar pune, Pune, Maharashtra, 414305, India');
-    // Customer 90000501: Company Atharv Pharma abc, Pune (from Screenshot 4)
+    // Customer 90000501: Company Atharv Pharma abc, Pune (from Screenshot 4 & VL03N 80001470)
     insertCustomer.run(2, 'Company Atharv Pharma abc', '90000501', 18.5204, 73.8567, '6, Pune, Maharashtra, 987789, India');
-    // Customer 131: Industrial Mining Customer (SO 2318)
-    insertCustomer.run(3, 'Industrial Mining Services', '131', -25.7670, 29.4630, 'Industrial Area Siding, Emoyeni, ZA');
+    // Customer 131: Company KK limited, Pune (from VL03N 80001469)
+    insertCustomer.run(3, 'Company KK limited', '131', 18.5987, 73.7634, '05, wakad, Pune, Maharashtra, 411057, India');
 
     const insertSO = instance.prepare(`
       INSERT OR REPLACE INTO sales_orders (id, sap_so_no, customer_id, sap_customer_no, created_date, delivery_date, overall_status, total_net_amount, currency, portal_status)
@@ -216,38 +239,97 @@ export function initDb(): Database.Database {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const insertDelivery = instance.prepare(`
-      INSERT OR REPLACE INTO outbound_deliveries (so_id, sap_so_no, sap_delivery_no, delivery_type, status)
-      VALUES (?, ?, ?, ?, 'OPEN')
+      INSERT OR REPLACE INTO outbound_deliveries (
+        so_id, sap_so_no, sap_delivery_no, delivery_type, status, delivered_qty,
+        ship_to_party, ship_to_name, ship_to_address, document_date, planned_gi_date, actual_gi_date,
+        total_weight_kg, net_weight_kg, volume_cd3, no_packages, items_json
+      )
+      VALUES (?, ?, ?, ?, 'OPEN', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    // SO 2318 (Case 1: Single line item complete delivery 80001469)
+    // SO 2318 (Case 1: Single line item complete delivery 80001469 - Company KK limited)
     insertSO.run(1, '2318', 3, '131', 99.99);
     insertItem.run(1, '2318', '10', '33', 'Brake Pad', 1.0, 'EA', 99.99, '1001', 'SL01');
-    insertDelivery.run(1, '2318', '80001469', 'COMPLETE');
+    insertDelivery.run(
+      1, '2318', '80001469', 'COMPLETE', 1.0,
+      '131', 'Company KK limited', '05, wakad, Pune, Maharashtra, 411057, India',
+      '07.10.2026', '07.10.2026', null,
+      10.0, 0.0, 0.0, 0,
+      JSON.stringify([
+        { item_no: '10', material: '33', material_desc: 'Brake Pad', deliv_qty: 1.0, uom: 'EA', plant: '1001', storage_location: 'SL01' }
+      ])
+    );
 
     // SO 2321 (Case 2: Multiple material partial delivery 80001471, 80001472 - DP WORLD PVT LTD)
     insertSO.run(2, '2321', 1, '122', 268013.20);
     insertItem.run(2, '2321', '100', '99', 'chair 01', 10.0, 'PC', 12000.00, 'RBP1', 'SL01');
     insertItem.run(2, '2321', '200', '33', 'Drilling machine spare part', 10.0, 'EA', 202000.00, 'RBP1', 'SL01');
     insertItem.run(2, '2321', '300', '41', 'Battery1', 10.0, 'EA', 54013.20, 'RBP1', 'SL01');
-    insertDelivery.run(2, '2321', '80001471', 'PARTIAL');
-    insertDelivery.run(2, '2321', '80001472', 'PARTIAL');
+    insertDelivery.run(
+      2, '2321', '80001471', 'PARTIAL', 10.0,
+      '122', 'DP WORLD PVT LTD', '123, Shivajinagar pune, Pune, Maharashtra, 414305, India',
+      '07.10.2026', '07.10.2026', null,
+      120.0, 0.0, 0.0, 1,
+      JSON.stringify([
+        { item_no: '100', material: '99', material_desc: 'chair 01', deliv_qty: 10.0, uom: 'PC', plant: 'RBP1', storage_location: 'SL01' }
+      ])
+    );
+    insertDelivery.run(
+      2, '2321', '80001472', 'PARTIAL', 20.0,
+      '122', 'DP WORLD PVT LTD', '123, Shivajinagar pune, Pune, Maharashtra, 414305, India',
+      '07.10.2026', '07.10.2026', null,
+      256.0, 0.0, 0.0, 2,
+      JSON.stringify([
+        { item_no: '200', material: '33', material_desc: 'Drilling machine spare part', deliv_qty: 10.0, uom: 'EA', plant: 'RBP1', storage_location: 'SL01' },
+        { item_no: '300', material: '41', material_desc: 'Battery1', deliv_qty: 10.0, uom: 'EA', plant: 'RBP1', storage_location: 'SL01' }
+      ])
+    );
 
     // SO 2320 (Case 3: Multiple line item partial delivery 80001470, 80001473 - Atharv Pharma)
     insertSO.run(3, '2320', 2, '90000501', 61000.00);
     insertItem.run(3, '2320', '10', '1702', 'pharma product 01', 10.0, 'EA', 1000.00, 'DSA1', 'SL01');
     insertItem.run(3, '2320', '20', '1727', 'pharma product 10', 10.0, 'EA', 10000.00, 'DSA1', 'DSA1');
     insertItem.run(3, '2320', '30', '1728', 'pharma product 09', 10.0, 'EA', 50000.00, 'DSA1', 'SL01');
-    insertDelivery.run(3, '2320', '80001470', 'PARTIAL');
-    insertDelivery.run(3, '2320', '80001473', 'PARTIAL');
+    insertDelivery.run(
+      3, '2320', '80001470', 'PARTIAL', 15.0,
+      '90000501', 'Company Atharv Pharma abc', '6, Pune, Maharashtra, 987789, India',
+      '07.10.2026', '08.10.2026', '07.10.2026',
+      10005.5, 0.0, 0.0, 0,
+      JSON.stringify([
+        { item_no: '10', material: '1702', material_desc: 'pharma product 01', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'SL01' },
+        { item_no: '20', material: '1727', material_desc: 'pharma product 10', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'DSA1' },
+        { item_no: '30', material: '1728', material_desc: 'pharma product 09', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'SL01' }
+      ])
+    );
+    insertDelivery.run(
+      3, '2320', '80001473', 'PARTIAL', 15.0,
+      '90000501', 'Company Atharv Pharma abc', '6, Pune, Maharashtra, 987789, India',
+      '07.10.2026', '09.10.2026', null,
+      10005.5, 0.0, 0.0, 0,
+      JSON.stringify([
+        { item_no: '10', material: '1702', material_desc: 'pharma product 01', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'SL01' },
+        { item_no: '20', material: '1727', material_desc: 'pharma product 10', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'DSA1' },
+        { item_no: '30', material: '1728', material_desc: 'pharma product 09', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'SL01' }
+      ])
+    );
 
     // SO 2322 (Case 4: Multiple line item complete delivery 80001474 - Atharv Pharma)
     insertSO.run(4, '2322', 2, '90000501', 26000.00);
     insertItem.run(4, '2322', '10', '1702', 'pharma product 01', 5.0, 'EA', 500.00, 'DSA1', 'SL01');
     insertItem.run(4, '2322', '20', '1727', 'pharma product 10', 5.0, 'EA', 500.00, 'DSA1', 'DSA1');
     insertItem.run(4, '2322', '30', '1728', 'pharma product 09', 5.0, 'EA', 25000.00, 'DSA1', 'SL01');
-    insertDelivery.run(4, '2322', '80001474', 'COMPLETE');
-    console.log('[DB V3] Real SAP Sales Orders and Outbound Deliveries synchronized.');
+    insertDelivery.run(
+      4, '2322', '80001474', 'COMPLETE', 15.0,
+      '90000501', 'Company Atharv Pharma abc', '6, Pune, Maharashtra, 987789, India',
+      '07.10.2026', '07.10.2026', '07.10.2026',
+      26000.0, 0.0, 0.0, 0,
+      JSON.stringify([
+        { item_no: '10', material: '1702', material_desc: 'pharma product 01', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'SL01' },
+        { item_no: '20', material: '1727', material_desc: 'pharma product 10', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'DSA1' },
+        { item_no: '30', material: '1728', material_desc: 'pharma product 09', deliv_qty: 5.0, uom: 'EA', plant: 'DSA1', storage_location: 'SL01' }
+      ])
+    );
+    console.log('[DB V3] Real SAP Sales Orders and Outbound Deliveries synchronized with full VL03N details.');
   } catch (err) {
     console.warn('[DB V3] Sales order seeding check warning:', err);
   }

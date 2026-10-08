@@ -546,7 +546,15 @@ router.get('/sales-orders/:id', requireAuth, (req: Request, res: Response) => {
   if (!so) return res.status(404).json({ error: 'Sales Order not found' });
 
   const items = db.prepare('SELECT * FROM sales_order_items WHERE so_id = ? ORDER BY CAST(item_no AS INTEGER) ASC').all(so.id);
-  const deliveries = db.prepare('SELECT * FROM outbound_deliveries WHERE so_id = ? ORDER BY id ASC').all(so.id);
+  const rawDeliveries = db.prepare('SELECT * FROM outbound_deliveries WHERE so_id = ? ORDER BY id ASC').all(so.id) as any[];
+  const deliveries = rawDeliveries.map(del => {
+    let delItems = [];
+    if (del.items_json) {
+      try { delItems = JSON.parse(del.items_json); } catch (e) { delItems = []; }
+    }
+    return { ...del, items: delItems };
+  });
+
   const distribution = db.prepare(`
     SELECT sod.*, t.name as transporter_name
     FROM so_distributions sod
@@ -561,6 +569,49 @@ router.get('/sales-orders/:id', requireAuth, (req: Request, res: Response) => {
     deliveries,
     distribution: distribution || null
   });
+});
+
+// GET /api/v3/outbound-deliveries - List all Outbound Deliveries (VL03N)
+router.get('/outbound-deliveries', requireAuth, (_req: Request, res: Response) => {
+  const db = getDb();
+  const rawDeliveries = db.prepare(`
+    SELECT od.*, so.sap_so_no, so.portal_status as so_portal_status, cu.name as customer_name
+    FROM outbound_deliveries od
+    JOIN sales_orders so ON so.id = od.so_id
+    LEFT JOIN customers cu ON cu.id = so.customer_id
+    ORDER BY od.id ASC
+  `).all() as any[];
+
+  const list = rawDeliveries.map(del => {
+    let items = [];
+    if (del.items_json) {
+      try { items = JSON.parse(del.items_json); } catch (e) { items = []; }
+    }
+    return { ...del, items };
+  });
+
+  return res.json(list);
+});
+
+// GET /api/v3/outbound-deliveries/:deliveryNo - Single delivery document detail
+router.get('/outbound-deliveries/:deliveryNo', requireAuth, (req: Request, res: Response) => {
+  const db = getDb();
+  const del = db.prepare(`
+    SELECT od.*, so.sap_so_no, so.portal_status as so_portal_status, cu.name as customer_name
+    FROM outbound_deliveries od
+    JOIN sales_orders so ON so.id = od.so_id
+    LEFT JOIN customers cu ON cu.id = so.customer_id
+    WHERE od.sap_delivery_no = ? OR od.id = ?
+  `).get(req.params.deliveryNo, req.params.deliveryNo) as any;
+
+  if (!del) return res.status(404).json({ error: 'Outbound Delivery document not found' });
+
+  let items = [];
+  if (del.items_json) {
+    try { items = JSON.parse(del.items_json); } catch (e) { items = []; }
+  }
+
+  return res.json({ ...del, items });
 });
 
 // POST /api/v3/sales-orders/refresh - Live fetch from SAP S/4HANA (or POC fallback)
