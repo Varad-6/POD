@@ -443,6 +443,9 @@ function syncS21ContractsAndPOs(db: any, s21ContractsPayload?: any[]) {
         );
       }
     }
+  }
+}
+
 // Helper function to sync fetched Sales Orders into database
 function syncSalesOrdersToDb(db: any, orders: any[]) {
   const insertCustomer = db.prepare(`
@@ -582,6 +585,11 @@ router.post('/sales-orders/refresh', requireAuth, requireRole('CA'), async (_req
       message: `Synchronized ${result.orders.length} Sales Orders from SAP S/4HANA.`
     });
   } catch (err: any) {
+    console.error('Failed to refresh sales orders:', err);
+    return res.status(500).json({ error: err.message || 'Failed to refresh sales orders from SAP' });
+  }
+});
+
 // POST /api/v3/sales-orders/distribute - CA distributes whole Sales Orders to a Transporter
 router.post('/sales-orders/distribute', requireAuth, requireRole('CA'), (req: Request, res: Response) => {
   const db = getDb();
