@@ -196,7 +196,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
                       style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
                     >
                       <FileSignature size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>SAP Sales Orders (VA03)</span>}
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>SAP Sales Orders</span>}
                     </NavLink>
                   </div>
                 </div>

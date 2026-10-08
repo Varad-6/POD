@@ -96,7 +96,7 @@ export const AdminSalesOrders: React.FC = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <PageHeader
-        title="Live SAP Sales Orders (VA03)"
+        title="Live SAP Sales Orders"
         subtitle="Extract open sales contracts and dispatches directly from SAP S/4HANA. Select orders to distribute as complete units to transport partners."
         actions={
           <div style={{ display: 'flex', gap: '10px' }}>
