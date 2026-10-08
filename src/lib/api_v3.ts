@@ -457,21 +457,36 @@ export interface SalesOrderItemV3 {
   storage_location?: string;
 }
 
+export interface OutboundDeliveryV3 {
+  id: number;
+  so_id: number;
+  sap_so_no: string;
+  sap_delivery_no: string;
+  delivery_type: 'COMPLETE' | 'PARTIAL';
+  status: string;
+  delivered_qty?: number;
+}
+
 export interface SalesOrderV3 {
   id: number;
   sap_so_no: string;
   customer_id: number;
   customer_name?: string;
+  customer_address?: string;
   sap_customer_no: string;
   created_date: string;
   delivery_date?: string;
   overall_status: string;
+  total_net_amount?: number;
+  currency?: string;
   portal_status: 'OPEN' | 'DISTRIBUTED' | 'IN_PROGRESS' | 'DELIVERED' | 'INVOICED' | 'PAID';
   fetched_at?: string;
   item_count?: number;
   total_qty?: number;
   materials_summary?: string;
+  deliveries_summary?: string;
   items?: SalesOrderItemV3[];
+  deliveries?: OutboundDeliveryV3[];
 }
 
 export interface SoDistributionV3 {

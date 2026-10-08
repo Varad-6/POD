@@ -520,10 +520,11 @@ function syncSalesOrdersToDb(db: any, orders: any[]) {
 router.get('/sales-orders', requireAuth, (req: Request, res: Response) => {
   const db = getDb();
   const orders = db.prepare(`
-    SELECT so.*, cu.name as customer_name,
+    SELECT so.*, cu.name as customer_name, cu.address as customer_address,
            (SELECT COUNT(*) FROM sales_order_items WHERE so_id = so.id) as item_count,
            (SELECT SUM(order_qty) FROM sales_order_items WHERE so_id = so.id) as total_qty,
            (SELECT GROUP_CONCAT(material, ', ') FROM sales_order_items WHERE so_id = so.id) as materials_summary,
+           (SELECT GROUP_CONCAT(sap_delivery_no, ', ') FROM outbound_deliveries WHERE so_id = so.id) as deliveries_summary,
            (SELECT COUNT(*) FROM so_distributions WHERE so_id = so.id) as distribution_count
     FROM sales_orders so
     LEFT JOIN customers cu ON cu.id = so.customer_id
@@ -545,6 +546,7 @@ router.get('/sales-orders/:id', requireAuth, (req: Request, res: Response) => {
   if (!so) return res.status(404).json({ error: 'Sales Order not found' });
 
   const items = db.prepare('SELECT * FROM sales_order_items WHERE so_id = ? ORDER BY CAST(item_no AS INTEGER) ASC').all(so.id);
+  const deliveries = db.prepare('SELECT * FROM outbound_deliveries WHERE so_id = ? ORDER BY id ASC').all(so.id);
   const distribution = db.prepare(`
     SELECT sod.*, t.name as transporter_name
     FROM so_distributions sod
@@ -556,6 +558,7 @@ router.get('/sales-orders/:id', requireAuth, (req: Request, res: Response) => {
   return res.json({
     ...so,
     items,
+    deliveries,
     distribution: distribution || null
   });
 });

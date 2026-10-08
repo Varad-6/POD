@@ -305,6 +305,7 @@ export const AdminDashboard: React.FC = () => {
                           </button>
                         </th>
                         <th style={{ padding: '12px 14px' }}>SAP SO #</th>
+                        <th style={{ padding: '12px 14px' }}>Outbound Deliveries (VL03N)</th>
                         <th style={{ padding: '12px 14px' }}>Customer Yard</th>
                         <th style={{ padding: '12px 14px' }}>Materials / Line Items</th>
                         <th style={{ padding: '12px 14px' }}>Total Qty</th>
@@ -367,6 +368,33 @@ export const AdminDashboard: React.FC = () => {
                               </span>
                             </td>
                             <td style={{ padding: '12px 14px' }}>
+                              {so.deliveries_summary ? (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                  {so.deliveries_summary.split(', ').map(delNo => (
+                                    <span 
+                                      key={delNo}
+                                      onClick={() => handleOpenInspect(so)}
+                                      style={{
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        backgroundColor: '#eff6ff',
+                                        border: '1px solid #bfdbfe',
+                                        fontFamily: 'monospace',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        color: '#1d4ed8',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      #{delNo}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>—</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '12px 14px' }}>
                               <div style={{ fontWeight: 600, color: 'var(--color-text-heading)' }}>{so.customer_name || 'PODZO Mining Yard'}</div>
                               <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{so.sap_customer_no}</div>
                             </td>
@@ -414,69 +442,144 @@ export const AdminDashboard: React.FC = () => {
           setInspectSo(null);
           setInspectDetails(null);
         }}
-        title={`Sales Order #${inspectSo?.sap_so_no || ''} Line Items Inspection`}
+        title={`SAP Sales Order #${inspectSo?.sap_so_no || ''} Detailed Document Overview`}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {inspectLoading ? (
-            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
-              Loading line item details...
+            <div style={{ padding: '28px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+              Loading SAP S/4HANA document hierarchy...
             </div>
           ) : (
             <>
+              {/* Header Box with Customer, Address & Net Value in INR */}
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '12px',
-                padding: '12px',
+                padding: '14px 16px',
                 borderRadius: '8px',
                 backgroundColor: 'var(--color-bg-page)',
                 border: '1px solid var(--color-border)',
                 fontSize: '12.5px'
               }}>
                 <div>
-                  <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Customer:</span>
-                  <strong>{inspectDetails?.customer_name || inspectSo?.customer_name}</strong>
+                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Sold-To Party (Customer)</span>
+                  <strong style={{ fontSize: '13.5px', color: 'var(--color-text-heading)' }}>{inspectDetails?.customer_name || inspectSo?.customer_name}</strong>
+                  <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                    {inspectDetails?.customer_address || 'Pune, Maharashtra, India'}
+                  </div>
                 </div>
+
                 <div>
-                  <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Delivery Target:</span>
-                  <strong>{inspectDetails?.delivery_date || inspectSo?.delivery_date || 'Standard'}</strong>
+                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Total Net Value (VA03)</span>
+                  <strong style={{ fontSize: '14px', color: 'var(--color-brand-blue-600)' }}>
+                    {Number(inspectDetails?.total_net_amount ?? inspectSo?.total_net_amount ?? 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} {inspectDetails?.currency || 'INR'}
+                  </strong>
+                  <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+                    Status: <span style={{ fontWeight: 600 }}>{inspectDetails?.overall_status === 'A' ? 'Active / Open' : 'Processed'}</span>
+                  </div>
                 </div>
+
                 <div>
-                  <span style={{ color: 'var(--color-text-muted)', display: 'block' }}>Portal Status:</span>
-                  <StatusBadge status={inspectDetails?.portal_status || inspectSo?.portal_status || 'OPEN'} />
+                  <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px', textTransform: 'uppercase', fontWeight: 600 }}>Logistics Execution Stage</span>
+                  <div style={{ marginTop: '4px' }}>
+                    <StatusBadge status={inspectDetails?.portal_status || inspectSo?.portal_status || 'OPEN'} />
+                  </div>
                 </div>
               </div>
 
+              {/* Real Outbound Deliveries (VL03N) Breakdown Box */}
               <div>
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '13.5px', fontWeight: 600 }}>Cargo Line Items (Whole Order Distribution)</h4>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                    Outbound Delivery Documents (VL03N)
+                  </h4>
+                  <span style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>
+                    {(inspectDetails?.deliveries || []).length} Document(s) Assigned
+                  </span>
+                </div>
+
+                {(inspectDetails?.deliveries && inspectDetails.deliveries.length > 0) ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {inspectDetails.deliveries.map(del => (
+                      <div
+                        key={del.id}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          backgroundColor: del.delivery_type === 'COMPLETE' ? '#f0fdf4' : '#eff6ff',
+                          border: `1px solid ${del.delivery_type === 'COMPLETE' ? '#bbf7d0' : '#bfdbfe'}`,
+                          fontSize: '12px',
+                        }}
+                      >
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#1e293b' }}>
+                          Delivery #{del.sap_delivery_no}
+                        </span>
+                        <span style={{
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          backgroundColor: del.delivery_type === 'COMPLETE' ? '#16a34a' : '#2563eb',
+                          color: '#ffffff'
+                        }}>
+                          {del.delivery_type === 'COMPLETE' ? 'Complete Delivery' : 'Partial Delivery'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ padding: '8px 12px', borderRadius: '6px', backgroundColor: 'var(--color-bg-page)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                    No outbound delivery generated yet in SAP S/4HANA.
+                  </div>
+                )}
+              </div>
+
+              {/* Real Cargo Line Items Breakdown (VA03) */}
+              <div>
+                <h4 style={{ margin: '4px 0 8px 0', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+                  Sales Order Cargo Items (VA03)
+                </h4>
                 <div style={{ border: '1px solid var(--color-border)', borderRadius: '6px', overflow: 'hidden' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                     <thead>
                       <tr style={{ backgroundColor: 'var(--color-bg-page)', borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
-                        <th style={{ padding: '8px 12px' }}>Item</th>
+                        <th style={{ padding: '8px 12px' }}>Item #</th>
                         <th style={{ padding: '8px 12px' }}>Material</th>
-                        <th style={{ padding: '8px 12px' }}>Quantity</th>
+                        <th style={{ padding: '8px 12px' }}>Description</th>
+                        <th style={{ padding: '8px 12px' }}>Order Qty</th>
+                        <th style={{ padding: '8px 12px' }}>Net Price</th>
                         <th style={{ padding: '8px 12px' }}>Plant</th>
-                        <th style={{ padding: '8px 12px' }}>Location</th>
+                        <th style={{ padding: '8px 12px' }}>SLoc</th>
                       </tr>
                     </thead>
                     <tbody>
                       {(inspectDetails?.items && inspectDetails.items.length > 0) ? (
                         inspectDetails.items.map(itm => (
                           <tr key={itm.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                            <td style={{ padding: '8px 12px', fontFamily: 'monospace' }}>#{itm.item_no}</td>
-                            <td style={{ padding: '8px 12px' }}>
-                              <div style={{ fontWeight: 600 }}>{itm.material}</div>
-                              {itm.material_desc && <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{itm.material_desc}</div>}
+                            <td style={{ padding: '8px 12px', fontFamily: 'monospace', fontWeight: 700 }}>#{itm.item_no}</td>
+                            <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--color-brand-blue-600)', fontWeight: 600 }}>
+                              {itm.material}
                             </td>
-                            <td style={{ padding: '8px 12px', fontWeight: 600 }}>{itm.order_qty} {itm.uom}</td>
-                            <td style={{ padding: '8px 12px' }}>{itm.plant || '1001'}</td>
+                            <td style={{ padding: '8px 12px', fontWeight: 500 }}>
+                              {itm.material_desc || itm.material}
+                            </td>
+                            <td style={{ padding: '8px 12px', fontWeight: 600 }}>
+                              {itm.order_qty} {itm.uom}
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              {Number(itm.net_price || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })} INR
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>{itm.plant || 'RBP1'}</td>
                             <td style={{ padding: '8px 12px' }}>{itm.storage_location || 'SL01'}</td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={5} style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                          <td colSpan={7} style={{ padding: '16px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
                             No line items registered.
                           </td>
                         </tr>
@@ -487,7 +590,7 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {inspectSo?.portal_status === 'OPEN' && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
                   <Button
                     variant="primary"
                     onClick={() => {

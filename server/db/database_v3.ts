@@ -175,46 +175,79 @@ export function initDb(): Database.Database {
     console.log('[DB V3] Staging user sa_staging01 initialized.');
   }
 
-  // Ensure POC Sales Orders (2318, 2320, 2321, 2322) are seeded if table is empty
+  addColumnIfNotExists('sales_orders', 'total_net_amount', 'REAL DEFAULT 0.0');
+  addColumnIfNotExists('sales_orders', 'currency', "TEXT DEFAULT 'INR'");
+
+  // Outbound Deliveries table
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS outbound_deliveries (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      so_id             INTEGER NOT NULL REFERENCES sales_orders(id) ON DELETE CASCADE,
+      sap_so_no         TEXT NOT NULL,
+      sap_delivery_no   TEXT UNIQUE NOT NULL,
+      delivery_type     TEXT NOT NULL CHECK(delivery_type IN ('COMPLETE','PARTIAL')),
+      status            TEXT NOT NULL DEFAULT 'OPEN',
+      delivered_qty     REAL DEFAULT 0,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Ensure POC Sales Orders (2318, 2320, 2321, 2322) are seeded if table is empty or update with real SAP master data
   try {
-    const soCount = (instance.prepare('SELECT COUNT(*) as c FROM sales_orders').get() as any)?.c || 0;
-    if (soCount === 0) {
-      console.log('[DB V3] Seeding initial POC Sales Orders from test suite...');
-      const insertCustomer = instance.prepare(`
-        INSERT OR IGNORE INTO customers (id, name, sap_customer_no, gps_lat, gps_lng, address)
-        VALUES (1, 'PODZO Mining – Emoyeni Siding', 'SAP-CUST-1001', -25.7670, 29.4630, 'Emoyeni Siding, Witbank, ZA')
-      `);
-      insertCustomer.run();
+    console.log('[DB V3] Synchronizing authentic SAP master data & deliveries matching screenshots...');
+    const insertCustomer = instance.prepare(`
+      INSERT OR REPLACE INTO customers (id, name, sap_customer_no, gps_lat, gps_lng, address)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
 
-      const insertSO = instance.prepare(`
-        INSERT OR REPLACE INTO sales_orders (id, sap_so_no, customer_id, sap_customer_no, created_date, delivery_date, overall_status, portal_status)
-        VALUES (?, ?, ?, ?, date('now'), date('now', '+2 days'), 'A', 'OPEN')
-      `);
-      const insertItem = instance.prepare(`
-        INSERT OR REPLACE INTO sales_order_items (so_id, sap_so_no, item_no, material, material_desc, order_qty, uom, net_price, plant, storage_location)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+    // Customer 122: DP WORLD PVT LTD, Pune (from Screenshot 5 & 6)
+    insertCustomer.run(1, 'DP WORLD PVT LTD', '122', 18.5308, 73.8475, '123, Shivajinagar pune, Pune, Maharashtra, 414305, India');
+    // Customer 90000501: Company Atharv Pharma abc, Pune (from Screenshot 4)
+    insertCustomer.run(2, 'Company Atharv Pharma abc', '90000501', 18.5204, 73.8567, '6, Pune, Maharashtra, 987789, India');
+    // Customer 131: Industrial Mining Customer (SO 2318)
+    insertCustomer.run(3, 'Industrial Mining Services', '131', -25.7670, 29.4630, 'Industrial Area Siding, Emoyeni, ZA');
 
-      // SO 2318 (Single line complete delivery 80001469)
-      insertSO.run(1, '2318', 1, 'SAP-CUST-1001');
-      insertItem.run(1, '2318', '10', 'SL BIT 20%ASH (40006653)', 'Washed Bituminous Coal Grade A', 34.0, 'TO', 151.50, '1001', 'SL01');
+    const insertSO = instance.prepare(`
+      INSERT OR REPLACE INTO sales_orders (id, sap_so_no, customer_id, sap_customer_no, created_date, delivery_date, overall_status, total_net_amount, currency, portal_status)
+      VALUES (?, ?, ?, ?, date('now'), date('now', '+2 days'), 'A', ?, 'INR', 'OPEN')
+    `);
+    const insertItem = instance.prepare(`
+      INSERT OR REPLACE INTO sales_order_items (so_id, sap_so_no, item_no, material, material_desc, order_qty, uom, net_price, plant, storage_location)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const insertDelivery = instance.prepare(`
+      INSERT OR REPLACE INTO outbound_deliveries (so_id, sap_so_no, sap_delivery_no, delivery_type, status)
+      VALUES (?, ?, ?, ?, 'OPEN')
+    `);
 
-      // SO 2321 (Multiple material partial delivery 80001471, 80001472)
-      insertSO.run(2, '2321', 1, 'SAP-CUST-1001');
-      insertItem.run(2, '2321', '10', 'FERT_50KG_BAG (40006654)', 'Agricultural Fertilizer 50kg', 15.0, 'BAG', 450.00, '1001', 'SL02');
-      insertItem.run(2, '2321', '20', 'DEF_ADBLUE_20L (40006660)', 'Diesel Exhaust Fluid 20L Drum', 25.0, 'BT', 280.00, '1001', 'SL03');
+    // SO 2318 (Case 1: Single line item complete delivery 80001469)
+    insertSO.run(1, '2318', 3, '131', 99.99);
+    insertItem.run(1, '2318', '10', '33', 'Brake Pad', 1.0, 'EA', 99.99, '1001', 'SL01');
+    insertDelivery.run(1, '2318', '80001469', 'COMPLETE');
 
-      // SO 2320 (Multiple line item partial delivery 80001470, 80001473)
-      insertSO.run(3, '2320', 1, 'SAP-CUST-1001');
-      insertItem.run(3, '2320', '10', 'SPARE_PARTS_BOX (40006657)', 'Heavy Equipment Maintenance Spares', 20.0, 'EA', 1250.00, '1002', 'SL01');
-      insertItem.run(3, '2320', '20', 'CRUSHER_JAW_PLATE (40006658)', 'Manganese Crusher Jaw Replacement Plate', 12.0, 'PC', 3400.00, '1002', 'SL01');
+    // SO 2321 (Case 2: Multiple material partial delivery 80001471, 80001472 - DP WORLD PVT LTD)
+    insertSO.run(2, '2321', 1, '122', 268013.20);
+    insertItem.run(2, '2321', '100', '99', 'chair 01', 10.0, 'PC', 12000.00, 'RBP1', 'SL01');
+    insertItem.run(2, '2321', '200', '33', 'Drilling machine spare part', 10.0, 'EA', 202000.00, 'RBP1', 'SL01');
+    insertItem.run(2, '2321', '300', '41', 'Battery1', 10.0, 'EA', 54013.20, 'RBP1', 'SL01');
+    insertDelivery.run(2, '2321', '80001471', 'PARTIAL');
+    insertDelivery.run(2, '2321', '80001472', 'PARTIAL');
 
-      // SO 2322 (Multiple line item complete delivery 80001474)
-      insertSO.run(4, '2322', 1, 'SAP-CUST-1001');
-      insertItem.run(4, '2322', '10', 'STEEL PLATE (200100)', 'Structural Carbon Steel Plate 20mm', 50.0, 'EA', 500.00, '1001', 'SL04');
-      insertItem.run(4, '2322', '20', 'Shaft (200119)', 'Transmission High-Torque Axle Shaft', 25.0, 'EA', 850.00, '1001', 'SL04');
-      console.log('[DB V3] Seeded 4 POC Sales Orders.');
-    }
+    // SO 2320 (Case 3: Multiple line item partial delivery 80001470, 80001473 - Atharv Pharma)
+    insertSO.run(3, '2320', 2, '90000501', 61000.00);
+    insertItem.run(3, '2320', '10', '1702', 'pharma product 01', 10.0, 'EA', 1000.00, 'DSA1', 'SL01');
+    insertItem.run(3, '2320', '20', '1727', 'pharma product 10', 10.0, 'EA', 10000.00, 'DSA1', 'DSA1');
+    insertItem.run(3, '2320', '30', '1728', 'pharma product 09', 10.0, 'EA', 50000.00, 'DSA1', 'SL01');
+    insertDelivery.run(3, '2320', '80001470', 'PARTIAL');
+    insertDelivery.run(3, '2320', '80001473', 'PARTIAL');
+
+    // SO 2322 (Case 4: Multiple line item complete delivery 80001474 - Atharv Pharma)
+    insertSO.run(4, '2322', 2, '90000501', 26000.00);
+    insertItem.run(4, '2322', '10', '1702', 'pharma product 01', 5.0, 'EA', 500.00, 'DSA1', 'SL01');
+    insertItem.run(4, '2322', '20', '1727', 'pharma product 10', 5.0, 'EA', 500.00, 'DSA1', 'DSA1');
+    insertItem.run(4, '2322', '30', '1728', 'pharma product 09', 5.0, 'EA', 25000.00, 'DSA1', 'SL01');
+    insertDelivery.run(4, '2322', '80001474', 'COMPLETE');
+    console.log('[DB V3] Real SAP Sales Orders and Outbound Deliveries synchronized.');
   } catch (err) {
     console.warn('[DB V3] Sales order seeding check warning:', err);
   }

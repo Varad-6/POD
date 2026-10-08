@@ -388,11 +388,24 @@ CREATE TABLE IF NOT EXISTS sales_orders (
   created_date      TEXT NOT NULL,                 -- SAP CreationDate
   delivery_date     TEXT,                          -- RequestedDeliveryDate
   overall_status    TEXT NOT NULL DEFAULT 'OPEN',  -- SAP OverallSDProcessStatus (A/B/C)
+  total_net_amount  REAL DEFAULT 0.0,
+  currency          TEXT DEFAULT 'INR',
   portal_status     TEXT NOT NULL CHECK(portal_status IN (
     'OPEN','DISTRIBUTED','IN_PROGRESS','DELIVERED','INVOICED','PAID'
   )) DEFAULT 'OPEN',
   fetched_at        TEXT NOT NULL DEFAULT (datetime('now')),
   raw_json          TEXT
+);
+
+CREATE TABLE IF NOT EXISTS outbound_deliveries (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  so_id             INTEGER NOT NULL REFERENCES sales_orders(id) ON DELETE CASCADE,
+  sap_so_no         TEXT NOT NULL,
+  sap_delivery_no   TEXT UNIQUE NOT NULL,          -- e.g. "80001469", "80001471", "80001474"
+  delivery_type     TEXT NOT NULL CHECK(delivery_type IN ('COMPLETE','PARTIAL')),
+  status            TEXT NOT NULL DEFAULT 'OPEN',  -- OPEN, IN_TRANSIT, DELIVERED
+  delivered_qty     REAL DEFAULT 0,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS sales_order_items (
