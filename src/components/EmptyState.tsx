@@ -7,6 +7,7 @@ interface EmptyStateProps {
   description?: string;
   message?: string;
   submessage?: string;
+  action?: React.ReactNode;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ 
@@ -14,7 +15,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   message, 
-  submessage
+  submessage,
+  action
 }) => {
   const displayTitle = title || message || "No pending items right now";
   const displaySubmessage = description || submessage || "Check back later or change your filters.";
@@ -51,11 +53,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <Inbox size={24} />
       </div>
       <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--neutral-primary)', marginBottom: '4px' }}>
-        {message}
+        {displayTitle}
       </h3>
-      <p style={{ fontSize: '14px', color: 'var(--neutral-secondary)' }}>
-        {submessage}
+      <p style={{ fontSize: '14px', color: 'var(--neutral-secondary)', marginBottom: action ? '16px' : '0' }}>
+        {displaySubmessage}
       </p>
+      {action && <div>{action}</div>}
     </div>
   );
 };

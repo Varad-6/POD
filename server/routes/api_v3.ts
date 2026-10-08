@@ -9,6 +9,9 @@ import { join, dirname, extname } from 'path';
 import { existsSync, mkdirSync, statSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { OCRService } from '../services/ocr/OCRService.js';
+import { SalesOrderAdapter } from '../services/sap/SalesOrderAdapter.js';
+
+const salesOrderAdapter = new SalesOrderAdapter();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -440,10 +443,271 @@ function syncS21ContractsAndPOs(db: any, s21ContractsPayload?: any[]) {
         );
       }
     }
+// Helper function to sync fetched Sales Orders into database
+function syncSalesOrdersToDb(db: any, orders: any[]) {
+  const insertCustomer = db.prepare(`
+    INSERT OR IGNORE INTO customers (name, sap_customer_no, gps_lat, gps_lng, address)
+    VALUES (?, ?, -25.7670, 29.4630, 'Witbank, ZA')
+  `);
+
+  const insertSO = db.prepare(`
+    INSERT INTO sales_orders (sap_so_no, customer_id, sap_customer_no, created_date, delivery_date, overall_status, raw_json, fetched_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(sap_so_no) DO UPDATE SET
+      customer_id = excluded.customer_id,
+      delivery_date = excluded.delivery_date,
+      overall_status = excluded.overall_status,
+      raw_json = excluded.raw_json,
+      fetched_at = datetime('now')
+  `);
+
+  const insertItem = db.prepare(`
+    INSERT INTO sales_order_items (so_id, sap_so_no, item_no, material, material_desc, order_qty, uom, net_price, plant, storage_location)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(sap_so_no, item_no) DO UPDATE SET
+      material = excluded.material,
+      material_desc = excluded.material_desc,
+      order_qty = excluded.order_qty,
+      uom = excluded.uom,
+      net_price = excluded.net_price,
+      plant = excluded.plant,
+      storage_location = excluded.storage_location
+  `);
+
+  for (const o of orders) {
+    if (!o.sap_so_no) continue;
+    const custNo = o.customer_no || 'SAP-CUST-1001';
+    const custName = o.customer_name || 'PODZO Mining – Emoyeni Siding';
+    insertCustomer.run(custName, custNo);
+
+    const customerRow = db.prepare('SELECT id FROM customers WHERE sap_customer_no = ?').get(custNo) as any;
+    const customerId = customerRow ? customerRow.id : 1;
+
+    insertSO.run(
+      o.sap_so_no,
+      customerId,
+      custNo,
+      o.created_date || new Date().toISOString().slice(0, 10),
+      o.delivery_date || new Date().toISOString().slice(0, 10),
+      o.overall_status || 'A',
+      o.raw_json || ''
+    );
+
+    const soRow = db.prepare('SELECT id FROM sales_orders WHERE sap_so_no = ?').get(o.sap_so_no) as any;
+    if (soRow && Array.isArray(o.items)) {
+      for (const itm of o.items) {
+        insertItem.run(
+          soRow.id,
+          o.sap_so_no,
+          String(itm.item_no || '10'),
+          itm.material || 'General Material',
+          itm.material_desc || '',
+          Number(itm.order_qty || 0),
+          itm.uom || 'TO',
+          Number(itm.net_price || 0),
+          itm.plant || '1001',
+          itm.storage_location || 'SL01'
+        );
+      }
+    }
   }
 }
 
-// POST /api/v3/sync/s21 - Sync fresh S21 Contracts & POs into PODZO
+// GET /api/v3/sales-orders - List all Sales Orders
+router.get('/sales-orders', requireAuth, (req: Request, res: Response) => {
+  const db = getDb();
+  const orders = db.prepare(`
+    SELECT so.*, cu.name as customer_name,
+           (SELECT COUNT(*) FROM sales_order_items WHERE so_id = so.id) as item_count,
+           (SELECT SUM(order_qty) FROM sales_order_items WHERE so_id = so.id) as total_qty,
+           (SELECT GROUP_CONCAT(material, ', ') FROM sales_order_items WHERE so_id = so.id) as materials_summary,
+           (SELECT COUNT(*) FROM so_distributions WHERE so_id = so.id) as distribution_count
+    FROM sales_orders so
+    LEFT JOIN customers cu ON cu.id = so.customer_id
+    ORDER BY so.id DESC
+  `).all();
+  return res.json(orders);
+});
+
+// GET /api/v3/sales-orders/:id - Detail view
+router.get('/sales-orders/:id', requireAuth, (req: Request, res: Response) => {
+  const db = getDb();
+  const so = db.prepare(`
+    SELECT so.*, cu.name as customer_name, cu.address as customer_address
+    FROM sales_orders so
+    LEFT JOIN customers cu ON cu.id = so.customer_id
+    WHERE so.id = ? OR so.sap_so_no = ?
+  `).get(req.params.id, req.params.id) as any;
+
+  if (!so) return res.status(404).json({ error: 'Sales Order not found' });
+
+  const items = db.prepare('SELECT * FROM sales_order_items WHERE so_id = ? ORDER BY CAST(item_no AS INTEGER) ASC').all(so.id);
+  const distribution = db.prepare(`
+    SELECT sod.*, t.name as transporter_name
+    FROM so_distributions sod
+    JOIN transporters t ON t.id = sod.transporter_id
+    WHERE sod.so_id = ?
+    ORDER BY sod.id DESC LIMIT 1
+  `).get(so.id);
+
+  return res.json({
+    ...so,
+    items,
+    distribution: distribution || null
+  });
+});
+
+// POST /api/v3/sales-orders/refresh - Live fetch from SAP S/4HANA (or POC fallback)
+router.post('/sales-orders/refresh', requireAuth, requireRole('CA'), async (_req: Request, res: Response) => {
+  const db = getDb();
+  try {
+    const result = await salesOrderAdapter.fetchOpenSalesOrders();
+    if (result.orders && result.orders.length > 0) {
+      syncSalesOrdersToDb(db, result.orders);
+    }
+
+    // Log to sap_sync_log (direction: IN)
+    db.prepare(`
+      INSERT INTO sap_sync_log (entity_type, sap_ref, direction, payload_json)
+      VALUES ('SALES_ORDERS_BATCH', ?, 'IN', ?)
+    `).run(`FETCH-${Date.now()}`, JSON.stringify({ count: result.orders.length, fromCache: result.fromCache }));
+
+    const count = (db.prepare('SELECT COUNT(*) as c FROM sales_orders').get() as any)?.c || 0;
+    return res.json({
+      success: true,
+      count,
+      fromCache: result.fromCache,
+      lastFetchedAt: result.lastFetchedAt,
+      note: result.note,
+      message: `Synchronized ${result.orders.length} Sales Orders from SAP S/4HANA.`
+    });
+  } catch (err: any) {
+// POST /api/v3/sales-orders/distribute - CA distributes whole Sales Orders to a Transporter
+router.post('/sales-orders/distribute', requireAuth, requireRole('CA'), (req: Request, res: Response) => {
+  const db = getDb();
+  const { so_ids, transporter_id } = req.body;
+
+  if (!Array.isArray(so_ids) || so_ids.length === 0) {
+    return res.status(400).json({ error: 'Please select at least one Sales Order to distribute.' });
+  }
+
+  if (!transporter_id) {
+    return res.status(400).json({ error: 'Please choose a Transporter to distribute to.' });
+  }
+
+  const transporter = db.prepare('SELECT id, name FROM transporters WHERE id = ?').get(transporter_id) as any;
+  if (!transporter) {
+    return res.status(404).json({ error: 'Selected transporter not found.' });
+  }
+
+  const distributeTransaction = db.transaction(() => {
+    const insertDist = db.prepare(`
+      INSERT INTO so_distributions (so_id, transporter_id, distributed_by, distributed_at, status)
+      VALUES (?, ?, ?, datetime('now'), 'PENDING')
+    `);
+    const updateSO = db.prepare("UPDATE sales_orders SET portal_status = 'DISTRIBUTED' WHERE id = ?");
+
+    const distributedIds: number[] = [];
+    for (const soId of so_ids) {
+      // Lookup SO by id or sap_so_no
+      const so = db.prepare('SELECT id, sap_so_no, portal_status FROM sales_orders WHERE id = ? OR sap_so_no = ?').get(soId, soId) as any;
+      if (!so) continue;
+
+      const resInsert = insertDist.run(so.id, transporter.id, req.user!.userId);
+      updateSO.run(so.id);
+      distributedIds.push(Number(resInsert.lastInsertRowid));
+    }
+    return distributedIds;
+  });
+
+  const createdIds = distributeTransaction();
+  return res.json({
+    success: true,
+    distributed_count: createdIds.length,
+    transporter_name: transporter.name,
+    message: `Successfully distributed ${createdIds.length} Sales Order(s) to ${transporter.name}. Entire orders assigned.`
+  });
+});
+
+// GET /api/v3/so-distributions - List distributed orders for CA or TA
+router.get('/so-distributions', requireAuth, requireRole('CA', 'TA'), (req: Request, res: Response) => {
+  const db = getDb();
+  const isTA = req.user!.role === 'TA';
+  const entityTransporterId = req.user!.entityId || 1;
+
+  let query = `
+    SELECT sod.*, so.sap_so_no, so.sap_customer_no, so.delivery_date, so.overall_status,
+           cu.name as customer_name, t.name as transporter_name,
+           (SELECT COUNT(*) FROM sales_order_items WHERE so_id = so.id) as item_count,
+           (SELECT SUM(order_qty) FROM sales_order_items WHERE so_id = so.id) as total_qty,
+           (SELECT GROUP_CONCAT(material, ', ') FROM sales_order_items WHERE so_id = so.id) as materials_summary,
+           ta.id as active_assignment_id, ta.status as assignment_status,
+           d.name as driver_name, v.reg_no as vehicle_reg
+    FROM so_distributions sod
+    JOIN sales_orders so ON so.id = sod.so_id
+    JOIN customers cu ON cu.id = so.customer_id
+    JOIN transporters t ON t.id = sod.transporter_id
+    LEFT JOIN transport_assignments ta ON ta.so_distribution_id = sod.id
+    LEFT JOIN drivers d ON d.id = ta.driver_id
+    LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+  `;
+
+  if (isTA) {
+    query += ' WHERE sod.transporter_id = ?';
+    const list = db.prepare(query + ' ORDER BY sod.id DESC').all(entityTransporterId);
+    return res.json(list);
+  }
+
+  const list = db.prepare(query + ' ORDER BY sod.id DESC').all();
+  return res.json(list);
+});
+
+// POST /api/v3/so-distributions/:id/assign - TA assigns Driver and Truck to a distributed Sales Order
+router.post('/so-distributions/:id/assign', requireAuth, requireRole('TA'), (req: Request, res: Response) => {
+  const db = getDb();
+  const distributionId = req.params.id;
+  const { driver_id, vehicle_id, scheduled_date } = req.body;
+
+  const dist = db.prepare(`
+    SELECT sod.*, so.id as so_id, so.sap_so_no
+    FROM so_distributions sod
+    JOIN sales_orders so ON so.id = sod.so_id
+    WHERE sod.id = ?
+  `).get(distributionId) as any;
+
+  if (!dist) {
+    return res.status(404).json({ error: 'Distribution record not found.' });
+  }
+
+  const driver = db.prepare('SELECT id, name, license_no FROM drivers WHERE id = ?').get(driver_id) as any;
+  const vehicle = db.prepare('SELECT id, reg_no FROM vehicles WHERE id = ?').get(vehicle_id) as any;
+
+  if (!driver || !vehicle) {
+    return res.status(400).json({ error: 'Valid Driver and Vehicle are required.' });
+  }
+
+  const date = scheduled_date || new Date().toISOString().slice(0, 10);
+
+  // Create transport assignment for this whole SO
+  const result = db.prepare(`
+    INSERT INTO transport_assignments (
+      job_config_id, so_distribution_id, so_id, driver_id, vehicle_id,
+      location, license_no, gstin, scheduled_date, status
+    ) VALUES (1, ?, ?, ?, ?, 'Mine Siding', ?, '27AABCS0001A1Z1', ?, 'ASSIGNED')
+  `).run(dist.id, dist.so_id, driver.id, vehicle.id, driver.license_no, date);
+
+  const assignmentId = Number(result.lastInsertRowid);
+
+  // Update status
+  db.prepare("UPDATE so_distributions SET status = 'ASSIGNED' WHERE id = ?").run(dist.id);
+  db.prepare("UPDATE sales_orders SET portal_status = 'IN_PROGRESS' WHERE id = ?").run(dist.so_id);
+
+  return res.json({
+    success: true,
+    assignment_id: assignmentId,
+    message: `Driver ${driver.name} and truck ${vehicle.reg_no} assigned to Sales Order #${dist.sap_so_no}. Trip #${assignmentId} is now live.`
+  });
+});
 router.post('/sync/s21', requireAuth, (req: Request, res: Response) => {
   const db = getDb();
   const { contracts = [] } = req.body;
@@ -1102,6 +1366,204 @@ router.post('/delivery-invoices', requireAuth, requireRole('TA', 'CA'), (req: Re
 });
 
 // GET /api/v3/miro
+// ── TARGET INVOICE & CUSTOMER PAYMENT FLOW ───────────────────
+
+// POST /api/v3/invoices/post - CA posts invoice (status becomes PARKED front-end block)
+router.post('/invoices/post', requireAuth, requireRole('CA'), (req: Request, res: Response) => {
+  const db = getDb();
+  const { assignment_id } = req.body;
+
+  if (!assignment_id) {
+    return res.status(400).json({ error: 'assignment_id is required.' });
+  }
+
+  // Business rule 8.6: Post Invoice blocked if any review queue item is OPEN
+  const openReview = db.prepare("SELECT id, flag_reason FROM review_queue WHERE assignment_id = ? AND status = 'OPEN'").get(assignment_id) as any;
+  if (openReview) {
+    return res.status(409).json({
+      error: `Invoicing is blocked: open exception exists in Review Queue (${openReview.flag_reason}). Please resolve the exception first.`
+    });
+  }
+
+  const ta = db.prepare(`
+    SELECT ta.*, so.sap_so_no,
+           COALESCE(
+             (SELECT net_price FROM sales_order_items WHERE so_id = ta.so_id LIMIT 1),
+             (SELECT rate FROM purchase_orders po JOIN job_configs jc ON jc.po_id = po.id WHERE jc.id = ta.job_config_id LIMIT 1),
+             151.50
+           ) as rate,
+           COALESCE(
+             (SELECT order_qty FROM sales_order_items WHERE so_id = ta.so_id LIMIT 1),
+             34.0
+           ) as target_qty,
+           COALESCE(
+             (SELECT (gross.weight_kg - tare.weight_kg) / 1000.0
+              FROM weight_logs gross, weight_logs tare
+              WHERE gross.assignment_id = ta.id AND gross.stage = 'DEST_GROSS'
+                AND tare.assignment_id = ta.id AND tare.stage = 'DEST_TARE' LIMIT 1),
+             34.0
+           ) as net_delivered_to
+    FROM transport_assignments ta
+    LEFT JOIN sales_orders so ON so.id = ta.so_id
+    WHERE ta.id = ?
+  `).get(assignment_id) as any;
+
+  if (!ta) return res.status(404).json({ error: 'Assignment not found.' });
+
+  const deliveredPayload = Number(ta.net_delivered_to || 34.0);
+  const rate = Number(ta.rate || 151.50);
+  const totalValue = parseFloat((deliveredPayload * rate).toFixed(2));
+
+  // Generate PODZO invoice number: PODZO-INV-YYYYMMDD-SEQ
+  const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const seqCount = ((db.prepare('SELECT COUNT(*) as c FROM invoice_events').get() as any)?.c || 0) + 1;
+  const invoiceNo = `PODZO-INV-${dateStr}-${String(seqCount).padStart(3, '0')}`;
+
+  const postTx = db.transaction(() => {
+    const resInsert = db.prepare(`
+      INSERT INTO invoice_events (
+        assignment_id, invoice_no, total_value, accepted_payload, rate,
+        status, posted_by, posted_at, customer_notified_at
+      ) VALUES (?, ?, ?, ?, ?, 'PARKED', ?, datetime('now'), datetime('now'))
+      ON CONFLICT(assignment_id) DO UPDATE SET
+        status = 'PARKED',
+        total_value = excluded.total_value,
+        posted_at = datetime('now')
+    `).run(assignment_id, invoiceNo, totalValue, deliveredPayload, rate, req.user!.userId);
+
+    db.prepare("UPDATE transport_assignments SET status = 'INVOICED' WHERE id = ?").run(assignment_id);
+    return resInsert;
+  });
+
+  postTx();
+
+  return res.json({
+    success: true,
+    invoice_no: invoiceNo,
+    total_value: totalValue,
+    status: 'PARKED',
+    message: `Invoice ${invoiceNo} posted with PARKED status. Customer has been notified for payment settlement.`
+  });
+});
+
+// GET /api/v3/invoices/posted - CA view of all posted/parked invoices and payment ledger
+router.get('/invoices/posted', requireAuth, requireRole('CA'), (_req: Request, res: Response) => {
+  const db = getDb();
+  const list = db.prepare(`
+    SELECT ie.*, ta.scheduled_date, ta.status as assignment_status,
+           so.sap_so_no, cu.name as customer_name,
+           d.name as driver_name, v.reg_no as vehicle_reg,
+           COALESCE((SELECT SUM(amount_paid) FROM payment_events WHERE invoice_id = ie.id), 0.0) as total_paid,
+           (SELECT COUNT(*) FROM payment_events WHERE invoice_id = ie.id) as payment_count
+    FROM invoice_events ie
+    JOIN transport_assignments ta ON ta.id = ie.assignment_id
+    LEFT JOIN sales_orders so ON so.id = ta.so_id
+    LEFT JOIN customers cu ON cu.id = so.customer_id
+    LEFT JOIN drivers d ON d.id = ta.driver_id
+    LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+    ORDER BY ie.id DESC
+  `).all();
+
+  // For each invoice, attach payments only if payment_count > 0 (visibility rule 4.4)
+  const enriched = list.map((inv: any) => {
+    const payments = inv.payment_count > 0
+      ? db.prepare('SELECT * FROM payment_events WHERE invoice_id = ? ORDER BY id ASC').all(inv.id)
+      : [];
+    const balance = parseFloat((inv.total_value - inv.total_paid).toFixed(2));
+    return { ...inv, balance: Math.max(0, balance), payments };
+  });
+
+  return res.json(enriched);
+});
+
+// GET /api/v3/invoices/my - Customer Receiver views invoices ready for payment
+router.get('/invoices/my', requireAuth, requireRole('CR', 'CA'), (_req: Request, res: Response) => {
+  const db = getDb();
+  const list = db.prepare(`
+    SELECT ie.*, ta.scheduled_date, so.sap_so_no, cu.name as customer_name,
+           COALESCE((SELECT SUM(amount_paid) FROM payment_events WHERE invoice_id = ie.id), 0.0) as total_paid
+    FROM invoice_events ie
+    JOIN transport_assignments ta ON ta.id = ie.assignment_id
+    LEFT JOIN sales_orders so ON so.id = ta.so_id
+    LEFT JOIN customers cu ON cu.id = so.customer_id
+    WHERE ie.status IN ('PARKED', 'PAID_PARTIAL', 'PAID_FULL')
+    ORDER BY ie.id DESC
+  `).all();
+
+  const enriched = list.map((inv: any) => {
+    const balance = parseFloat((inv.total_value - inv.total_paid).toFixed(2));
+    const payments = db.prepare('SELECT * FROM payment_events WHERE invoice_id = ? ORDER BY id ASC').all(inv.id);
+    return { ...inv, balance: Math.max(0, balance), payments };
+  });
+
+  return res.json(enriched);
+});
+
+// POST /api/v3/invoices/:id/pay - Customer makes FULL or PARTIAL payment
+router.post('/invoices/:id/pay', requireAuth, requireRole('CR', 'CA'), (req: Request, res: Response) => {
+  const db = getDb();
+  const invoiceId = req.params.id;
+  const { payment_type, amount, ref_no } = req.body;
+
+  const inv = db.prepare('SELECT * FROM invoice_events WHERE id = ?').get(invoiceId) as any;
+  if (!inv) return res.status(404).json({ error: 'Invoice not found.' });
+
+  if (inv.status === 'PAID_FULL') {
+    return res.status(400).json({ error: 'Invoice is already fully paid.' });
+  }
+
+  const currentPaid = (db.prepare('SELECT COALESCE(SUM(amount_paid), 0.0) as sum FROM payment_events WHERE invoice_id = ?').get(invoiceId) as any)?.sum || 0.0;
+  const currentBalance = parseFloat((inv.total_value - currentPaid).toFixed(2));
+
+  let payAmount = 0.0;
+  if (payment_type === 'PARTIAL') {
+    payAmount = Number(amount);
+    if (!payAmount || payAmount <= 0) {
+      return res.status(400).json({ error: 'Please enter a valid partial payment amount.' });
+    }
+    if (payAmount > currentBalance) {
+      return res.status(400).json({ error: `Partial amount cannot exceed outstanding balance of ZAR ${currentBalance.toLocaleString()}.` });
+    }
+  } else {
+    // FULL payment
+    payAmount = currentBalance;
+  }
+
+  const newBalance = parseFloat((currentBalance - payAmount).toFixed(2));
+  const isFullyPaid = newBalance <= 0.01;
+
+  const payTx = db.transaction(() => {
+    const ref = ref_no || `EFT-CR-${Date.now()}`;
+    db.prepare(`
+      INSERT INTO payment_events (invoice_id, payment_type, amount_paid, balance_before, balance_after, paid_by, paid_at, ref_no)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'), ?)
+    `).run(invoiceId, payment_type === 'PARTIAL' ? 'PARTIAL' : 'FULL', payAmount, currentBalance, newBalance, req.user!.userId, ref);
+
+    const newStatus = isFullyPaid ? 'PAID_FULL' : 'PAID_PARTIAL';
+    db.prepare('UPDATE invoice_events SET status = ? WHERE id = ?').run(newStatus, invoiceId);
+
+    if (isFullyPaid) {
+      db.prepare("UPDATE transport_assignments SET status = 'CLEARED' WHERE id = ?").run(inv.assignment_id);
+    }
+    return { newStatus, ref };
+  });
+
+  const outcome = payTx();
+
+  return res.json({
+    success: true,
+    invoice_id: Number(invoiceId),
+    payment_type,
+    amount_paid: payAmount,
+    balance_remaining: Math.max(0, newBalance),
+    is_fully_paid: isFullyPaid,
+    status: outcome.newStatus,
+    message: isFullyPaid
+      ? `Payment completed in full (ZAR ${payAmount.toLocaleString()}). Invoice is marked PAID.`
+      : `Partial payment of ZAR ${payAmount.toLocaleString()} recorded. Remaining balance: ZAR ${newBalance.toLocaleString()}.`
+  });
+});
+
 router.get('/miro', requireAuth, requireRole('CA', 'TA'), (req: Request, res: Response) => {
   const db = getDb();
   const list = db.prepare(`
@@ -1200,6 +1662,12 @@ router.all(['/miro/:id/post', '/miro/post'], requireAuth, requireRole('CA', 'TA'
 
   const sapRef = miro.sap_ref || `BAPI-REF-${Date.now()}`;
 
+  // Write sync log OUT
+  db.prepare(`
+    INSERT INTO sap_sync_log (entity_type, sap_ref, direction, payload_json)
+    VALUES ('MIRO_INVOICE', ?, 'OUT', ?)
+  `).run(miro.sap_invoice_no, JSON.stringify({ miro_id: miroId, sap_invoice_no: miro.sap_invoice_no, amount: miro.total_value }));
+
   return res.json({
     id: miroId,
     status: 'POSTED',
@@ -1207,15 +1675,6 @@ router.all(['/miro/:id/post', '/miro/post'], requireAuth, requireRole('CA', 'TA'
     sap_ref: sapRef,
     message: `MIRO Invoice ${miro.sap_invoice_no} posted successfully to SAP Financial Ledger (Ref: ${sapRef}). Ready for payment clearing.`
   });
-});
-
-  // Write sync log OUT
-  db.prepare(`
-    INSERT INTO sap_sync_log (entity_type, sap_ref, direction, payload_json)
-    VALUES ('MIRO_INVOICE', ?, 'OUT', ?)
-  `).run(miro.sap_invoice_no, JSON.stringify({ miro_id: miroId, sap_invoice_no: miro.sap_invoice_no, amount: miro.total_value }));
-
-  return res.json({ message: 'MIRO posted successfully' });
 });
 
 // POST /api/v3/miro/:id/clear — Clear payment
@@ -1595,6 +2054,122 @@ router.post('/assignments/:id/bilty-upload', requireAuth, requireRole('SR'), (re
   db.prepare("UPDATE transport_assignments SET loading_status = 'LOADED' WHERE id = ?").run(assignmentId);
 
   return res.json({ message: 'Bilty uploaded successfully. Ready for dispatch authorization.' });
+});
+
+// POST /api/v3/assignments/:id/supervisor-release - Supervisor checks loaded items vs SO and releases to Staging
+router.post('/assignments/:id/supervisor-release', requireAuth, requireRole('SR'), (req: Request, res: Response) => {
+  const db = getDb();
+  const assignmentId = req.params.id;
+  const { loaded_items_checked } = req.body;
+
+  if (!loaded_items_checked) {
+    return res.status(400).json({ error: 'Please confirm loaded line items have been checked against the Sales Order.' });
+  }
+
+  // Update status to wait for Staging Area validation
+  db.prepare(`
+    UPDATE transport_assignments
+    SET status = 'MINE_GROSS_LOGGED', loading_status = 'LOADED'
+    WHERE id = ?
+  `).run(assignmentId);
+
+  return res.json({
+    success: true,
+    status: 'MINE_GROSS_LOGGED',
+    message: 'Loaded items verified and released to Staging Area for physical validation.'
+  });
+});
+
+// GET /api/v3/staging/queue - Staging Area inbox of trips awaiting verification
+router.get('/staging/queue', requireAuth, requireRole('SA', 'CA'), (_req: Request, res: Response) => {
+  const db = getDb();
+  const queue = db.prepare(`
+    SELECT ta.id as assignment_id, ta.status as assignment_status, ta.scheduled_date,
+           ta.so_id, so.sap_so_no, so.sap_customer_no, cu.name as customer_name,
+           d.name as driver_name, d.phone as driver_phone, d.license_no,
+           v.reg_no as vehicle_reg, v.capacity as vehicle_capacity,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
+           (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
+           (SELECT mismatch_notes FROM staging_checks WHERE assignment_id = ta.id ORDER BY id DESC LIMIT 1) as last_staging_notes
+    FROM transport_assignments ta
+    LEFT JOIN sales_orders so ON so.id = ta.so_id
+    LEFT JOIN customers cu ON cu.id = so.customer_id
+    LEFT JOIN drivers d ON d.id = ta.driver_id
+    LEFT JOIN vehicles v ON v.id = ta.vehicle_id
+    WHERE ta.status IN ('MINE_GROSS_LOGGED', 'STAGING_EXCEPTION')
+    ORDER BY ta.id ASC
+  `).all();
+
+  // Attach line items to each queue entry
+  const enriched = queue.map((item: any) => {
+    const items = item.so_id
+      ? db.prepare('SELECT * FROM sales_order_items WHERE so_id = ?').all(item.so_id)
+      : [];
+    return { ...item, line_items: items };
+  });
+
+  return res.json(enriched);
+});
+
+// POST /api/v3/assignments/:id/staging-check - Staging Area records MATCH or MISMATCH
+router.post('/assignments/:id/staging-check', requireAuth, requireRole('SA'), (req: Request, res: Response) => {
+  const db = getDb();
+  const assignmentId = req.params.id;
+  const { result, mismatch_notes } = req.body;
+
+  if (!['MATCH', 'MISMATCH'].includes(result)) {
+    return res.status(400).json({ error: "Result must be either 'MATCH' or 'MISMATCH'." });
+  }
+
+  const ta = db.prepare('SELECT ta.*, so.sap_so_no FROM transport_assignments ta LEFT JOIN sales_orders so ON so.id = ta.so_id WHERE ta.id = ?').get(assignmentId) as any;
+  if (!ta) return res.status(404).json({ error: 'Assignment not found.' });
+
+  if (result === 'MISMATCH') {
+    // Record mismatch check
+    db.prepare(`
+      INSERT INTO staging_checks (assignment_id, checked_by, result, mismatch_notes, checked_at)
+      VALUES (?, ?, 'MISMATCH', ?, datetime('now'))
+    `).run(assignmentId, req.user!.userId, mismatch_notes || 'Loaded line items do not match Sales Order.');
+
+    // Update assignment to STAGING_EXCEPTION (shown to Supervisor to fix)
+    db.prepare(`
+      UPDATE transport_assignments
+      SET status = 'STAGING_EXCEPTION', loading_status = 'STAGING_EXCEPTION'
+      WHERE id = ?
+    `).run(assignmentId);
+
+    return res.json({
+      success: true,
+      status: 'STAGING_EXCEPTION',
+      result: 'MISMATCH',
+      message: 'Staging exception logged. Trip flagged for Supervisor re-inspection.'
+    });
+  }
+
+  // MATCH: generate Waybill and clear the driver
+  const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const soNo = ta.sap_so_no || 'SO';
+  const waybillNo = `WB-${soNo}-${assignmentId}-${todayStr}`;
+
+  db.prepare(`
+    INSERT INTO staging_checks (assignment_id, checked_by, result, waybill_no, waybill_issued_at, checked_at)
+    VALUES (?, ?, 'MATCH', ?, datetime('now'), datetime('now'))
+  `).run(assignmentId, req.user!.userId, waybillNo);
+
+  // Update assignment to DISPATCHED
+  db.prepare(`
+    UPDATE transport_assignments
+    SET status = 'DISPATCHED', journey_authorized = 1, loading_status = 'CLEARED'
+    WHERE id = ?
+  `).run(assignmentId);
+
+  return res.json({
+    success: true,
+    status: 'DISPATCHED',
+    result: 'MATCH',
+    waybill_no: waybillNo,
+    message: `Staging match verified. Waybill #${waybillNo} issued. Driver cleared for transit.`
+  });
 });
 
 // POST /api/v3/assignments/:id/authorize-journey
@@ -2598,6 +3173,8 @@ router.get('/joule/dashboard', requireAuth, (_req: Request, res: Response) => {
     open_reviews: reviewCount.cnt,
     summary
   });
+});
+
 // ─── DEDICATED JOULE ACTION POST ENDPOINTS ──────────────────
 
 // 7. Joule Action: Distribute PO

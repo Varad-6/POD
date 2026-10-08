@@ -3,7 +3,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
-import { assignmentsApi, srApi, drApi, caApi, TransportAssignmentV3, ReviewQueueItemV3 } from '../lib/api_v3';
+import { assignmentsApi, srApi, drApi, caApi, TransportAssignmentV3, ReviewQueueItemV3, API_BASE } from '../lib/api_v3';
 import { useContractPo } from '../contexts/ContractPoContext';
 import { Tabs } from '../components/Tabs';
 import {
@@ -202,18 +202,28 @@ export const SupervisorDashboard: React.FC = () => {
     }
   };
 
-  const handleAuthorizeJourney = async () => {
+  const handleReleaseToStaging = async () => {
     if (!selectedAssignment) return;
     setIsSubmitting(true);
     try {
-      await new Promise(r => setTimeout(r, 1100));
-      await srApi.authorizeJourney(selectedAssignment.id);
+      await new Promise(r => setTimeout(r, 600));
+      const res = await fetch(`${API_BASE}/assignments/${selectedAssignment.id}/supervisor-release`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}`
+        },
+        body: JSON.stringify({ loaded_items_checked: true })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to release to Staging');
       const updatedList = await assignmentsApi.list();
       const updated = updatedList.find(a => a.id === selectedAssignment.id);
       if (updated) setSelectedAssignment(updated);
       setAssignments(updatedList);
+      setSuccessMsg('Loaded cargo verified and released to Staging Area for physical clearance.');
     } catch (err: any) {
-      alert('Authorization error: ' + (err.message || 'Please try again'));
+      alert('Release error: ' + (err.message || 'Please try again'));
     } finally {
       setIsSubmitting(false);
     }
@@ -221,18 +231,22 @@ export const SupervisorDashboard: React.FC = () => {
 
   const getStepStatus = (a: TransportAssignmentV3) => {
     const hasTare = !!a.mine_tare_kg;
-    const hasBilty = !!a.bilty_no;
+    const hasGross = !!a.mine_gross_kg;
     const isDispatched = ['DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(a.status);
+    const isStagingPending = a.status === 'MINE_GROSS_LOGGED' || a.status === 'STAGING_EXCEPTION';
+
     return {
       step1Done: !['ASSIGNED'].includes(a.status),
       step1Active: a.status === 'ASSIGNED',
       step2Done: hasTare,
       step2Active: !['ASSIGNED'].includes(a.status) && !hasTare,
-      step3Done: hasBilty,
-      step3Active: hasTare && !hasBilty,
+      step3Done: hasGross,
+      step3Active: hasTare && !hasGross,
       step4Done: isDispatched,
-      step4Active: hasTare && hasBilty && !isDispatched,
+      step4Active: hasGross && !isDispatched,
       isComplete: isDispatched,
+      isStagingPending,
+      isStagingException: a.status === 'STAGING_EXCEPTION',
     };
   };
 
@@ -535,18 +549,26 @@ export const SupervisorDashboard: React.FC = () => {
 
                   <div style={{ backgroundColor: 'var(--color-brand-blue-50)', border: '1px solid var(--color-border)', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>
-                      ✓ WEIGHBRIDGE RECORDS LOCKED & READY FOR DISPATCH
+                      ✓ ORIGIN WEIGHBRIDGE & CARGO LOCKED
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--color-brand-blue-600)' }}>
-                      The loaded net payload is finalized. Click below to authorize dispatch and release the driver.
+                      Origin Tare & Gross weights recorded. Verify that physical loaded items match the Sales Order line items before handing over to the Staging Area checkpoint.
                     </div>
+
+                    {steps.isStagingException && (
+                      <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AlertCircle size={16} />
+                        <span>STAGING EXCEPTION: Discrepancy detected by Staging Area. Please re-check loaded materials with warehouse and re-release.</span>
+                      </div>
+                    )}
+
                     <Button
-                      onClick={handleAuthorizeJourney}
+                      onClick={handleReleaseToStaging}
                       disabled={isSubmitting}
                       variant="primary"
                       style={{ width: '100%', marginTop: '6px', padding: '14px' }}
                     >
-                      {isSubmitting ? 'Authorizing...' : isMobile ? 'Authorize Dispatch & Release' : 'Authorize Start Journey & Dispatch Vehicle'}
+                      {isSubmitting ? 'Releasing...' : steps.isStagingException ? 'Re-Verify Items & Re-Release to Staging' : 'Verify Items vs Sales Order & Release to Staging'}
                     </Button>
                   </div>
                 </div>
@@ -554,6 +576,24 @@ export const SupervisorDashboard: React.FC = () => {
             </div>
           )}
         </StepCard>
+
+        {/* Staging Awaiting State */}
+        {steps.isStagingPending && !steps.step4Done && (
+          <div style={{
+            textAlign: 'center', padding: '24px',
+            backgroundColor: '#eff6ff', borderRadius: '14px', border: '1.5px solid #3b82f6'
+          }}>
+            <Clock size={36} color="#2563eb" style={{ margin: '0 auto 10px' }} />
+            <h4 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: 800, color: '#1e40af' }}>
+              {steps.isStagingException ? 'Staging Exception Reported' : 'Awaiting Staging Clearance'}
+            </h4>
+            <p style={{ margin: 0, fontSize: '13px', color: '#3b82f6' }}>
+              {steps.isStagingException
+                ? 'Check above instructions from the Staging inspector, adjust loaded items, and click Re-Release.'
+                : 'Vehicle is currently stationed at Staging Area for physical cargo verification. Waybill will be issued upon match.'}
+            </p>
+          </div>
+        )}
 
         {/* All done */}
         {steps.isComplete && (

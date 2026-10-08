@@ -4,8 +4,10 @@ import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { Table } from '../components/Table';
-import { crApi, drApi, TransportAssignmentV3 } from '../lib/api_v3';
+import { Modal } from '../components/Modal';
+import { crApi, drApi, targetInvoicesApi, TransportAssignmentV3, InvoiceEventV3 } from '../lib/api_v3';
 import { Tabs } from '../components/Tabs';
+import { formatCurrency } from '../utils/format';
 import {
   PackageCheck, ShieldCheck, CheckCircle2, Scale, ArrowLeft, Check,
   Truck, MapPin, RefreshCw, ArrowRight, AlertTriangle, Lock
@@ -22,12 +24,19 @@ const InfoBit: React.FC<{ label: string; value: string | number; mono?: boolean 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export const CustomerDashboard: React.FC = () => {
   const [incoming, setIncoming] = useState<TransportAssignmentV3[]>([]);
+  const [myInvoices, setMyInvoices] = useState<InvoiceEventV3[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<TransportAssignmentV3 | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'HISTORY'>('ACTIVE');
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'INVOICES' | 'HISTORY'>('ACTIVE');
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  // Payment modal state
+  const [selectedPayInvoice, setSelectedPayInvoice] = useState<InvoiceEventV3 | null>(null);
+  const [payType, setPayType] = useState<'FULL' | 'PARTIAL'>('FULL');
+  const [payAmount, setPayAmount] = useState<string>('');
+  const [paymentMsg, setPaymentMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -48,12 +57,36 @@ export const CustomerDashboard: React.FC = () => {
     setWeighSaved(false);
     setSuccessDone(false);
     try {
-      const data = await crApi.getIncomingAssignments();
-      setIncoming(data);
+      const [data, invs] = await Promise.all([
+        crApi.getIncomingAssignments(),
+        targetInvoicesApi.getMyInvoices()
+      ]);
+      setIncoming(data || []);
+      setMyInvoices(invs || []);
     } catch (err) {
-      console.error('Failed to load incoming trucks:', err);
+      console.error('Failed to load incoming trucks and invoices:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePaySubmit = async () => {
+    if (!selectedPayInvoice) return;
+    setIsSubmitting(true);
+    setPaymentMsg(null);
+    try {
+      const res = await targetInvoicesApi.pay(
+        selectedPayInvoice.id,
+        payType,
+        payType === 'PARTIAL' ? Number(payAmount) : undefined
+      );
+      setPaymentMsg({ type: 'success', text: res.message });
+      setSelectedPayInvoice(null);
+      await loadIncoming();
+    } catch (err: any) {
+      setPaymentMsg({ type: 'error', text: err.message || 'Payment processing failed.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -479,12 +512,100 @@ export const CustomerDashboard: React.FC = () => {
 
       <Tabs
         tabs={[
-          { id: 'ACTIVE', label: 'Active Queue', count: activeItems.length },
+          { id: 'ACTIVE', label: 'Active Deliveries Queue', count: activeItems.length },
+          { id: 'INVOICES', label: 'Invoices & Settlements', count: myInvoices.length },
           { id: 'HISTORY', label: 'Delivery History', count: historyItems.length }
         ]}
         activeTab={activeTab}
         onChange={(id) => setActiveTab(id as any)}
       />
+
+      {activeTab === 'INVOICES' && (
+        <Card
+          title="Customer Freight Invoices & Settlement Desk"
+          subtitle="View invoices posted by Company Admin with PARKED status. Make full or partial payments until balance reaches 0."
+        >
+          {myInvoices.length === 0 ? (
+            <EmptyState
+              icon={<ShieldCheck size={44} />}
+              title="No Invoices Pending"
+              description="No posted invoices are currently awaiting customer payment."
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {myInvoices.map(inv => (
+                <div
+                  key={inv.id}
+                  style={{
+                    padding: '18px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-card)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-brand-blue-600)' }}>
+                        {inv.invoice_no}
+                      </span>
+                      <StatusBadge status={inv.status} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Total Value</div>
+                        <div style={{ fontSize: '15px', fontWeight: 800 }}>{formatCurrency(inv.total_value)}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Balance Remaining</div>
+                        <div style={{ fontSize: '17px', fontWeight: 900, color: (inv.balance ?? 0) === 0 ? '#16a34a' : 'var(--color-brand-blue-600)' }}>
+                          {formatCurrency(inv.balance ?? 0)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions for PARKED or PAID_PARTIAL */}
+                  {inv.status !== 'PAID_FULL' && (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => {
+                          setSelectedPayInvoice(inv);
+                          setPayType('PARTIAL');
+                          setPayAmount(String(Math.min(500, inv.balance ?? 0)));
+                        }}
+                      >
+                        Pay Partial
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        onClick={() => {
+                          setSelectedPayInvoice(inv);
+                          setPayType('FULL');
+                          setPayAmount(String(inv.balance ?? 0));
+                        }}
+                      >
+                        Pay Full Balance ({formatCurrency(inv.balance ?? 0)})
+                      </Button>
+                    </div>
+                  )}
+
+                  {inv.status === 'PAID_FULL' && (
+                    <div style={{ fontSize: '12.5px', color: '#16a34a', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle2 size={16} /> Fully Paid & Settled
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* ── UNIFIED SAP ENTERPRISE TABLE FOR INCOMING DELIVERIES ── */}
       <Card 
@@ -578,6 +699,99 @@ export const CustomerDashboard: React.FC = () => {
           ]}
         />
       </Card>
+
+      {/* Payment Settlement Modal */}
+      <Modal
+        isOpen={Boolean(selectedPayInvoice)}
+        onClose={() => setSelectedPayInvoice(null)}
+        title={`Settle Freight Invoice #${selectedPayInvoice?.invoice_no}`}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--color-text-body)' }}>
+            Choose whether to pay the full outstanding balance or record a partial installment. Payments update the balance ledger immediately.
+          </p>
+
+          <div style={{
+            padding: '14px',
+            borderRadius: '8px',
+            backgroundColor: 'var(--color-bg-page)',
+            border: '1px solid var(--color-border)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{ fontSize: '13px', fontWeight: 600 }}>Outstanding Balance Due:</span>
+            <strong style={{ fontSize: '18px', color: 'var(--color-brand-blue-600)' }}>
+              {formatCurrency(selectedPayInvoice?.balance ?? 0)}
+            </strong>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="payType"
+                checked={payType === 'FULL'}
+                onChange={() => {
+                  setPayType('FULL');
+                  setPayAmount(String(selectedPayInvoice?.balance ?? 0));
+                }}
+              />
+              <strong>Pay Full Balance</strong>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', cursor: 'pointer' }}>
+              <input
+                type="radio"
+                name="payType"
+                checked={payType === 'PARTIAL'}
+                onChange={() => setPayType('PARTIAL')}
+              />
+              <strong>Pay Partial Installment</strong>
+            </label>
+          </div>
+
+          {payType === 'PARTIAL' && (
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '6px' }}>
+                Installment Amount (ZAR)
+              </label>
+              <input
+                type="number"
+                value={payAmount}
+                onChange={e => setPayAmount(e.target.value)}
+                placeholder="e.g. 500.00"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--color-border)',
+                  backgroundColor: 'var(--color-bg-card)',
+                  color: 'var(--color-text-body)',
+                  fontSize: '15px',
+                  fontWeight: 700
+                }}
+              />
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+            <Button
+              variant="secondary"
+              onClick={() => setSelectedPayInvoice(null)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handlePaySubmit}
+              disabled={isSubmitting || (payType === 'PARTIAL' && (!payAmount || Number(payAmount) <= 0))}
+            >
+              {isSubmitting ? 'Processing Payment...' : `Confirm & Pay ZAR ${payType === 'FULL' ? (selectedPayInvoice?.balance ?? 0).toLocaleString() : Number(payAmount || 0).toLocaleString()}`}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

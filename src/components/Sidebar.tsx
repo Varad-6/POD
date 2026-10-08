@@ -56,6 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
     if (role === 'CR') return 'Yard Receiving';
     if (role === 'DR') return 'Truck Driver';
     if (role === 'TA') return 'Transporter Admin';
+    if (role === 'SA') return 'Staging Controller';
     return 'Portal User';
   };
 
@@ -180,22 +181,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
                   </div>
                 </div>
 
-                {/* Group 2: PROCUREMENT */}
+                {/* Group 2: PROCUREMENT / SALES */}
                 <div>
                   {!isEffectiveCollapsed && (
                     <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                      PROCUREMENT
+                      SALES & DISTRIBUTION
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <NavLink 
-                      to="/admin/contracts" 
+                      to="/admin/sales-orders" 
                       className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "Contracts & PO Release" : undefined}
+                      title={isEffectiveCollapsed ? "SAP Sales Orders" : undefined}
                       style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
                     >
                       <FileSignature size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Contracts & PO Release</span>}
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>SAP Sales Orders (VA03)</span>}
                     </NavLink>
                   </div>
                 </div>
@@ -204,18 +205,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
                 <div>
                   {!isEffectiveCollapsed && (
                     <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                      FINANCE
+                      FINANCE & BILLING
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <NavLink 
                       to="/admin/invoices" 
                       className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "SAP MIRO Invoices" : undefined}
+                      title={isEffectiveCollapsed ? "Post Invoice Desk" : undefined}
                       style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
                     >
                       <FileClock size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>SAP MIRO Invoices</span>}
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Post Invoice Desk</span>}
                     </NavLink>
                   </div>
                 </div>
@@ -271,6 +272,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Driver Haulage Console</span>}
                 </NavLink>
               </div>
+            ) : currentUser.role === 'SA' ? (
+              <div>
+                {!isEffectiveCollapsed && (
+                  <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    CHECKPOINT INSPECTION
+                  </div>
+                )}
+                <NavLink 
+                  to="/staging/dashboard" 
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  title={isEffectiveCollapsed ? "Staging Console" : undefined}
+                  style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                >
+                  <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                  {!isEffectiveCollapsed && <span style={navLabelStyle}>Staging Console</span>}
+                </NavLink>
+              </div>
             ) : (
               <>
                 {/* Transporter Admin: OPERATIONS */}
@@ -303,42 +321,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
                   </div>
                 </div>
 
-                {/* Transporter Admin: ORDERS */}
+                {/* Transporter Admin: SALES ORDERS */}
                 <div>
                   {!isEffectiveCollapsed && (
                     <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                      ORDERS
+                      ASSIGNED HAULS
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <NavLink 
-                      to="/transporter/purchase-orders" 
+                      to="/transporter/sales-orders" 
                       className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "Purchase Orders Queue" : undefined}
+                      title={isEffectiveCollapsed ? "Assigned Sales Orders" : undefined}
                       style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
                     >
                       <FileSignature size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Purchase Orders Queue</span>}
-                    </NavLink>
-                  </div>
-                </div>
-
-                {/* Transporter Admin: FINANCE */}
-                <div>
-                  {!isEffectiveCollapsed && (
-                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                      FINANCE
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                    <NavLink 
-                      to="/transporter/invoices" 
-                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "Freight Delivery Invoices" : undefined}
-                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
-                    >
-                      <FileClock size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Freight Delivery Invoices</span>}
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Assigned Sales Orders</span>}
                     </NavLink>
                   </div>
                 </div>

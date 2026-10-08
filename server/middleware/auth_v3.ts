@@ -10,7 +10,7 @@ export const JWT_SECRET = process.env.JWT_SECRET || 'podzo-portal-jwt-secret-202
 export interface AuthPayload {
   userId: number;
   username: string;
-  role: 'CA' | 'TA' | 'DR' | 'CR' | 'SR';
+  role: 'CA' | 'TA' | 'DR' | 'CR' | 'SR' | 'SA';
   entityId: number | null;
 }
 
@@ -26,7 +26,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const mockRole = (req.headers['x-mock-role'] as string) || (req.query.mock_role as string);
   const mockUserId = Number(req.headers['x-mock-user-id'] || req.query.mock_user_id) || 1;
 
-  if (mockRole && ['CA', 'TA', 'DR', 'CR', 'SR'].includes(mockRole.toUpperCase())) {
+  if (mockRole && ['CA', 'TA', 'DR', 'CR', 'SR', 'SA'].includes(mockRole.toUpperCase())) {
     req.user = {
       userId: mockUserId,
       username: `mock_${mockRole.toLowerCase()}`,
@@ -63,7 +63,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-export function requireRole(...roles: ('CA' | 'TA' | 'DR' | 'CR' | 'SR')[]) {
+export function requireRole(...roles: ('CA' | 'TA' | 'DR' | 'CR' | 'SR' | 'SA')[]) {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthenticated' });
     if (!roles.includes(req.user.role)) {

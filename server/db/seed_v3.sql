@@ -17,7 +17,8 @@ INSERT OR IGNORE INTO users (id, username, password_hash, role, display_name, em
   (9, 'dr_suresh',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Suresh Kumar',       'suresh@driver.in',         '+27720001010', 5),
   (10, 'dr_anil',      '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Anil Kumar',          'anil@driver.in',           '+27720001011', 6),
   (11, 'dr_ramesh',    '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Ramesh Lal',          'ramesh@driver.in',         '+27720001012', 7),
-  (12, 'dr_vijay',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Vijay Singh',         'vijay@driver.in',          '+27720001013', 8);
+  (12, 'dr_vijay',     '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'DR', 'Vijay Singh',         'vijay@driver.in',          '+27720001013', 8),
+  (13, 'sa_staging01', '$2y$10$yFwzU1gXp5P3XFw49NqSGOu14lB2W.33VzS6sIe87747e90197V5.', 'SA', 'Staging Controller', 'staging@podzo.co.za',      '+27110001014', NULL);
 
 -- CUSTOMERS (Mining Yards)
 INSERT OR IGNORE INTO customers (id, name, sap_customer_no, gps_lat, gps_lng, address) VALUES

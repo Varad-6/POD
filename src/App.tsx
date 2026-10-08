@@ -14,14 +14,14 @@ import { Footer } from './components/Footer';
 
 // Existing views
 import { TransporterDashboard } from './views/TransporterDashboard';
-import { TransporterPOs } from './views/TransporterPOs';
+import { TransporterSalesOrders } from './views/TransporterSalesOrders';
 import { TransporterPODs } from './views/TransporterPODs';
-import { TransporterInvoices } from './views/TransporterInvoices';
 import { AdminDashboard } from './views/AdminDashboard';
 import { AdminApprovals } from './views/AdminApprovals';
 import { AdminInvoices } from './views/AdminInvoices';
-import { AdminContracts } from './views/AdminContracts';
+import { AdminSalesOrders } from './views/AdminSalesOrders';
 import { SupervisorDashboard } from './views/SupervisorDashboard';
+import { StagingDashboard } from './views/StagingDashboard';
 import { CustomerDashboard } from './views/CustomerDashboard';
 import { DriverDashboard } from './views/DriverDashboard';
 import { ComponentGallery } from './views/ComponentGallery';
@@ -30,6 +30,7 @@ function getDefaultRoute(role: string): string {
   switch (role) {
     case 'CA': return '/admin/dashboard';
     case 'SR': return '/supervisor/dashboard';
+    case 'SA': return '/staging/dashboard';
     case 'CR': return '/customer/dashboard';
     case 'DR': return '/driver/dashboard';
     case 'TA': return '/transporter/dashboard';
@@ -53,11 +54,12 @@ const RoleRoute: React.FC<RoleRouteProps> = ({ allowedRoles, userRole, children 
 function getPageTitle(path: string, role: string): string {
   if (path.includes('/admin/dashboard')) return 'Control Tower';
   if (path.includes('/transporter/dashboard')) return 'Transport Operations';
-  if (path.includes('/purchase-orders')) return 'Transport Purchase Orders';
+  if (path.includes('/transporter/sales-orders')) return 'Assigned Sales Orders';
   if (path.includes('/pods')) return 'Proof of Delivery Upload & Management';
-  if (path.includes('/invoices')) return role === 'CA' ? 'SAP MIRO Invoice Clearing' : 'Freight Invoices & Ledger';
+  if (path.includes('/invoices')) return 'Post Invoice & Customer Settlement';
   if (path.includes('/approvals')) return 'OCR POD Verification Desk';
-  if (path.includes('/contracts')) return 'Outline Contracts';
+  if (path.includes('/sales-orders')) return 'SAP S/4HANA Sales Orders';
+  if (path.includes('/staging/dashboard')) return 'Staging Area Pre-Clearance Console';
   if (path.includes('/supervisor/dashboard')) return 'Pre-Dispatch Weighbridge Console';
   if (path.includes('/customer/dashboard')) return 'Yard Receiving & Gate Clearance';
   if (path.includes('/driver/dashboard')) return 'Driver Transport App';
@@ -178,15 +180,17 @@ const MainApp: React.FC = () => {
             <Routes>
               {/* Transporter Routes */}
               <Route path="/transporter/dashboard"      element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterDashboard /></RoleRoute>} />
-              <Route path="/transporter/purchase-orders" element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterPOs /></RoleRoute>} />
+              <Route path="/transporter/sales-orders"   element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterSalesOrders /></RoleRoute>} />
               <Route path="/transporter/pods"           element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterPODs /></RoleRoute>} />
-              <Route path="/transporter/invoices"       element={<RoleRoute allowedRoles={['TA']} userRole={user.role}><TransporterInvoices /></RoleRoute>} />
 
               {/* Admin Routes */}
-              <Route path="/admin/dashboard"  element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminDashboard /></RoleRoute>} />
-              <Route path="/admin/contracts"  element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminContracts /></RoleRoute>} />
-              <Route path="/admin/approvals"  element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminApprovals /></RoleRoute>} />
-              <Route path="/admin/invoices"   element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminInvoices /></RoleRoute>} />
+              <Route path="/admin/dashboard"    element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminDashboard /></RoleRoute>} />
+              <Route path="/admin/sales-orders" element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminSalesOrders /></RoleRoute>} />
+              <Route path="/admin/approvals"    element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminApprovals /></RoleRoute>} />
+              <Route path="/admin/invoices"     element={<RoleRoute allowedRoles={['CA']} userRole={user.role}><AdminInvoices /></RoleRoute>} />
+
+              {/* Staging Routes */}
+              <Route path="/staging/dashboard"  element={<RoleRoute allowedRoles={['SA']} userRole={user.role}><StagingDashboard /></RoleRoute>} />
 
               {/* Supervisor Routes */}
               <Route path="/supervisor/dashboard" element={<RoleRoute allowedRoles={['SR']} userRole={user.role}><SupervisorDashboard /></RoleRoute>} />

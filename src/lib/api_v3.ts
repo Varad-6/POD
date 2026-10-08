@@ -214,7 +214,7 @@ export const invoicesApi = {
 export interface UserV3 {
   id: number;
   username: string;
-  role: 'CA' | 'TA' | 'DR' | 'CR' | 'SR';
+  role: 'CA' | 'TA' | 'DR' | 'CR' | 'SR' | 'SA';
   displayName: string;
   email?: string;
   entityId?: number;
@@ -441,3 +441,149 @@ export interface Vehicle {
   reg_no: string;
   capacity: number;
 }
+
+// ─── NEW SALES ORDER & OVERHAUL TYPES ─────────────────────────
+export interface SalesOrderItemV3 {
+  id: number;
+  so_id: number;
+  sap_so_no: string;
+  item_no: string;
+  material: string;
+  material_desc?: string;
+  order_qty: number;
+  uom: string;
+  net_price?: number;
+  plant?: string;
+  storage_location?: string;
+}
+
+export interface SalesOrderV3 {
+  id: number;
+  sap_so_no: string;
+  customer_id: number;
+  customer_name?: string;
+  sap_customer_no: string;
+  created_date: string;
+  delivery_date?: string;
+  overall_status: string;
+  portal_status: 'OPEN' | 'DISTRIBUTED' | 'IN_PROGRESS' | 'DELIVERED' | 'INVOICED' | 'PAID';
+  fetched_at?: string;
+  item_count?: number;
+  total_qty?: number;
+  materials_summary?: string;
+  items?: SalesOrderItemV3[];
+}
+
+export interface SoDistributionV3 {
+  id: number;
+  so_id: number;
+  transporter_id: number;
+  distributed_by: number;
+  distributed_at: string;
+  status: 'PENDING' | 'ASSIGNED' | 'COMPLETED';
+  sap_so_no?: string;
+  sap_customer_no?: string;
+  customer_name?: string;
+  delivery_date?: string;
+  transporter_name?: string;
+  item_count?: number;
+  total_qty?: number;
+  materials_summary?: string;
+  active_assignment_id?: number;
+  assignment_status?: string;
+  driver_name?: string;
+  vehicle_reg?: string;
+}
+
+export interface StagingQueueItemV3 {
+  assignment_id: number;
+  assignment_status: string;
+  scheduled_date: string;
+  so_id: number;
+  sap_so_no: string;
+  sap_customer_no: string;
+  customer_name: string;
+  driver_name: string;
+  driver_phone?: string;
+  license_no: string;
+  vehicle_reg: string;
+  vehicle_capacity: number;
+  mine_tare_kg?: number;
+  mine_gross_kg?: number;
+  last_staging_notes?: string;
+  line_items: SalesOrderItemV3[];
+}
+
+export interface PaymentEventV3 {
+  id: number;
+  invoice_id: number;
+  payment_type: 'FULL' | 'PARTIAL';
+  amount_paid: number;
+  balance_before: number;
+  balance_after: number;
+  paid_by: number;
+  paid_at: string;
+  ref_no?: string;
+}
+
+export interface InvoiceEventV3 {
+  id: number;
+  assignment_id: number;
+  invoice_no: string;
+  total_value: number;
+  accepted_payload: number;
+  rate: number;
+  status: 'DRAFT' | 'PARKED' | 'PAID_PARTIAL' | 'PAID_FULL';
+  posted_at?: string;
+  scheduled_date?: string;
+  sap_so_no?: string;
+  customer_name?: string;
+  driver_name?: string;
+  vehicle_reg?: string;
+  total_paid?: number;
+  balance?: number;
+  payments?: PaymentEventV3[];
+}
+
+// ─── NEW API CLIENT MODULES ───────────────────────────────────
+export const salesOrdersApi = {
+  list: () => request<SalesOrderV3[]>('/sales-orders'),
+  get: (id: number | string) => request<SalesOrderV3>(`/sales-orders/${id}`),
+  refresh: () => request<{ success: boolean; count: number; fromCache: boolean; lastFetchedAt?: string; note?: string; message: string }>('/sales-orders/refresh', { method: 'POST' }),
+  distribute: (soIds: number[], transporterId: number) =>
+    request<{ success: boolean; distributed_count: number; message: string }>('/sales-orders/distribute', {
+      method: 'POST',
+      body: JSON.stringify({ so_ids: soIds, transporter_id: transporterId }),
+    }),
+  getDistributions: () => request<SoDistributionV3[]>('/so-distributions'),
+  assignDriver: (distId: number, driverId: number, vehicleId: number, scheduledDate?: string) =>
+    request<{ success: boolean; assignment_id: number; message: string }>(`/so-distributions/${distId}/assign`, {
+      method: 'POST',
+      body: JSON.stringify({ driver_id: driverId, vehicle_id: vehicleId, scheduled_date: scheduledDate }),
+    }),
+};
+
+export const stagingApi = {
+  getQueue: () => request<StagingQueueItemV3[]>('/staging/queue'),
+  check: (assignmentId: number, result: 'MATCH' | 'MISMATCH', mismatchNotes?: string) =>
+    request<{ success: boolean; status: string; result: string; waybill_no?: string; message: string }>(`/assignments/${assignmentId}/staging-check`, {
+      method: 'POST',
+      body: JSON.stringify({ result, mismatch_notes: mismatchNotes }),
+    }),
+};
+
+export const targetInvoicesApi = {
+  postInvoice: (assignmentId: number) =>
+    request<{ success: boolean; invoice_no: string; total_value: number; status: string; message: string }>('/invoices/post', {
+      method: 'POST',
+      body: JSON.stringify({ assignment_id: assignmentId }),
+    }),
+  getPosted: () => request<InvoiceEventV3[]>('/invoices/posted'),
+  getMyInvoices: () => request<InvoiceEventV3[]>('/invoices/my'),
+  pay: (invoiceId: number, paymentType: 'FULL' | 'PARTIAL', amount?: number, refNo?: string) =>
+    request<{ success: boolean; is_fully_paid: boolean; status: string; amount_paid: number; balance_remaining: number; message: string }>(`/invoices/${invoiceId}/pay`, {
+      method: 'POST',
+      body: JSON.stringify({ payment_type: paymentType, amount, ref_no: refNo }),
+    }),
+};
+

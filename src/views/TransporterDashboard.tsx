@@ -174,19 +174,13 @@ export const TransporterDashboard: React.FC = () => {
       />
 
       {/* 3. Primary Operational Navigation Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
         <NavCard
           icon={<FileText size={20} />}
-          title="Purchase Orders"
-          description="View incoming transport execution orders and assign drivers and trucks."
-          route="/transporter/purchase-orders"
+          title="Assigned Sales Orders"
+          description="View complete Sales Orders distributed by Company Admin and allocate fleet capacity."
+          route="/transporter/sales-orders"
           badge={pendingPO.length > 0 ? `${pendingPO.length} Pending` : undefined}
-        />
-        <NavCard
-          icon={<Truck size={20} />}
-          title="Active Transports"
-          description="Track active deliveries, weighbridge slips, and trip milestones."
-          route="/transporter/trips"
         />
         <NavCard
           icon={<ClipboardList size={20} />}
@@ -194,12 +188,6 @@ export const TransporterDashboard: React.FC = () => {
           description="Upload signed proof of delivery notes for automated OCR verification."
           route="/transporter/pods"
           badge={podPending.length > 0 ? `${podPending.length} Needed` : undefined}
-        />
-        <NavCard
-          icon={<Receipt size={20} />}
-          title="Invoices & Payments"
-          description="Raise tax invoices for approved trips and inspect SAP payment remittances."
-          route="/transporter/invoices"
         />
       </div>
 

@@ -120,7 +120,7 @@ export function initDb(): Database.Database {
 
   // Check if seeded (ensure all core personas exist)
   const userCount = (instance.prepare('SELECT COUNT(*) as c FROM users').get() as { c: number }).c;
-  if (userCount < 12) {
+  if (userCount < 13) {
     const seed = readFileSync(SEED_PATH, 'utf8');
     instance.exec(seed);
 
@@ -131,6 +131,92 @@ export function initDb(): Database.Database {
     console.log('[DB V3] Seed data synchronized. All users set to password: Demo@1234');
   } else {
     console.log(`[DB V3] Database already has ${userCount} users, skipping seed.`);
+  }
+
+  // Ensure users table allows 'SA' role in CHECK constraint
+  try {
+    const userTableSql = (instance.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get() as any)?.sql || '';
+    if (userTableSql.includes('CHECK') && !userTableSql.includes("'SA'")) {
+      console.log("[DB V3] Migrating users table to add 'SA' role...");
+      instance.exec(`
+        CREATE TABLE users_new (
+          id              INTEGER PRIMARY KEY AUTOINCREMENT,
+          username        TEXT    NOT NULL UNIQUE,
+          password_hash   TEXT    NOT NULL,
+          role            TEXT    NOT NULL CHECK (role IN ('CA', 'TA', 'DR', 'SR', 'CR', 'LA', 'SA')),
+          display_name    TEXT    NOT NULL,
+          email           TEXT    NOT NULL,
+          phone           TEXT,
+          transporter_id  INTEGER REFERENCES transporters(id),
+          customer_id     INTEGER REFERENCES customers(id),
+          is_active       INTEGER NOT NULL DEFAULT 1,
+          created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+        );
+        INSERT OR IGNORE INTO users_new (id, username, password_hash, role, display_name, email, phone, transporter_id, customer_id, is_active, created_at)
+        SELECT id, username, password_hash, role, display_name, email, phone, transporter_id, customer_id, is_active, created_at FROM users;
+        DROP TABLE users;
+        ALTER TABLE users_new RENAME TO users;
+      `);
+      console.log("[DB V3] users table migrated with 'SA' role.");
+    }
+  } catch (err) {
+    console.warn('[DB V3] users table migration check warning:', err);
+  }
+
+  // Ensure sa_staging01 user is specifically inserted if missing
+  const hasSa = instance.prepare("SELECT id FROM users WHERE username = 'sa_staging01'").get();
+  if (!hasSa) {
+    const DEMO_PASSWORD = 'Demo@1234';
+    const hash = bcrypt.hashSync(DEMO_PASSWORD, 10);
+    instance.prepare(`
+      INSERT OR IGNORE INTO users (id, username, password_hash, role, display_name, email, phone)
+      VALUES (13, 'sa_staging01', ?, 'SA', 'Staging Controller', 'staging@podzo.co.za', '+27110001014')
+    `).run(hash);
+    console.log('[DB V3] Staging user sa_staging01 initialized.');
+  }
+
+  // Ensure POC Sales Orders (2318, 2320, 2321, 2322) are seeded if table is empty
+  try {
+    const soCount = (instance.prepare('SELECT COUNT(*) as c FROM sales_orders').get() as any)?.c || 0;
+    if (soCount === 0) {
+      console.log('[DB V3] Seeding initial POC Sales Orders from test suite...');
+      const insertCustomer = instance.prepare(`
+        INSERT OR IGNORE INTO customers (id, name, sap_customer_no, gps_lat, gps_lng, address)
+        VALUES (1, 'PODZO Mining – Emoyeni Siding', 'SAP-CUST-1001', -25.7670, 29.4630, 'Emoyeni Siding, Witbank, ZA')
+      `);
+      insertCustomer.run();
+
+      const insertSO = instance.prepare(`
+        INSERT OR REPLACE INTO sales_orders (id, sap_so_no, customer_id, sap_customer_no, created_date, delivery_date, overall_status, portal_status)
+        VALUES (?, ?, ?, ?, date('now'), date('now', '+2 days'), 'A', 'OPEN')
+      `);
+      const insertItem = instance.prepare(`
+        INSERT OR REPLACE INTO sales_order_items (so_id, sap_so_no, item_no, material, material_desc, order_qty, uom, net_price, plant, storage_location)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      // SO 2318 (Single line complete delivery 80001469)
+      insertSO.run(1, '2318', 1, 'SAP-CUST-1001');
+      insertItem.run(1, '2318', '10', 'SL BIT 20%ASH (40006653)', 'Washed Bituminous Coal Grade A', 34.0, 'TO', 151.50, '1001', 'SL01');
+
+      // SO 2321 (Multiple material partial delivery 80001471, 80001472)
+      insertSO.run(2, '2321', 1, 'SAP-CUST-1001');
+      insertItem.run(2, '2321', '10', 'FERT_50KG_BAG (40006654)', 'Agricultural Fertilizer 50kg', 15.0, 'BAG', 450.00, '1001', 'SL02');
+      insertItem.run(2, '2321', '20', 'DEF_ADBLUE_20L (40006660)', 'Diesel Exhaust Fluid 20L Drum', 25.0, 'BT', 280.00, '1001', 'SL03');
+
+      // SO 2320 (Multiple line item partial delivery 80001470, 80001473)
+      insertSO.run(3, '2320', 1, 'SAP-CUST-1001');
+      insertItem.run(3, '2320', '10', 'SPARE_PARTS_BOX (40006657)', 'Heavy Equipment Maintenance Spares', 20.0, 'EA', 1250.00, '1002', 'SL01');
+      insertItem.run(3, '2320', '20', 'CRUSHER_JAW_PLATE (40006658)', 'Manganese Crusher Jaw Replacement Plate', 12.0, 'PC', 3400.00, '1002', 'SL01');
+
+      // SO 2322 (Multiple line item complete delivery 80001474)
+      insertSO.run(4, '2322', 1, 'SAP-CUST-1001');
+      insertItem.run(4, '2322', '10', 'STEEL PLATE (200100)', 'Structural Carbon Steel Plate 20mm', 50.0, 'EA', 500.00, '1001', 'SL04');
+      insertItem.run(4, '2322', '20', 'Shaft (200119)', 'Transmission High-Torque Axle Shaft', 25.0, 'EA', 850.00, '1001', 'SL04');
+      console.log('[DB V3] Seeded 4 POC Sales Orders.');
+    }
+  } catch (err) {
+    console.warn('[DB V3] Sales order seeding check warning:', err);
   }
 
   // Ensure active demonstration trip exists for driver and open review item exists

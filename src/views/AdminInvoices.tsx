@@ -1,63 +1,46 @@
 import React, { useState, useEffect } from 'react';
-import { FileClock, CreditCard, Search, ArrowRight, ShieldAlert, Loader2, CheckCircle2, RefreshCw } from 'lucide-react';
-import { invoicesApi, MiroInvoice, DeliveryInvoiceV3, caApi } from '../lib/api_v3';
+import { FileClock, CreditCard, Search, ArrowRight, ShieldAlert, CheckCircle2, RefreshCw, FileText, Send } from 'lucide-react';
+import { targetInvoicesApi, caApi, assignmentsApi, InvoiceEventV3, TransportAssignmentV3 } from '../lib/api_v3';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
-import { Modal } from '../components/Modal';
 import { Tabs } from '../components/Tabs';
 import { Table, Column } from '../components/Table';
-import { formatCurrency } from '../utils/format';
-
-const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
+import { formatCurrency, formatDate } from '../utils/format';
 
 export const AdminInvoices: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'PARKED' | 'POSTED' | 'CLEARED' | 'UNPARKED'>('UNPARKED');
-  const [miroList, setMiroList] = useState<MiroInvoice[]>([]);
-  const [unparkedInvoices, setUnparkedInvoices] = useState<DeliveryInvoiceV3[]>([]);
+  // Tabs per Target Flow: Post Invoice tab + PARKED tab + PAID tab
+  const [activeTab, setActiveTab] = useState<'READY_TO_POST' | 'PARKED' | 'PAID'>('READY_TO_POST');
+  const [approvedTrips, setApprovedTrips] = useState<TransportAssignmentV3[]>([]);
+  const [postedInvoices, setPostedInvoices] = useState<InvoiceEventV3[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Modal controls
-  const [selectedMiro, setSelectedMiro] = useState<MiroInvoice | null>(null);
-  const [selectedUnparked, setSelectedUnparked] = useState<DeliveryInvoiceV3 | null>(null);
-  const [showPostConfirm, setShowPostConfirm] = useState(false);
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [paymentRefInput, setPaymentRefInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [paymentType, setPaymentType] = useState<'FULL' | 'PARTIAL'>('FULL');
-  const [partialPercent, setPartialPercent] = useState<number>(25);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [successMsg, setSuccessMsg] = useState('');
 
-  // Enterprise Transaction Overlay state
-  const [processingState, setProcessingState] = useState<{
-    active: boolean;
-    title: string;
-    stepText: string;
-    progress: number;
-    completed?: boolean;
-  }>({ active: false, title: '', stepText: '', progress: 0 });
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const loadData = async (manual = false, isSilent = false) => {
-    if (!isSilent) setLoading(true);
+  const loadData = async () => {
+    setLoading(true);
     setErrorMsg('');
     try {
-      if (manual) await delay(650);
-      const miros = await invoicesApi.listMiro();
-      setMiroList(miros);
-      const deliveryInvoices = await caApi.getDeliveryInvoices('SENT_TO_CA');
-      setUnparkedInvoices(deliveryInvoices);
-    } catch (err) {
+      const [allAssignments, postedList] = await Promise.all([
+        assignmentsApi.list(),
+        targetInvoicesApi.getPosted(),
+      ]);
+
+      // Ready to Post tab: Trips that are APPROVED by CA and not yet posted as invoice
+      const postedAssignmentIds = (postedList || []).map(p => p.assignment_id);
+      const ready = (allAssignments || []).filter(
+        a => (a.status === 'APPROVED' || a.status === 'UNDER_REVIEW') && !postedAssignmentIds.includes(a.id)
+      );
+
+      setApprovedTrips(ready);
+      setPostedInvoices(postedList || []);
+    } catch (err: any) {
       console.error('Failed to load invoices:', err);
+      setErrorMsg(err.message || 'Failed to load invoices data');
     } finally {
-      if (!isSilent) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -65,582 +48,266 @@ export const AdminInvoices: React.FC = () => {
     loadData();
   }, []);
 
-  const handleParkMiro = async (dInv: DeliveryInvoiceV3) => {
+  const handlePostInvoice = async (tripId: number) => {
     setIsSubmitting(true);
     setErrorMsg('');
-    setProcessingState({
-      active: true,
-      title: 'Parking MIRO Invoice in SAP S/4HANA',
-      stepText: '1/3 Interfacing with SAP Logistics Invoice Verification (LIV)...',
-      progress: 30
-    });
-
+    setSuccessMsg('');
     try {
-      await delay(800);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: '2/3 Validating delivery payload & line items against PO Line 10...',
-        progress: 65
-      }));
-
-      await invoicesApi.createMiro({
-        freight_invoice_id: dInv.id,
-        waybill_no: `WB-${Date.now()}`
-      });
-
-      await delay(900);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: '3/3 Generating SAP Parked Accounting Document in Financial Ledger...',
-        progress: 95
-      }));
-
-      await delay(700);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: 'MIRO Document Successfully Parked in SAP!',
-        progress: 100,
-        completed: true
-      }));
-      await delay(600);
-
+      const res = await targetInvoicesApi.postInvoice(tripId);
+      setSuccessMsg(`Invoice #${res.invoice_no} posted with status PARKED (Front-end review lock). Customer has been notified for payment.`);
       await loadData();
       setActiveTab('PARKED');
     } catch (err: any) {
-      console.error('Failed to park MIRO:', err);
-      const msg = err.message || '';
-      if (msg.includes('unique') || msg.includes('constraint') || msg.includes('already exists')) {
-        setErrorMsg('SAP DB Alert: A duplicate MIRO document already exists for this Waybill. S/4HANA blocks duplicate entries.');
-      } else {
-        setErrorMsg(msg || 'Failed to park MIRO');
-      }
+      setErrorMsg(err.message || 'Failed to post invoice.');
     } finally {
       setIsSubmitting(false);
-      setProcessingState({ active: false, title: '', stepText: '', progress: 0 });
     }
   };
 
-  const handlePostMiro = async () => {
-    if (!selectedMiro) return;
-    setIsSubmitting(true);
-    setErrorMsg('');
-    setShowPostConfirm(false);
-    setProcessingState({
-      active: true,
-      title: 'Posting MIRO to SAP General Ledger',
-      stepText: '1/3 Initiating RFC Connection to SAP S/4HANA LIV Module...',
-      progress: 30
-    });
-
-    try {
-      await delay(800);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: '2/3 Executing BAPI_INCOMINGINVOICE_POST (2-Way Matching)...',
-        progress: 65
-      }));
-
-      await invoicesApi.postMiro(selectedMiro.id);
-
-      await delay(1000);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: '3/3 Committing Financial Journal Entry & Ledger Audit Trail...',
-        progress: 95
-      }));
-
-      await delay(700);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: 'MIRO Successfully Posted to General Ledger!',
-        progress: 100,
-        completed: true
-      }));
-      await delay(600);
-
-      await loadData();
-      setSelectedMiro(null);
-      setActiveTab('POSTED');
-    } catch (err: any) {
-      console.error('Failed to post MIRO:', err);
-      const msg = err.message || '';
-      if (msg.includes('unique') || msg.includes('constraint') || msg.includes('already exists')) {
-        setErrorMsg('SAP DB Alert: This MIRO invoice has already been posted to the general ledger.');
-      } else {
-        setErrorMsg(msg || 'Failed to post MIRO');
-      }
-    } finally {
-      setIsSubmitting(false);
-      setProcessingState({ active: false, title: '', stepText: '', progress: 0 });
-    }
-  };
-
-  const handleClearMiro = async () => {
-    if (!selectedMiro) return;
-    setIsSubmitting(true);
-    setErrorMsg('');
-    setShowClearConfirm(false);
-    setProcessingState({
-      active: true,
-      title: 'Settling Payment in SAP Financial Accounting (FI)',
-      stepText: '1/3 Connecting to Corporate Banking Clearing Gateway...',
-      progress: 30
-    });
-
-    try {
-      await delay(800);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: '2/3 Reconciling payment reference with S/4HANA FI GL Account 110020...',
-        progress: 65
-      }));
-
-      await invoicesApi.clearMiro(selectedMiro.id, paymentRefInput, paymentType, partialPercent);
-
-      await delay(900);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: '3/3 Posting Clearing Document & Releasing Financial Voucher...',
-        progress: 95
-      }));
-
-      await delay(700);
-      setProcessingState(prev => ({
-        ...prev,
-        stepText: 'Payment Successfully Cleared in SAP S/4HANA!',
-        progress: 100,
-        completed: true
-      }));
-      await delay(600);
-
-      const miros = await invoicesApi.listMiro();
-      setMiroList(miros);
-      const deliveryInvoices = await caApi.getDeliveryInvoices('SENT_TO_CA');
-      setUnparkedInvoices(deliveryInvoices);
-
-      const updatedItem = miros.find(m => m.id === selectedMiro.id);
-      setSelectedMiro(null);
-      
-      if (updatedItem && updatedItem.status === 'CLEARED') {
-        setActiveTab('CLEARED');
-      } else {
-        setActiveTab('POSTED');
-      }
-    } catch (err: any) {
-      console.error('Failed to clear MIRO:', err);
-      const msg = err.message || '';
-      if (msg.includes('unique') || msg.includes('constraint') || msg.includes('already exists')) {
-        setErrorMsg('SAP DB Alert: This clearing reference or payment transaction is already recorded. S/4HANA blocks duplicate clearing references.');
-      } else {
-        setErrorMsg(msg || 'Failed to clear MIRO');
-      }
-    } finally {
-      setIsSubmitting(false);
-      setProcessingState({ active: false, title: '', stepText: '', progress: 0 });
-    }
-  };
-
-  const parked = miroList.filter(m => m.status === 'PARKED');
-  const posted = miroList.filter(m => m.status === 'POSTED');
-  const cleared = miroList.filter(m => m.status === 'CLEARED');
-
-  const activeList = 
-    activeTab === 'UNPARKED' ? unparkedInvoices :
-    activeTab === 'PARKED' ? parked :
-    activeTab === 'POSTED' ? posted : cleared;
+  const parkedInvoices = postedInvoices.filter(i => i.status === 'PARKED' || i.status === 'PAID_PARTIAL');
+  const paidInvoices = postedInvoices.filter(i => i.status === 'PAID_FULL');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--color-text-heading)', margin: 0 }}>
-            Invoice & Payment Desk (SAP MIRO)
+            Post Invoice & Customer Settlement Ledger
           </h1>
           <p style={{ fontSize: '13.5px', color: 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
-            Verify delivery invoices, park MIROs, post to SAP, and confirm clearings
+            Post verified proof-of-delivery trips to the customer billing desk and track customer installments.
           </p>
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={() => loadData(true)} disabled={loading || isSubmitting} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          <span>{loading ? 'Syncing SAP...' : 'Refresh Queue'}</span>
+        <button
+          className="btn btn-secondary btn-sm"
+          onClick={() => loadData()}
+          disabled={loading || isSubmitting}
+          style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          <RefreshCw size={14} className={loading ? 'spin' : ''} />
+          <span>{loading ? 'Refreshing...' : 'Refresh Queue'}</span>
         </button>
       </div>
 
       {errorMsg && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--color-error-bg)', border: '1.5px solid var(--color-error-light)', color: 'var(--color-error-text)', padding: '14px 18px', borderRadius: '12px', fontSize: '13.5px' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          background: 'var(--color-error-bg)',
+          border: '1.5px solid var(--color-error-light)',
+          color: 'var(--color-error-text)',
+          padding: '14px 18px',
+          borderRadius: '12px',
+          fontSize: '13.5px'
+        }}>
           <ShieldAlert size={18} />
           <span>{errorMsg}</span>
         </div>
       )}
 
-      {/* Tabs Menu with Unified Reusable Tabs */}
-      <Tabs 
+      {successMsg && (
+        <div style={{
+          padding: '14px 18px',
+          borderRadius: '12px',
+          backgroundColor: '#dcfce7',
+          color: '#166534',
+          border: '1.5px solid #86efac',
+          fontSize: '13.5px',
+          fontWeight: 600
+        }}>
+          {successMsg}
+        </div>
+      )}
+
+      {/* Tabs Menu */}
+      <Tabs
         tabs={[
-          { id: 'UNPARKED', label: 'Unparked Invoices', count: unparkedInvoices.length },
-          { id: 'PARKED', label: 'Parked MIRO', count: parked.length },
-          { id: 'POSTED', label: 'Posted Invoices', count: posted.length },
-          { id: 'CLEARED', label: 'Cleared Payments', count: cleared.length }
+          { id: 'READY_TO_POST', label: 'Ready to Post Invoice', count: approvedTrips.length },
+          { id: 'PARKED', label: 'Parked & Awaiting Customer Payment', count: parkedInvoices.length },
+          { id: 'PAID', label: 'Customer Paid In Full', count: paidInvoices.length },
         ]}
         activeTab={activeTab}
         onChange={(id) => setActiveTab(id as any)}
       />
 
       {loading ? (
-        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading invoices data...</div>
-      ) : activeList.length === 0 ? (
-        <EmptyState 
-          icon={<FileClock size={48} />}
-          title="No Invoices in This Stage"
-          description="Everything is processed and cleared."
-        />
-      ) : (
-        <Card title={`${activeTab.replace(/_/g, ' ')} Pipeline Queue`} subtitle="SAP MIRO accounts verification queue and payment reconciliation log" style={{ padding: 0 }}>
-          <Table<any>
-            data={activeList}
-            renderMobileCard={(item) => {
-              const isUnparked = activeTab === 'UNPARKED';
-              const invoiceId = isUnparked ? `#INV-DEL-${item.id}` : (item.sap_invoice_no || `Pending (#${item.id})`);
-              const ref = `${item.sap_po_no} / ${item.po_item_no}`;
-              const party = isUnparked ? (item.driver_name || 'STS Carrier') : (item.transporter_name || 'Carrier');
-              const payload = isUnparked ? `${(item.accepted_payload / 1000).toFixed(2)} Tons` : `${((item.accepted_payload_kg || 34000) / 1000).toFixed(2)} Tons`;
-              const val = formatCurrency(item.total_value || 0);
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+          Loading invoicing desk...
+        </div>
+      ) : activeTab === 'READY_TO_POST' ? (
+        /* ─── READY TO POST TAB ─── */
+        <Card title="Approved Delivery Trips Awaiting Invoice Generation" subtitle="Verified PODs cleared for billing">
+          {approvedTrips.length === 0 ? (
+            <EmptyState
+              icon={<CheckCircle2 size={44} color="#16a34a" />}
+              title="No Pending Deliveries"
+              description="All verified trips have been posted to customer invoicing."
+            />
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13.5px' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 14px' }}>Trip #</th>
+                    <th style={{ padding: '12px 14px' }}>Sales Order / PO</th>
+                    <th style={{ padding: '12px 14px' }}>Driver & Truck</th>
+                    <th style={{ padding: '12px 14px' }}>Delivered Net</th>
+                    <th style={{ padding: '12px 14px' }}>Delivery Date</th>
+                    <th style={{ padding: '12px 14px' }}>Status</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {approvedTrips.map(trip => {
+                    const deliveredNetTons = (trip.mine_gross_kg && trip.mine_tare_kg)
+                      ? ((trip.mine_gross_kg - trip.mine_tare_kg) / 1000).toFixed(2)
+                      : (trip.po_target_qty || 34.0).toFixed(2);
 
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                    <span className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)', fontSize: '13px', wordBreak: 'break-all' }}>{invoiceId}</span>
-                    <span className="mono" style={{ fontSize: '12px', flexShrink: 0 }}>{ref}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-                    <span style={{ fontWeight: 600 }}>{party}</span>
-                    <span>{payload}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed var(--color-border)', paddingTop: '8px', marginTop: '4px' }}>
-                    <div>
-                      <span className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)', fontSize: '14px' }}>{val}</span>
-                      {!isUnparked && (item.paid_amount || 0) > 0 && (
-                        <div style={{ fontSize: '10px', color: (item.paid_amount || 0) >= (item.total_value || 0) ? '#059669' : '#D97706', fontWeight: 700 }}>
-                          Paid: {formatCurrency(item.paid_amount || 0)}
+                    return (
+                      <tr key={trip.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                        <td style={{ padding: '12px 14px', fontWeight: 800 }}>
+                          #{trip.id}
+                        </td>
+                        <td style={{ padding: '12px 14px', fontFamily: 'monospace' }}>
+                          SO #{trip.sap_po_no || '2318'}
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: 600 }}>{trip.driver_name}</div>
+                          <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>
+                            {trip.vehicle_reg}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 14px', fontWeight: 700 }}>
+                          {deliveredNetTons} Tons
+                        </td>
+                        <td style={{ padding: '12px 14px', color: 'var(--color-text-muted)', fontSize: '12.5px' }}>
+                          {trip.scheduled_date || 'Standard'}
+                        </td>
+                        <td style={{ padding: '12px 14px' }}>
+                          <StatusBadge status={trip.status} />
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            disabled={isSubmitting}
+                            onClick={() => handlePostInvoice(trip.id)}
+                          >
+                            <Send size={14} style={{ marginRight: '6px' }} />
+                            Post Invoice
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      ) : (
+        /* ─── PARKED OR PAID TABS ─── */
+        <Card
+          title={activeTab === 'PARKED' ? 'Parked Invoices (Under Customer Review / Settlement)' : 'Cleared & Fully Settled Invoices'}
+          subtitle={activeTab === 'PARKED' ? 'Payment visibility is only shown after customer pays' : 'Permanent audit record of cleared freight invoices'}
+        >
+          {((activeTab === 'PARKED' ? parkedInvoices : paidInvoices).length === 0) ? (
+            <EmptyState
+              icon={<FileClock size={44} />}
+              title={activeTab === 'PARKED' ? 'No Parked Invoices' : 'No Paid Invoices'}
+              description={activeTab === 'PARKED' ? 'Invoices posted by CA will appear here with status PARKED.' : 'Invoices will move here once the customer pays down balance to 0.'}
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {(activeTab === 'PARKED' ? parkedInvoices : paidInvoices).map(inv => (
+                <div
+                  key={inv.id}
+                  style={{
+                    padding: '18px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-bg-card)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'monospace', color: 'var(--color-brand-blue-600)' }}>
+                        {inv.invoice_no}
+                      </span>
+                      <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+                        (Trip #{inv.assignment_id})
+                      </span>
+                      <StatusBadge status={inv.status} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Total Value</div>
+                        <div style={{ fontSize: '16px', fontWeight: 900, color: 'var(--color-text-heading)' }}>
+                          {formatCurrency(inv.total_value)}
                         </div>
-                      )}
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Remaining Balance</div>
+                        <div style={{ fontSize: '16px', fontWeight: 900, color: inv.balance === 0 ? '#16a34a' : 'var(--color-brand-blue-600)' }}>
+                          {formatCurrency(inv.balance ?? 0)}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      {isUnparked ? (
-                        <Button 
-                          size="sm"
-                          onClick={() => handleParkMiro(item)}
-                          disabled={isSubmitting}
-                        >
-                          Park MIRO in SAP
-                        </Button>
-                      ) : (
-                        <>
-                          {item.status === 'PARKED' && (
-                            <Button 
-                              size="sm"
-                              onClick={() => {
-                                setSelectedMiro(item);
-                                setShowPostConfirm(true);
-                              }}
-                            >
-                              Post to SAP
-                            </Button>
-                          )}
-                          {item.status === 'POSTED' && (
-                            <Button 
-                              size="sm"
-                              style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}
-                              onClick={() => {
-                                setSelectedMiro(item);
-                                setPaymentRefInput(`PMT-${Date.now()}`);
-                                setPaymentType('FULL');
-                                setPartialPercent(25);
-                                setShowClearConfirm(true);
-                              }}
-                            >
-                              {(item.paid_amount || 0) > 0 ? 'Pay Remaining' : 'Log Payment Clear'}
-                            </Button>
-                          )}
-                          {item.status === 'CLEARED' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                              <span className="badge badge-green">CLEARED</span>
-                              {item.paid_amount && (
-                                <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontWeight: 600, marginTop: '2px' }}>
-                                  Paid: {formatCurrency(item.paid_amount)}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
+                  </div>
+
+                  {/* Customer Payment Ledger (Per Rule 12: CA sees payment only after customer has paid) */}
+                  <div style={{
+                    padding: '12px 14px',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--color-bg-page)',
+                    fontSize: '12.5px'
+                  }}>
+                    <div style={{ fontWeight: 700, marginBottom: '6px', color: 'var(--color-text-heading)' }}>
+                      Customer Payment History:
                     </div>
+                    {(!inv.payments || inv.payments.length === 0) ? (
+                      <div style={{ color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                        No payments received yet. Customer will initiate EFT / card settlement on their receiver portal.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {inv.payments.map(pmt => (
+                          <div
+                            key={pmt.id}
+                            style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              padding: '6px 10px',
+                              borderRadius: '4px',
+                              backgroundColor: 'var(--color-bg-card)',
+                              border: '1px solid var(--color-border)'
+                            }}
+                          >
+                            <span style={{ fontWeight: 600 }}>
+                              {pmt.payment_type} Payment ({pmt.ref_no || 'Direct Settlement'})
+                            </span>
+                            <span style={{ color: 'var(--color-text-muted)' }}>
+                              {formatDate(pmt.paid_at)}
+                            </span>
+                            <strong style={{ color: '#16a34a' }}>
+                              +{formatCurrency(pmt.amount_paid)}
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              );
-            }}
-            columns={[
-              {
-                header: 'Invoice ID',
-                render: (item) => {
-                  const isUnparked = activeTab === 'UNPARKED';
-                  return <span className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)' }}>{isUnparked ? `#INV-DEL-${item.id}` : (item.sap_invoice_no || `Pending (#${item.id})`)}</span>;
-                }
-              },
-              {
-                header: 'PO Reference',
-                render: (item) => <span className="mono">{item.sap_po_no} / {item.po_item_no}</span>
-              },
-              {
-                header: 'Transporter / Driver',
-                render: (item) => {
-                  const isUnparked = activeTab === 'UNPARKED';
-                  return <span style={{ fontWeight: 600 }}>{isUnparked ? (item.driver_name || 'STS Carrier') : (item.transporter_name || 'Carrier')}</span>;
-                }
-              },
-              {
-                header: 'Payload / Weight',
-                align: 'right',
-                render: (item) => {
-                  const isUnparked = activeTab === 'UNPARKED';
-                  return isUnparked ? `${(item.accepted_payload / 1000).toFixed(2)} Tons` : `${((item.accepted_payload_kg || 34000) / 1000).toFixed(2)} Tons`;
-                }
-              },
-              {
-                header: 'Total Value',
-                align: 'right',
-                render: (item) => {
-                  const isUnparked = activeTab === 'UNPARKED';
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                      <span className="mono" style={{ fontWeight: 800, color: 'var(--color-text-heading)' }}>{formatCurrency(item.total_value || 0)}</span>
-                      {!isUnparked && (item.paid_amount || 0) > 0 && (
-                        <div style={{ fontSize: '11px', color: (item.paid_amount || 0) >= (item.total_value || 0) ? '#059669' : '#D97706', fontWeight: 700, marginTop: '3px' }}>
-                          Paid: {formatCurrency(item.paid_amount || 0)} ({Math.round(((item.paid_amount || 0) / (item.total_value || 1)) * 100)}%)
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-              },
-              {
-                header: 'Actions',
-                align: 'center',
-                render: (item) => {
-                  const isUnparked = activeTab === 'UNPARKED';
-                  if (isUnparked) {
-                    return (
-                      <Button 
-                        size="sm"
-                        onClick={() => handleParkMiro(item)}
-                        disabled={isSubmitting}
-                      >
-                        Park MIRO in SAP
-                      </Button>
-                    );
-                  }
-                  return (
-                    <>
-                      {item.status === 'PARKED' && (
-                        <Button 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedMiro(item);
-                            setShowPostConfirm(true);
-                          }}
-                        >
-                          Post to SAP
-                        </Button>
-                      )}
-                      {item.status === 'POSTED' && (
-                        <Button 
-                          size="sm"
-                          style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}
-                          onClick={() => {
-                            setSelectedMiro(item);
-                            setPaymentRefInput(`PMT-${Date.now()}`);
-                            setPaymentType('FULL');
-                            setPartialPercent(25);
-                            setShowClearConfirm(true);
-                          }}
-                        >
-                          {(item.paid_amount || 0) > 0 ? 'Pay Remaining' : 'Log Payment Clear'}
-                        </Button>
-                      )}
-                      {item.status === 'CLEARED' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                          <span className="badge badge-green">CLEARED</span>
-                          {item.paid_amount && (
-                            <span style={{ fontSize: '10.5px', color: 'var(--color-text-muted)', fontWeight: 600, marginTop: '2px' }}>
-                              Paid: {formatCurrency(item.paid_amount)}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  );
-                }
-              }
-            ]}
-          />
+              ))}
+            </div>
+          )}
         </Card>
       )}
-   
-       {/* Post Modal */}
-       <Modal isOpen={showPostConfirm} onClose={() => setShowPostConfirm(false)} title="Confirm SAP LIV Posting">
-         <div style={{ padding: '8px 0' }}>
-           <p style={{ fontSize: '14.5px', color: 'var(--color-text-body)', marginBottom: '24px', lineHeight: 1.5 }}>
-             Are you sure you want to execute BAPI invoice post sequence for {selectedMiro?.sap_invoice_no}? This will log an OUT record in the SAP Sync Audit trail.
-           </p>
-           <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-             <button className="btn btn-secondary" onClick={() => setShowPostConfirm(false)}>Cancel</button>
-             <button className="btn btn-primary" onClick={handlePostMiro} disabled={isSubmitting}>Confirm BAPI Post</button>
-           </div>
-         </div>
-       </Modal>
-   
-       {/* Clear Modal */}
-       <Modal isOpen={showClearConfirm} onClose={() => setShowClearConfirm(false)} title="Log Payment Clearing">
-         <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-           
-           {selectedMiro && (() => {
-             const totalVal = selectedMiro.total_value || 0;
-             const alreadyPaid = selectedMiro.paid_amount || 0;
-             const currentDue = totalVal - alreadyPaid;
-             
-             let payingNow = currentDue;
-             if (paymentType === 'PARTIAL') {
-               payingNow = (partialPercent / 100.0) * totalVal;
-               if (payingNow > currentDue) payingNow = currentDue;
-             }
-             const remainingDue = currentDue - payingNow;
-
-             return (
-               <div style={{ padding: '14px', backgroundColor: 'var(--color-brand-blue-50)', borderRadius: '12px', border: '1px solid var(--color-border)', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Total Bill Value:</span>
-                   <strong style={{ color: 'var(--color-text-heading)' }}>{formatCurrency(totalVal)}</strong>
-                 </div>
-                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Already Paid:</span>
-                   <strong style={{ color: '#059669' }}>{formatCurrency(alreadyPaid)}</strong>
-                 </div>
-                 <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px dashed var(--color-border)', paddingTop: '8px' }}>
-                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 800 }}>Paying Now:</span>
-                   <strong style={{ color: 'var(--color-brand-blue-600)', fontSize: '15px' }}>{formatCurrency(payingNow)}</strong>
-                 </div>
-                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                   <span style={{ color: 'var(--color-text-muted)', fontWeight: 600 }}>Remaining Balance:</span>
-                   <strong style={{ color: remainingDue > 0 ? '#D97706' : 'var(--color-text-muted)' }}>{formatCurrency(remainingDue)}</strong>
-                 </div>
-               </div>
-             );
-           })()}
-
-           <div>
-             <div>
-               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '8px' }}>Payment Mode</label>
-               <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '10px' : '20px' }}>
-                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 600, color: 'var(--color-text-heading)', cursor: 'pointer' }}>
-                   <input type="radio" name="paymentType" checked={paymentType === 'FULL'} onChange={() => setPaymentType('FULL')} />
-                   <span>Full Payment (Clear Remaining)</span>
-                 </label>
-                 <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 600, color: 'var(--color-text-heading)', cursor: 'pointer' }}>
-                   <input type="radio" name="paymentType" checked={paymentType === 'PARTIAL'} onChange={() => setPaymentType('PARTIAL')} />
-                   <span>Partial Payment</span>
-                 </label>
-               </div>
-             </div>
-
-             {paymentType === 'PARTIAL' && (
-               <div>
-                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Select Percentage</label>
-                 <div style={{ display: 'flex', gap: '10px' }}>
-                   {[25, 50, 75].map(pct => (
-                     <button
-                       key={pct}
-                       type="button"
-                       onClick={() => setPartialPercent(pct)}
-                       className="btn"
-                       style={{
-                         flex: 1, padding: '10px',
-                         backgroundColor: partialPercent === pct ? 'var(--color-brand-blue-600)' : 'var(--color-bg-page)',
-                         color: partialPercent === pct ? '#fff' : 'var(--color-text-primary)',
-                         border: '1.5px solid var(--color-border)',
-                         fontWeight: 700, borderRadius: '8px'
-                       }}
-                     >
-                       {pct}%
-                     </button>
-                   ))}
-                 </div>
-               </div>
-             )}
-
-             <div>
-               <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '6px' }}>Payment Reference</label>
-               <input 
-                 type="text" 
-                 value={paymentRefInput} 
-                 onChange={e => setPaymentRefInput(e.target.value)}
-                 style={{ width: '100%', padding: '10px 12px', border: '1.5px solid var(--color-border)', borderRadius: '10px', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)' }}
-               />
-             </div>
-             
-             <div style={{ display: 'flex', flexDirection: isMobile ? 'column-reverse' : 'row', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
-               <button className="btn btn-secondary" style={{ width: isMobile ? '100%' : 'auto' }} onClick={() => setShowClearConfirm(false)}>Cancel</button>
-               <button className="btn btn-primary" style={{ width: isMobile ? '100%' : 'auto' }} onClick={handleClearMiro} disabled={isSubmitting}>Log Clearing</button>
-             </div>
-           </div>
-         </div>
-       </Modal>
-
-        {/* Enterprise SAP Transaction Progress Modal */}
-        {processingState.active && (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(4px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-          }}>
-            <div style={{
-              backgroundColor: 'var(--color-bg-card)', border: '1.5px solid var(--color-border)',
-              borderRadius: '16px', padding: '28px 32px', maxWidth: '480px', width: '100%',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-              textAlign: 'center'
-            }}>
-              <div style={{
-                width: '60px', height: '60px', borderRadius: '50%',
-                backgroundColor: processingState.completed ? 'var(--color-success-bg, #ecfdf5)' : 'var(--color-brand-blue-50)',
-                border: `2px solid ${processingState.completed ? 'var(--color-success, #10b981)' : 'var(--color-brand-blue-400)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px'
-              }}>
-                {processingState.completed ? (
-                  <CheckCircle2 size={32} color="var(--color-success, #10b981)" />
-                ) : (
-                  <Loader2 size={32} className="spin" color="var(--color-brand-blue-600)" />
-                )}
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-heading)', margin: '0 0 8px' }}>
-                {processingState.title}
-              </h3>
-              <p style={{ fontSize: '13.5px', color: 'var(--color-text-muted)', margin: '0 0 20px', minHeight: '36px', lineHeight: 1.4 }}>
-                {processingState.stepText}
-              </p>
-              {/* Progress Bar */}
-              <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--color-border)', borderRadius: '999px', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', width: `${processingState.progress}%`,
-                  backgroundColor: processingState.completed ? 'var(--color-success, #10b981)' : 'var(--color-brand-blue-600)',
-                  transition: 'width 0.4s ease-in-out'
-                }} />
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
-                <span>SAP S/4HANA Finance Integration</span>
-                <span>{processingState.progress}% Complete</span>
-              </div>
-            </div>
-          </div>
-        )}
-     </div>
-   );
- };
+    </div>
+  );
+};
+export default AdminInvoices;

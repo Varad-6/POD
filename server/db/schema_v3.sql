@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   username      TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  role          TEXT NOT NULL CHECK(role IN ('CA', 'TA', 'DR', 'CR', 'SR')),
+  role          TEXT NOT NULL CHECK(role IN ('CA', 'TA', 'DR', 'CR', 'SR', 'SA')),
   display_name  TEXT NOT NULL,
   email         TEXT UNIQUE,
   phone         TEXT,
@@ -378,3 +378,94 @@ CREATE INDEX IF NOT EXISTS idx_review_queue_assignment ON review_queue(assignmen
 CREATE INDEX IF NOT EXISTS idx_transit_events_assignment ON transit_events(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_weight_reconciliations_assignment ON weight_reconciliations(assignment_id);
 CREATE INDEX IF NOT EXISTS idx_delivery_exceptions_assignment ON delivery_exceptions(assignment_id);
+
+-- ── 5. SALES ORDERS & OVERHAUL FLOW (TARGET SPEC) ─────────────
+CREATE TABLE IF NOT EXISTS sales_orders (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  sap_so_no         TEXT UNIQUE NOT NULL,          -- e.g. "2318", "2320", "2321", "2322"
+  customer_id       INTEGER NOT NULL REFERENCES customers(id),
+  sap_customer_no   TEXT NOT NULL,
+  created_date      TEXT NOT NULL,                 -- SAP CreationDate
+  delivery_date     TEXT,                          -- RequestedDeliveryDate
+  overall_status    TEXT NOT NULL DEFAULT 'OPEN',  -- SAP OverallSDProcessStatus (A/B/C)
+  portal_status     TEXT NOT NULL CHECK(portal_status IN (
+    'OPEN','DISTRIBUTED','IN_PROGRESS','DELIVERED','INVOICED','PAID'
+  )) DEFAULT 'OPEN',
+  fetched_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  raw_json          TEXT
+);
+
+CREATE TABLE IF NOT EXISTS sales_order_items (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  so_id             INTEGER NOT NULL REFERENCES sales_orders(id) ON DELETE CASCADE,
+  sap_so_no         TEXT NOT NULL,
+  item_no           TEXT NOT NULL,                 -- e.g. "10", "20"
+  material          TEXT NOT NULL,
+  material_desc     TEXT,
+  order_qty         REAL NOT NULL,
+  uom               TEXT NOT NULL,
+  net_price         REAL,
+  plant             TEXT,
+  storage_location  TEXT,
+  delivered_qty     REAL DEFAULT 0,
+  portal_item_status TEXT NOT NULL CHECK(portal_item_status IN (
+    'OPEN','ASSIGNED','IN_PROGRESS','DELIVERED','CLOSED'
+  )) DEFAULT 'OPEN',
+  UNIQUE(sap_so_no, item_no)
+);
+
+CREATE TABLE IF NOT EXISTS so_distributions (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  so_id             INTEGER NOT NULL REFERENCES sales_orders(id),
+  transporter_id    INTEGER NOT NULL REFERENCES transporters(id),
+  distributed_by    INTEGER NOT NULL REFERENCES users(id),
+  distributed_at    TEXT NOT NULL DEFAULT (datetime('now')),
+  status            TEXT NOT NULL CHECK(status IN ('PENDING','ASSIGNED','COMPLETED')) DEFAULT 'PENDING'
+);
+
+CREATE TABLE IF NOT EXISTS staging_checks (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id     INTEGER NOT NULL REFERENCES transport_assignments(id),
+  checked_by        INTEGER NOT NULL REFERENCES users(id),
+  checked_at        TEXT NOT NULL DEFAULT (datetime('now')),
+  result            TEXT NOT NULL CHECK(result IN ('MATCH','MISMATCH')),
+  mismatch_notes    TEXT,
+  waybill_no        TEXT,
+  waybill_issued_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS invoice_events (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  assignment_id     INTEGER UNIQUE NOT NULL REFERENCES transport_assignments(id),
+  invoice_no        TEXT UNIQUE,
+  total_value       REAL NOT NULL,
+  accepted_payload  REAL NOT NULL,
+  rate              REAL NOT NULL,
+  status            TEXT NOT NULL CHECK(status IN (
+    'DRAFT','PARKED','PAID_PARTIAL','PAID_FULL'
+  )) DEFAULT 'DRAFT',
+  posted_by         INTEGER REFERENCES users(id),
+  posted_at         TEXT,
+  customer_notified_at TEXT,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS payment_events (
+  id                INTEGER PRIMARY KEY AUTOINCREMENT,
+  invoice_id        INTEGER NOT NULL REFERENCES invoice_events(id),
+  payment_type      TEXT NOT NULL CHECK(payment_type IN ('FULL','PARTIAL')),
+  amount_paid       REAL NOT NULL,
+  balance_before    REAL NOT NULL,
+  balance_after     REAL NOT NULL,
+  paid_by           INTEGER NOT NULL REFERENCES users(id),
+  paid_at           TEXT NOT NULL DEFAULT (datetime('now')),
+  ref_no            TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_so_sap_no ON sales_orders(sap_so_no);
+CREATE INDEX IF NOT EXISTS idx_so_items_so_id ON sales_order_items(so_id);
+CREATE INDEX IF NOT EXISTS idx_so_distributions_so ON so_distributions(so_id);
+CREATE INDEX IF NOT EXISTS idx_staging_checks_assignment ON staging_checks(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_invoice_events_assignment ON invoice_events(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_payment_events_invoice ON payment_events(invoice_id);
+
