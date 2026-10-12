@@ -61,6 +61,8 @@ function getPageTitle(path: string, role: string): string {
   if (path.includes('/sales-orders')) return 'SAP S/4HANA Sales Orders';
   if (path.includes('/staging/dashboard')) return 'Staging Area Pre-Clearance Console';
   if (path.includes('/supervisor/dashboard')) return 'Pre-Dispatch Weighbridge Console';
+  if (path.includes('/customer/payments')) return 'Invoices & Customer Settlements';
+  if (path.includes('/customer/history')) return 'Yard Delivery History';
   if (path.includes('/customer/dashboard')) return 'Yard Receiving & Gate Clearance';
   if (path.includes('/driver/dashboard')) return 'Driver Transport App';
   return 'Transport Execution Platform';
@@ -196,7 +198,9 @@ const MainApp: React.FC = () => {
               <Route path="/supervisor/dashboard" element={<RoleRoute allowedRoles={['SR']} userRole={user.role}><SupervisorDashboard /></RoleRoute>} />
 
               {/* Customer Routes */}
-              <Route path="/customer/dashboard" element={<RoleRoute allowedRoles={['CR']} userRole={user.role}><CustomerDashboard /></RoleRoute>} />
+              <Route path="/customer/dashboard" element={<RoleRoute allowedRoles={['CR']} userRole={user.role}><CustomerDashboard initialTab="ACTIVE" /></RoleRoute>} />
+              <Route path="/customer/payments"  element={<RoleRoute allowedRoles={['CR']} userRole={user.role}><CustomerDashboard initialTab="INVOICES" /></RoleRoute>} />
+              <Route path="/customer/history"   element={<RoleRoute allowedRoles={['CR']} userRole={user.role}><CustomerDashboard initialTab="HISTORY" /></RoleRoute>} />
 
               {/* Driver Routes */}
               <Route path="/driver/dashboard" element={<RoleRoute allowedRoles={['DR']} userRole={user.role}><DriverDashboard /></RoleRoute>} />

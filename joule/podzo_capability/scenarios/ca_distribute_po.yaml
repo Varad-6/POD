@@ -1,17 +1,17 @@
 description: |
-  Distributes an approved SAP Purchase Order to a selected transporter vendor.
+  Distributes an approved SAP S/4HANA Sales Order (SO) or Purchase Order to a selected transporter vendor for dispatch execution.
 
 slots:
   - name: po_id
-    description: Purchase Order Number or ID
+    description: Sales Order Number or Purchase Order Number (e.g. 2318, 2321, 2322)
   - name: transporter_id
-    description: Transporter vendor name or ID
+    description: Transporter vendor name or ID (e.g. Sipho Transport Services)
 
 response_context:
   - value: $target_result.job_config_id
-    description: Job Config ID
+    description: Job Config ID or Distribution ID
   - value: $target_result.message
-    description: Distribution status
+    description: Distribution status confirmation
 
 target:
   name: distribute_po

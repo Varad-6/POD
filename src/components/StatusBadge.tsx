@@ -54,12 +54,15 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     case 'IN_TRANSIT':
     case 'EN_ROUTE':
     case 'DISPATCHED':
+    case 'IN_PROGRESS':
       variant = 'amber';
       if (s === 'PENDING_SIGNATURE') text = 'Ready for Driver';
       else if (s === 'DRIVER_ARRIVED') text = 'Driver Arrived';
       else if (s === 'MINE_TARE_LOGGED') text = 'Tare Captured';
       else if (s === 'PARKED') text = 'Parked (MIRO)';
       else if (s === 'PARTIALLY_INVOICED' || s === 'PARTIALLY INVOICED') text = 'Partially Invoiced';
+      else if (s === 'IN_TRANSIT' || s === 'EN_ROUTE' || s === 'DISPATCHED') text = 'In Transit';
+      else if (s === 'IN_PROGRESS') text = 'In Progress';
       else if (s === 'PENDING') text = 'Pending';
       break;
 
@@ -86,10 +89,15 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     case 'CONFIRMED':
     case 'OCR_PROCESSED':
     case 'POSTED':
+    case 'DISTRIBUTED':
+    case 'POD_VERIFICATION':
+    case 'UNDER_REVIEW':
       variant = 'blue';
       if (s === 'NEW') text = 'New';
       else if (s === 'OPEN') text = 'Open';
       else if (s === 'RELEASED') text = 'Released';
+      else if (s === 'DISTRIBUTED') text = 'Distributed';
+      else if (s === 'POD_VERIFICATION' || s === 'UNDER_REVIEW') text = 'POD Verification';
       break;
 
     default:

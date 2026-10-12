@@ -7,6 +7,7 @@ import { EmptyState } from '../components/EmptyState';
 import { Modal } from '../components/Modal';
 import { RefreshCw, Send, CheckSquare, Square, Package, AlertCircle, ArrowRight } from 'lucide-react';
 import { salesOrdersApi, transportersApi, SalesOrderV3, Transporter } from '../lib/api_v3';
+import { formatCargoDisplay } from './SupervisorDashboard';
 
 export const AdminSalesOrders: React.FC = () => {
   const [salesOrders, setSalesOrders] = useState<SalesOrderV3[]>([]);
@@ -121,6 +122,24 @@ export const AdminSalesOrders: React.FC = () => {
         }
       />
 
+      {/* Standard Packaging & Load Mapping Note Banner */}
+      <div style={{
+        padding: '12px 16px',
+        backgroundColor: '#eff6ff',
+        border: '1px solid #bfdbfe',
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        fontSize: '13px',
+        color: '#1e40af'
+      }}>
+        <Package size={17} style={{ flexShrink: 0, color: '#2563eb' }} />
+        <span>
+          <strong>Standard Payload Conversion: 1 Box = 1 Ton (1,000 kg).</strong> Quantities from SAP VL03N outbound deliveries map 1:1 into fleet truck capacities.
+        </span>
+      </div>
+
       {statusMessage && (
         <div style={{
           padding: '12px 16px',
@@ -232,13 +251,37 @@ export const AdminSalesOrders: React.FC = () => {
                         <div style={{ fontSize: '11.5px', color: 'var(--color-text-muted)' }}>{so.sap_customer_no}</div>
                       </td>
                       <td style={{ padding: '12px 14px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Package size={14} color="var(--color-brand-blue-600)" />
-                          <span>{so.materials_summary || `${so.item_count || 1} material line item(s)`}</span>
-                        </div>
+                        {(() => {
+                          const cargo = formatCargoDisplay(so.materials_summary, so.materials_codes);
+                          return (
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                              <Package size={15} color="var(--color-brand-blue-600)" style={{ marginTop: '2px', flexShrink: 0 }} />
+                              <div>
+                                <div style={{ fontWeight: 600, color: 'var(--color-text-heading)', fontSize: '12.5px' }}>
+                                  {cargo.title}
+                                </div>
+                                {cargo.codes && (
+                                  <span style={{
+                                    display: 'inline-block',
+                                    marginTop: '3px',
+                                    fontSize: '11px',
+                                    fontFamily: 'monospace',
+                                    color: 'var(--color-text-muted)',
+                                    backgroundColor: '#f1f5f9',
+                                    padding: '1px 6px',
+                                    borderRadius: '3px',
+                                    border: '1px solid #e2e8f0'
+                                  }}>
+                                    SAP #{cargo.codes}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td style={{ padding: '12px 14px', fontWeight: 600 }}>
-                        {so.total_qty ? `${so.total_qty.toFixed(1)} TO` : '34.0 TO'}
+                        {so.total_qty ? `${so.total_qty.toLocaleString()} Boxes (${so.total_qty.toLocaleString()} Tons)` : '34 Boxes (34 Tons)'}
                       </td>
                       <td style={{ padding: '12px 14px', fontSize: '12.5px', color: 'var(--color-text-muted)' }}>
                         {so.delivery_date || 'Standard'}

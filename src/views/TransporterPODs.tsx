@@ -99,10 +99,10 @@ export const TransporterPODs: React.FC = () => {
     .map((a: any) => ({
       ...a,
       podStatus: getMappedPodStatus(a.status),
-      waybillNo: a.ocr_waybill_extracted || `WB-${a.id}`,
+      waybillNo: a.ocr_waybill_extracted || `POD-${a.id}`,
       productDescription: a.material || 'Coal Grade A',
       horseRegNo: a.vehicle_reg || 'TEMP-REG',
-      poRef: a.sap_po_no ? `${a.sap_po_no} / ${a.po_item_no || '10'}` : 'PO-TEMP',
+      soRef: a.sap_po_no ? `${a.sap_po_no}` : 'SO-2322',
       offloadDate: a.scheduled_date || new Date().toISOString(),
       netWeightKg: (a.dest_gross_kg && a.dest_tare_kg) ? (a.dest_gross_kg - a.dest_tare_kg) : (a.ocr_weight_extracted ? a.ocr_weight_extracted * 1000 : null),
       rejectionReason: a.rejection_reason || 'Flagged for quality audit by Company Admin.'
@@ -171,7 +171,7 @@ export const TransporterPODs: React.FC = () => {
     setInvoiceGeneration({
       active: true,
       progress: 15,
-      stepText: '1/3 Validating approved delivery receipt & weighbridge logs against SAP PO Line 10...',
+      stepText: '1/3 Validating approved delivery receipt & weighbridge logs against SAP Sales Order...',
       assignmentId,
       invoiceNo: invNo
     });
@@ -266,7 +266,7 @@ export const TransporterPODs: React.FC = () => {
             <Card key={rec.id} style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px', border: '1px solid var(--color-border)', borderRadius: '16px', backgroundColor: 'var(--color-bg-card)', boxShadow: 'var(--shadow-card)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid var(--color-border)', paddingBottom: '10px' }}>
                 <h3 className="mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-text-heading)', margin: 0 }}>
-                  PO #{rec.poRef}
+                  SO #{rec.soRef}
                 </h3>
                 <StatusBadge status={rec.podStatus} />
               </div>
@@ -445,7 +445,7 @@ export const TransporterPODs: React.FC = () => {
       <Modal
         isOpen={!!uploadingAssignment}
         onClose={() => { if (uploadStep !== 'PROCESSING') setUploadingAssignment(null); }}
-        title={uploadingAssignment ? `Upload Proof of Delivery — Waybill #${uploadingAssignment.waybillNo}` : ''}
+        title={uploadingAssignment ? `Upload Proof of Delivery — Receipt #${uploadingAssignment.waybillNo}` : ''}
         width={uploadStep === 'RESULT' ? '720px' : '500px'}
       >
         {uploadStep === 'UPLOAD' && (
@@ -502,7 +502,7 @@ export const TransporterPODs: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: 'var(--color-bg-page)', borderRadius: '10px', border: '1.5px solid var(--color-border)' }}>
                     <div>
-                      <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700 }}>EXTRACTED WAYBILL</p>
+                      <p style={{ fontSize: '10px', color: 'var(--color-text-muted)', fontWeight: 700 }}>EXTRACTED RECEIPT / POD</p>
                       <p className="mono" style={{ fontWeight: 700, fontSize: '13px', color: 'var(--color-text-heading)' }}>{ocrData.extracted.waybillNo}</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>

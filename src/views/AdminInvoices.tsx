@@ -31,7 +31,7 @@ export const AdminInvoices: React.FC = () => {
       // Ready to Post tab: Trips that are APPROVED by CA and not yet posted as invoice
       const postedAssignmentIds = (postedList || []).map(p => p.assignment_id);
       const ready = (allAssignments || []).filter(
-        a => (a.status === 'APPROVED' || a.status === 'UNDER_REVIEW') && !postedAssignmentIds.includes(a.id)
+        a => a.status === 'APPROVED' && !postedAssignmentIds.includes(a.id)
       );
 
       setApprovedTrips(ready);
@@ -150,7 +150,7 @@ export const AdminInvoices: React.FC = () => {
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
                     <th style={{ padding: '12px 14px' }}>Trip #</th>
-                    <th style={{ padding: '12px 14px' }}>Sales Order / PO</th>
+                    <th style={{ padding: '12px 14px' }}>Sales Order (SO)</th>
                     <th style={{ padding: '12px 14px' }}>Driver & Truck</th>
                     <th style={{ padding: '12px 14px' }}>Delivered Net</th>
                     <th style={{ padding: '12px 14px' }}>Delivery Date</th>

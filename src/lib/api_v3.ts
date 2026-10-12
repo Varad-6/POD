@@ -343,6 +343,7 @@ export interface TransportAssignmentV3 {
   sap_po_no?: string;
   po_item_no?: number;
   material?: string;
+  material_codes?: string;
   from_location?: string;
   to_location?: string;
   driver_name?: string;
@@ -369,13 +370,14 @@ export interface TransportAssignmentV3 {
 export interface ReviewQueueItemV3 {
   id: number;
   assignment_id: number;
-  flag_reason: 'OCR_MISMATCH' | 'TOLERANCE_EXCEEDED' | 'AWAITING_CA_VERIFY';
+  flag_reason: 'OCR_MISMATCH' | 'TOLERANCE_EXCEEDED' | 'AWAITING_CA_VERIFY' | string;
   status: 'OPEN' | 'RESOLVED';
   resolved_by_role?: string;
   resolution_notes?: string;
   blocks_miro_bool: number;
   created_at: string;
   sap_po_no?: string;
+  sap_so_no?: string;
   po_item_no?: number;
   material?: string;
   driver_name?: string;
@@ -387,6 +389,23 @@ export interface ReviewQueueItemV3 {
   dest_gross_kg?: number;
   dest_tare_kg?: number;
   po_target_qty?: number;
+  scanned_pod_url?: string;
+  pod_file_url?: string;
+  ocr_waybill_extracted?: string;
+  ocr_weight_extracted?: number;
+  ocr_confidence_pct?: number;
+  ocr_match_status?: string;
+  ocr_invoice_no?: string;
+  ocr_vendor_name?: string;
+  ocr_po_no?: string;
+  ocr_material?: string;
+  ocr_total_amount?: number;
+  ocr_tax_amount?: number;
+  ocr_line_items_json?: string;
+  ocr_provider?: string;
+  ocr_processing_status?: string;
+  ocr_stamped_bool?: number;
+  ocr_stamp_text?: string;
 }
 
 export interface DeliveryInvoiceV3 {
@@ -501,14 +520,36 @@ export interface SalesOrderV3 {
   overall_status: string;
   total_net_amount?: number;
   currency?: string;
-  portal_status: 'OPEN' | 'DISTRIBUTED' | 'IN_PROGRESS' | 'DELIVERED' | 'INVOICED' | 'PAID';
+  portal_status: 'OPEN' | 'DISTRIBUTED' | 'IN_PROGRESS' | 'IN_TRANSIT' | 'POD_VERIFICATION' | 'APPROVED' | 'COMPLETED' | 'DELIVERED' | 'INVOICED' | 'PAID' | string;
   fetched_at?: string;
   item_count?: number;
   total_qty?: number;
   materials_summary?: string;
+  materials_codes?: string;
   deliveries_summary?: string;
   items?: SalesOrderItemV3[];
   deliveries?: OutboundDeliveryV3[];
+}
+
+export interface TransportAssignmentSummaryV3 {
+  id: number;
+  driver_id: number;
+  driver_name: string;
+  driver_phone?: string;
+  license_no?: string;
+  vehicle_id: number;
+  vehicle_reg: string;
+  vehicle_capacity?: number;
+  assigned_qty?: number;
+  status: string;
+  scheduled_date?: string;
+}
+
+export interface FleetAllocationInput {
+  driver_id: number;
+  vehicle_id: number;
+  assigned_qty?: number;
+  scheduled_date?: string;
 }
 
 export interface SoDistributionV3 {
@@ -526,10 +567,14 @@ export interface SoDistributionV3 {
   item_count?: number;
   total_qty?: number;
   materials_summary?: string;
+  deliveries_summary?: string;
   active_assignment_id?: number;
   assignment_status?: string;
   driver_name?: string;
   vehicle_reg?: string;
+  assignments?: TransportAssignmentSummaryV3[];
+  assigned_trips_count?: number;
+  total_allocated_qty?: number;
 }
 
 export interface StagingQueueItemV3 {
@@ -594,12 +639,25 @@ export const salesOrdersApi = {
     }),
   getDistributions: () => request<SoDistributionV3[]>('/so-distributions'),
   getDeliveries: () => request<OutboundDeliveryV3[]>('/outbound-deliveries'),
-  getDelivery: (deliveryNo: string | number) => request<OutboundDeliveryV3>(`/outbound-deliveries/${deliveryNo}`),
-  assignDriver: (distId: number, driverId: number, vehicleId: number, scheduledDate?: string) =>
-    request<{ success: boolean; assignment_id: number; message: string }>(`/so-distributions/${distId}/assign`, {
-      method: 'POST',
-      body: JSON.stringify({ driver_id: driverId, vehicle_id: vehicleId, scheduled_date: scheduledDate }),
-    }),
+  assignDriver: (
+    distId: number,
+    driverIdOrAllocations: number | FleetAllocationInput[],
+    vehicleId?: number,
+    scheduledDate?: string,
+    assignedQty?: number
+  ) => {
+    const payload = Array.isArray(driverIdOrAllocations)
+      ? { allocations: driverIdOrAllocations }
+      : { driver_id: driverIdOrAllocations, vehicle_id: vehicleId, scheduled_date: scheduledDate, assigned_qty: assignedQty };
+
+    return request<{ success: boolean; assignment_id: number; assignment_ids?: number[]; message: string }>(
+      `/so-distributions/${distId}/assign`,
+      {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }
+    );
+  },
 };
 
 export const stagingApi = {

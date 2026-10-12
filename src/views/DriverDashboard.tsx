@@ -106,7 +106,7 @@ export const DriverDashboard: React.FC = () => {
   const [selectedRealFileName, setSelectedRealFileName] = useState<string | null>(null);
   const [ocrStep, setOcrStep] = useState<'IDLE' | 'UPLOADING' | 'SCANNING' | 'EXTRACTING' | 'PROCESSING'>('IDLE');
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [selectedPodFile, setSelectedPodFile] = useState('/uploads/pods/waybill_match.png');
+  const [selectedPodFile, setSelectedPodFile] = useState('/uploads/invoices/invoice_001_full_match.png');
   const [ocrResult, setOcrResult] = useState<any>(null);
   const [mockScenario, setMockScenario] = useState<'MATCH' | 'MISMATCH' | 'BLURRY'>('MATCH');
 
@@ -148,7 +148,7 @@ export const DriverDashboard: React.FC = () => {
   const s = selectedAssignment;
   const isEnRoute = s && ['DISPATCHED', 'EN_ROUTE'].includes(s.status);
   const isArrived = s && ['ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status);
-  const canUploadPod = s && ['DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status);
+  const canUploadPod = s && ['ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status);
   const isUploaded = s && ['POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status);
 
   useEffect(() => {
@@ -194,12 +194,33 @@ export const DriverDashboard: React.FC = () => {
     }
   };
 
+  const handleStartJourney = async () => {
+    if (!s || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const lat = gpsCoords?.lat || -25.7670;
+      const lng = gpsCoords?.lng || 29.4630;
+      await drApi.logTransitEvent(s.id, { status: 'EN_ROUTE', gps_lat: lat, gps_lng: lng });
+      setTrackingActive(true);
+      setGpsCoords({ lat, lng });
+      setSelectedAssignment(prev => prev ? { ...prev, status: 'EN_ROUTE', journey_authorized: 1 } : null);
+      await loadAssignments(true);
+    } catch (err: any) {
+      console.warn('Transit log warning, enabling local GPS tracking:', err);
+      setTrackingActive(true);
+      setSelectedAssignment(prev => prev ? { ...prev, status: 'EN_ROUTE', journey_authorized: 1 } : null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleConfirmArrival = async () => {
     if (!s || isSubmitting) return;
     setIsSubmitting(true);
     try {
-      await new Promise(r => setTimeout(r, 1100));
+      await new Promise(r => setTimeout(r, 800));
       await drApi.confirmArrival(s.id, { gps_lat: -25.7670, gps_lng: 29.4630 });
+      setSelectedAssignment(prev => prev ? { ...prev, status: 'ARRIVED' } : null);
       await loadAssignments(true);
     } catch (err: any) {
       alert('Arrival Confirmation failed: ' + (err.message || 'Please check coordinates'));
@@ -377,7 +398,7 @@ export const DriverDashboard: React.FC = () => {
               {completedTrips.map(ct => (
                 <div key={ct.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderRadius: '12px', backgroundColor: 'var(--color-bg-page)', border: '1px solid var(--color-border)' }}>
                   <div>
-                    <div className="mono" style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-text-heading)' }}>PO #{ct.sap_po_no} / {ct.po_item_no}</div>
+                    <div className="mono" style={{ fontWeight: 800, fontSize: '14px', color: 'var(--color-text-heading)' }}>SO #{ct.sap_po_no}</div>
                     <div style={{ fontSize: '12px', color: 'var(--color-text-body)', marginTop: '2px' }}>{ct.material} • Truck: {ct.vehicle_reg}</div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -395,15 +416,15 @@ export const DriverDashboard: React.FC = () => {
 
       {activeTab === 'ACTIVE' && s && (
         <>
-          {/* ── PO Info Banner ── */}
+          {/* ── Sales Order Info Banner ── */}
           <div style={{
             backgroundColor: 'var(--color-bg-card)', borderRadius: '16px', border: '1.5px solid var(--color-border)',
             padding: '20px 24px', display: 'flex', gap: '24px', flexWrap: 'wrap',
             boxShadow: 'var(--shadow-card)'
           }}>
             <div style={{ flex: 1, minWidth: '160px' }}>
-              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Purchase Order / Item</div>
-              <div className="mono" style={{ fontSize: '20px', fontWeight: 900, color: 'var(--color-text-primary)' }}>PO #{s.sap_po_no} / {s.po_item_no}</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sales Order (SO)</div>
+              <div className="mono" style={{ fontSize: '20px', fontWeight: 900, color: 'var(--color-text-primary)' }}>SO #{s.sap_po_no}</div>
             </div>
             <div style={{ flex: 1, minWidth: '120px' }}>
               <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Cargo</div>
@@ -513,7 +534,7 @@ export const DriverDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                {trackingActive ? (
+                {trackingActive || s.status === 'EN_ROUTE' ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -521,17 +542,36 @@ export const DriverDashboard: React.FC = () => {
                       borderRadius: '10px', padding: '14px 18px'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 700, color: 'var(--color-brand-blue-700)' }}>
-                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--color-brand-blue-600)', display: 'inline-block' }} />
-                        GPS ACTIVE — Tracking Transit Route
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#16a34a', display: 'inline-block' }} />
+                        GPS ACTIVE — Tracking Transit Route to Customer Yard
                       </div>
                       <span className="mono" style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-brand-blue-600)' }}>
-                        {gpsCoords ? `${gpsCoords.lat.toFixed(4)}, ${gpsCoords.lng.toFixed(4)}` : 'Resolving GPS...'}
+                        {gpsCoords ? `${gpsCoords.lat.toFixed(4)}, ${gpsCoords.lng.toFixed(4)}` : '-25.7670, 29.4630 (Live)'}
                       </span>
+                    </div>
+                    <div style={{ fontSize: '12.5px', color: 'var(--color-text-secondary)', padding: '0 4px' }}>
+                      Transit is active along the authorized logistics corridor. When you arrive at the customer receiving siding, proceed to Step 3.
                     </div>
                   </div>
                 ) : (
-                  <div style={{ backgroundColor: 'var(--color-warning-bg)', border: '1px solid var(--color-warning-light)', borderRadius: '10px', padding: '14px 16px', color: 'var(--color-warning-text)', fontSize: '13px', fontWeight: 600 }}>
-                    ⚠️ Waiting for Siding Supervisor to authorize journey and dispatch.
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ backgroundColor: 'var(--color-brand-blue-50)', border: '1px solid var(--color-brand-blue-200)', borderRadius: '10px', padding: '14px 16px', color: 'var(--color-brand-blue-800)', fontSize: '13px', fontWeight: 600 }}>
+                      {hasGross && hasBilty
+                        ? '✓ Origin weighbridge and Bilty verified! Ready to start transit to customer yard.'
+                        : '📋 Siding operations complete. Click below to begin driving and start GPS transit tracking.'}
+                    </div>
+                    <Button
+                      onClick={handleStartJourney}
+                      disabled={isSubmitting}
+                      variant="primary"
+                      style={{
+                        width: '100%', padding: '16px 20px', minHeight: '48px',
+                        fontSize: '15px', fontWeight: 800,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
+                      }}
+                    >
+                      <Navigation size={18} /> Start Journey & Activate GPS Transit
+                    </Button>
                   </div>
                 )}
               </ActionCard>
@@ -544,7 +584,7 @@ export const DriverDashboard: React.FC = () => {
             subtitle="Confirm your arrival at the customer yard once you reach the geofence."
             icon={<MapPin size={18} />}
             accentColor="var(--color-brand-blue-600)"
-            locked={!['DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status)}
+            locked={!['DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED'].includes(s.status) && !trackingActive}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {!isArrived ? (
@@ -642,30 +682,42 @@ export const DriverDashboard: React.FC = () => {
                   ) : (
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                        Select Sample Stamped Receipt Scenario (Demo Mode)
+                        Select S/4HANA Order Receipt Scenario (1 Box = 1 Ton Standard)
                       </label>
                       <select
-                        value={mockScenario}
+                        value={selectedPodFile}
                         onChange={(e) => {
-                          const val = e.target.value as 'MATCH' | 'MISMATCH' | 'BLURRY';
-                          setMockScenario(val);
-                          if (val === 'MATCH') {
-                            setSelectedPodFile('/uploads/pods/waybill_match.png');
-                          } else if (val === 'MISMATCH') {
-                            setSelectedPodFile('/uploads/pods/waybill_mismatch.png');
+                          const filePath = e.target.value;
+                          setSelectedPodFile(filePath);
+                          if (filePath.includes('unstamped') || filePath.includes('mismatch')) {
+                            setMockScenario('MISMATCH');
+                          } else if (filePath.includes('blurry')) {
+                            setMockScenario('BLURRY');
                           } else {
-                            setSelectedPodFile('/uploads/pods/waybill_blurry.png');
+                            setMockScenario('MATCH');
                           }
                         }}
                         style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--color-border)', borderRadius: '10px', fontSize: isMobile ? '11px' : '13px', fontWeight: 600, backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', cursor: 'pointer' }}
                       >
-                        <option value="MATCH">{isMobile ? '🟢 MATCH (100% Weight Match)' : '🟢 MATCH (Clean Scan, 100% Weight Agreement)'}</option>
-                        <option value="MISMATCH">{isMobile ? '🔴 MISMATCH (Weight Discrepancy)' : '🔴 MISMATCH (Variance Found, Weight Discrepancy)'}</option>
-                        <option value="BLURRY">{isMobile ? '🟡 BLURRY (Low OCR Confidence)' : '🟡 BLURRY (Low Image Quality, Low OCR Confidence)'}</option>
+                        <optgroup label="✅ MATCH SCENARIOS (Customer Yard Stamped & Within Tolerance)">
+                          <option value="/uploads/invoices/invoice_001_full_match.png">🟢 MATCH 1: SO #2322 Full Match (15 Boxes / 15.0 Tons • Customer Stamped)</option>
+                          <option value="/uploads/invoices/invoice_003_qty_match_30tons.png">🟢 MATCH 2: SO #2320 Exact Match (30 Boxes / 30.0 Tons • Customer Stamped)</option>
+                          <option value="/uploads/invoices/invoice_005_so_match_2318.png">🟢 MATCH 3: SO #2318 Single Item Match (1 Box / 1.0 Ton • Customer Stamped)</option>
+                          <option value="/uploads/invoices/invoice_007_carrier_match_sipho.png">🟢 MATCH 4: Certified Transporter Match (Sipho Transport Services)</option>
+                          <option value="/uploads/invoices/invoice_009_multi_item_match_dpworld.png">🟢 MATCH 5: Multi-Item SO #2321 Match (DP World Siding • 30 Boxes)</option>
+                        </optgroup>
+                        <optgroup label="❌ MISMATCH SCENARIOS (Flagged for Review / Unstamped)">
+                          <option value="/uploads/invoices/invoice_002_unstamped_mismatch.png">🔴 MISMATCH 1: Unstamped Document (Missing Customer Yard Stamp • Blocked)</option>
+                          <option value="/uploads/invoices/invoice_004_qty_mismatch_overload.png">🔴 MISMATCH 2: Payload Variance (35.0 Tons vs 15.0 Tons • Discrepancy)</option>
+                          <option value="/uploads/invoices/invoice_006_so_mismatch_wrong_order.png">🔴 MISMATCH 3: Wrong Sales Order Ref (SO #9999 vs #2322)</option>
+                          <option value="/uploads/invoices/invoice_008_carrier_mismatch_uncertified.png">🔴 MISMATCH 4: Uncertified Carrier (Apex Global Logistics)</option>
+                          <option value="/uploads/invoices/invoice_010_financial_mismatch_inflated.png">🔴 MISMATCH 5: Price Inflation (R 99,999 vs Standard Freight Rate)</option>
+                          <option value="/uploads/invoices/invoice_011_blurry_low_quality.png">🟡 MISMATCH 6: Blurry Low-Quality Photo (OCR Confidence Below Threshold)</option>
+                        </optgroup>
                       </select>
                       {selectedPodFile && (
                         <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--color-brand-blue-700)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Check size={14} color="var(--color-success)" /> Selected Mock Document: {selectedPodFile.split('/').pop()}
+                          <Check size={14} color="var(--color-success)" /> Selected Document: {selectedPodFile.split('/').pop()}
                         </div>
                       )}
                     </div>
@@ -682,7 +734,7 @@ export const DriverDashboard: React.FC = () => {
                         {ocrStep === 'UPLOADING' && 'Uploading Invoice Document...'}
                         {ocrStep === 'SCANNING' && 'Scanning Invoice Document...'}
                         {ocrStep === 'EXTRACTING' && 'Extracting Structured Line Items & Tax Metadata...'}
-                        {ocrStep === 'PROCESSING' && 'Verifying Against SAP PO & Destination Weighment...'}
+                        {ocrStep === 'PROCESSING' && 'Verifying Against SAP Sales Order & Destination Weighment...'}
                       </div>
                     </div>
                   )}
@@ -754,8 +806,8 @@ export const DriverDashboard: React.FC = () => {
                           <div style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.extracted_invoice.vendorName || '—'}</div>
                         </div>
                         <div>
-                          <div style={{ color: 'var(--color-text-muted)', fontSize: '10.5px', textTransform: 'uppercase', fontWeight: 700 }}>Extracted PO #</div>
-                          <div className="mono" style={{ fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>{ocrResult.extracted_invoice.poNumber || 'None / Missing'}</div>
+                          <div style={{ color: 'var(--color-text-muted)', fontSize: '10.5px', textTransform: 'uppercase', fontWeight: 700 }}>Extracted SO #</div>
+                          <div className="mono" style={{ fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>{ocrResult.extracted_invoice.poNumber || ocrResult.extracted_invoice.invoiceNumber || 'None / Missing'}</div>
                         </div>
                         <div>
                           <div style={{ color: 'var(--color-text-muted)', fontSize: '10.5px', textTransform: 'uppercase', fontWeight: 700 }}>Total Amount</div>
@@ -804,7 +856,7 @@ export const DriverDashboard: React.FC = () => {
                   <div style={{ backgroundColor: 'var(--color-bg-page)', borderRadius: '12px', padding: '16px', border: '1px solid var(--color-border)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                       <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        AI Invoice & PO Reconciliation Match
+                        AI Invoice & Sales Order Reconciliation Match
                       </div>
                       <span className="mono" style={{
                         fontSize: '14px',
@@ -830,7 +882,7 @@ export const DriverDashboard: React.FC = () => {
                     {/* Visual Accuracy Bar */}
                     <div style={{ marginBottom: '14px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '5px' }}>
-                        <span>SAP PO Match Accuracy</span>
+                        <span>SAP SO Match Accuracy</span>
                         <span className="mono" style={{ fontWeight: 700 }}>
                           {ocrResult.ocr?.match_percentage || ocrResult.ocr?.ocr_confidence_pct || 98.5}%
                         </span>
@@ -866,7 +918,7 @@ export const DriverDashboard: React.FC = () => {
                         <span className="mono" style={{ fontWeight: 700, color: 'var(--color-text-heading)' }}>{ocrResult.ocr?.ocr_confidence_pct || '98.5'}%</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', borderTop: '1px solid var(--color-border)', paddingTop: '8px', marginTop: '4px' }}>
-                        <span style={{ color: 'var(--color-text-muted)' }}>Matches SAP PO?</span>
+                        <span style={{ color: 'var(--color-text-muted)' }}>Matches SAP SO?</span>
                         <span style={{ 
                           fontWeight: 850, 
                           color: ocrResult.ocr?.match_status === 'MATCH' 
@@ -876,7 +928,7 @@ export const DriverDashboard: React.FC = () => {
                               : 'var(--color-error-text)' 
                         }}>
                           {ocrResult.ocr?.match_status === 'MATCH' 
-                            ? '✓ 100% Validated Match Against PO' 
+                            ? '✓ 100% Validated Match Against SO' 
                             : ocrResult.ocr?.match_status === 'LOW_CONFIDENCE'
                               ? '⚠️ Low Confidence / Manual Audit Required'
                               : '✗ Discrepancy Found — Sent to Verification Desk'}
@@ -891,7 +943,7 @@ export const DriverDashboard: React.FC = () => {
                     )}
                     {ocrResult.ocr?.match_status === 'MISMATCH' && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '14px', backgroundColor: 'var(--color-error-bg)', borderRadius: '8px', padding: '10px 14px', color: 'var(--color-error-text)', fontSize: '12px', fontWeight: 600, border: '1px solid var(--color-error-light)' }}>
-                        <AlertTriangle size={16} /> Discrepancy detected against SAP PO. Queued for Company Admin verification & override.
+                        <AlertTriangle size={16} /> Discrepancy detected against SAP SO. Queued for Company Admin verification & override.
                       </div>
                     )}
                     {ocrResult.ocr?.match_status === 'LOW_CONFIDENCE' && (

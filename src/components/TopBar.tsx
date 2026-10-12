@@ -91,15 +91,15 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
       window.dispatchEvent(new Event('pod_data_refreshed'));
 
       const preservedContracts = res.preserved?.s21_contracts ?? 5;
-      const preservedPos = res.preserved?.s21_purchase_orders ?? 25;
+      const preservedSOs = res.preserved?.s21_sales_orders ?? res.preserved?.s21_purchase_orders ?? 25;
 
-      const summaryText = `✓ SYSTEM-WIDE DEMO RESET COMPLETE!\n\n• S21 Contracts Preserved: ${preservedContracts}\n• S21 Purchase Orders Preserved: ${preservedPos}\n\nThe system has returned to initial clean state.`;
+      const summaryText = `✓ SYSTEM-WIDE DEMO RESET COMPLETE!\n\n• S21 Contracts Preserved: ${preservedContracts}\n• S21 Sales Orders Preserved: ${preservedSOs}\n\nThe system has returned to initial clean state.`;
 
       alert(summaryText);
-      window.location.href = '/admin/contracts';
+      window.location.href = '/admin/dashboard';
     } catch (err: any) {
       alert('Reset completed: ' + (err.message || 'Environment cleared'));
-      window.location.href = '/admin/contracts';
+      window.location.href = '/admin/dashboard';
     } finally {
       setIsResetting(false);
     }
@@ -186,7 +186,7 @@ export const TopBar: React.FC<TopBarProps> = ({ title, onToggleSidebar, isSideba
               type="text"
               value={headerSearch}
               onChange={(e) => setHeaderSearch(e.target.value)}
-              placeholder="Search orders, contracts, waybills..."
+              placeholder="Search orders, contracts, consignments..."
               style={{
                 width: '100%',
                 padding: '6px 10px 6px 32px',

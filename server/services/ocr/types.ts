@@ -42,6 +42,10 @@ export interface ExtractedInvoiceData {
   processedAt: string;
   processingError?: string | null;
   
+  // Stamp Verification
+  isStamped?: boolean;
+  stampText?: string | null;
+
   // File verification metadata
   fileHash: string;
   originalFileName: string;

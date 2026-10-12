@@ -197,9 +197,12 @@ Return ONLY valid JSON matching this schema:
   "invoiceDate": string or null,
   "vendorName": string or null,
   "vendorGstin": string or null,
+  "customerName": string or null,
   "poNumber": string or null,
   "deliveryNumber": string or null,
   "vehicleNumber": string or null,
+  "isStamped": boolean,
+  "stampText": string or null,
   "subtotalAmount": number or null,
   "taxAmount": number or null,
   "totalAmount": number or null,
@@ -218,6 +221,8 @@ Return ONLY valid JSON matching this schema:
     }
   ]
 }
+Note on "vendorName": The vendor/issuer is the carrier/logistics company issuing the invoice shown at the top (e.g. "SIPHO TRANSPORT SERVICES"). The customer billed to (e.g. "Company Atharv Pharma abc") should NOT be set as vendorName.
+Check carefully whether an official receiver verification stamp, seal, or signed acknowledgment box is present on the document (e.g. "OFFLOAD RECEIVED & WEIGHED", "CUSTOMER YARD RECEIVED", "SECURITY GATE VERIFIED", "GOODS RECEIVED STAMP"). Set "isStamped" to true if a stamp is visually present; false if absent.
 All numeric amount and quantity fields must be clean numbers without currency symbols (e.g. 5151.00, not "R 5151.00").
 If line items cannot be determined, return an empty array [].`;
 
@@ -302,6 +307,8 @@ If line items cannot be determined, return an empty array [].`;
       const totalAmt = parseCleanNumber(parsed.totalAmount);
       const poNo = parsed.poNumber ? String(parsed.poNumber).trim() : null;
       const invNo = parsed.invoiceNumber ? String(parsed.invoiceNumber).trim() : null;
+      const isStamped = parsed.isStamped === true || (typeof parsed.stampText === 'string' && parsed.stampText.trim().length > 0);
+      const stampText = parsed.stampText ? String(parsed.stampText).trim() : null;
 
       const hasKeyData = !!(invNo || poNo || lineItems.length > 0 || totalAmt !== null);
       const status = hasKeyData ? 'EXTRACTED' : 'REVIEW_REQUIRED';
@@ -314,6 +321,8 @@ If line items cannot be determined, return an empty array [].`;
         poNumber: poNo,
         deliveryNumber: parsed.deliveryNumber ? String(parsed.deliveryNumber).trim() : null,
         vehicleNumber: parsed.vehicleNumber ? String(parsed.vehicleNumber).trim() : null,
+        isStamped,
+        stampText,
         subtotalAmount: subtotal,
         taxAmount: taxAmt,
         totalAmount: totalAmt,

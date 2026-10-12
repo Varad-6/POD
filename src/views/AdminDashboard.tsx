@@ -13,7 +13,8 @@ import {
   Eye,
   AlertCircle,
   FileText,
-  Truck
+  Truck,
+  RotateCcw
 } from 'lucide-react';
 
 import { 
@@ -35,6 +36,7 @@ import { KPISummaryBar } from '../components/KPISummaryBar';
 import { PageHeader } from '../components/PageHeader';
 import { EmptyState } from '../components/EmptyState';
 import { Modal } from '../components/Modal';
+import { formatCargoDisplay } from './SupervisorDashboard';
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -101,10 +103,11 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const openOrders = salesOrders.filter(so => so.portal_status === 'OPEN');
-  const distributedOrders = salesOrders.filter(so => so.portal_status === 'DISTRIBUTED' || so.portal_status === 'IN_PROGRESS');
+  const distributedOrders = salesOrders.filter(so => ['DISTRIBUTED', 'IN_PROGRESS', 'IN_TRANSIT'].includes(so.portal_status));
   const openReviews = reviews.filter(r => r.status === 'OPEN');
   const pendingPodVerify = invoices.filter(i => i.status === 'SENT_TO_CA');
   const pendingMiro = miroInvoices.filter(m => m.status === 'PARKED');
+  const completedOrders = salesOrders.filter(so => ['COMPLETED', 'DELIVERED', 'INVOICED', 'PAID', 'APPROVED', 'CLEARED'].includes(so.portal_status));
 
   const allSelectableIds = openOrders.map(so => so.id);
   const isAllSelected = allSelectableIds.length > 0 && allSelectableIds.every(id => selectedSoIds.includes(id));
@@ -165,11 +168,32 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleResetDemo = async () => {
+    if (!window.confirm('Reset all demo execution data? All Sales Orders will return to OPEN status and no orders will be distributed.')) return;
+    setLoading(true);
+    setStatusMessage(null);
+    try {
+      await fetch('/api/v3/demo/reset', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}`
+        }
+      });
+      setStatusMessage({ type: 'success', text: 'Demo environment reset. All Sales Orders are now OPEN and ready to distribute.' });
+      await loadData();
+    } catch (err: any) {
+      setStatusMessage({ type: 'error', text: 'Reset failed: ' + err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <PageHeader
-        title="Fleet Logistics Command Desk"
-        subtitle="Manage end-to-end logistics execution: extract live SAP Sales Orders, inspect line items, distribute entire orders to transporters, and track physical delivery."
+        title="Open Sales Orders"
+        subtitle="Manage end-to-end logistics execution: extract live SAP Sales Orders, inspect line items & outbound deliveries, and distribute entire orders to transporters."
         actions={
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <Button
@@ -191,23 +215,36 @@ export const AdminDashboard: React.FC = () => {
                 Distribute Selected ({selectedSoIds.length})
               </Button>
             )}
-            <Button 
-              onClick={() => navigate('/admin/approvals')} 
-              variant="secondary" 
+            <Button
+              variant="ghost"
               size="sm"
+              onClick={handleResetDemo}
+              style={{ color: '#dc2626', border: '1px solid #fecaca', backgroundColor: '#fef2f2' }}
             >
-              Inspect POD Queue ({openReviews.length})
-            </Button>
-            <Button 
-              onClick={() => navigate('/admin/invoices')} 
-              variant="secondary" 
-              size="sm"
-            >
-              Post Invoice Desk ({pendingPodVerify.length})
+              <RotateCcw size={13} style={{ marginRight: '6px' }} />
+              Reset Demo State
             </Button>
           </div>
         }
       />
+
+      {/* Standard Packaging & Load Mapping Note Banner */}
+      <div style={{
+        padding: '12px 16px',
+        backgroundColor: '#eff6ff',
+        border: '1px solid #bfdbfe',
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        fontSize: '13px',
+        color: '#1e40af'
+      }}>
+        <Package size={17} style={{ flexShrink: 0, color: '#2563eb' }} />
+        <span>
+          <strong>Standard Payload Conversion: 1 Box = 1 Ton (1,000 kg).</strong> Quantities from SAP VL03N outbound deliveries map 1:1 into fleet truck capacities.
+        </span>
+      </div>
 
       {statusMessage && (
         <div style={{
@@ -267,6 +304,14 @@ export const AdminDashboard: React.FC = () => {
                 subtitle: pendingPodVerify.length > 0 ? 'Verified Deliveries' : 'None pending',
                 onClick: () => navigate('/admin/invoices'),
                 accentColor: pendingPodVerify.length > 0 ? 'var(--color-warning)' : undefined,
+              },
+              {
+                id: 'completed_sos',
+                value: completedOrders.length,
+                label: 'Fully Completed',
+                subtitle: completedOrders.length > 0 ? 'POD Approved & Cleared' : 'None completed',
+                onClick: () => navigate('/admin/invoices'),
+                accentColor: '#16a34a',
               },
             ]}
           />
@@ -414,10 +459,34 @@ export const AdminDashboard: React.FC = () => {
                               <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{so.sap_customer_no}</div>
                             </td>
                             <td style={{ padding: '12px 14px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <Package size={14} color="var(--color-brand-blue-600)" />
-                                <span style={{ fontWeight: 500 }}>{so.materials_summary || `${so.item_count || 1} line item(s)`}</span>
-                              </div>
+                              {(() => {
+                                const cargo = formatCargoDisplay(so.materials_summary, so.materials_codes);
+                                return (
+                                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                    <Package size={15} color="var(--color-brand-blue-600)" style={{ marginTop: '2px', flexShrink: 0 }} />
+                                    <div>
+                                      <div style={{ fontWeight: 600, color: 'var(--color-text-heading)', fontSize: '12.5px' }}>
+                                        {cargo.title}
+                                      </div>
+                                      {cargo.codes && (
+                                        <span style={{
+                                          display: 'inline-block',
+                                          marginTop: '3px',
+                                          fontSize: '11px',
+                                          fontFamily: 'monospace',
+                                          color: 'var(--color-text-muted)',
+                                          backgroundColor: '#f1f5f9',
+                                          padding: '1px 6px',
+                                          borderRadius: '3px',
+                                          border: '1px solid #e2e8f0'
+                                        }}>
+                                          SAP #{cargo.codes}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </td>
                             <td style={{ padding: '12px 14px', fontWeight: 600 }}>
                               {so.total_qty ? `${so.total_qty.toFixed(1)} TO` : '34.0 TO'}

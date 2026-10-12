@@ -99,7 +99,7 @@ export const Login: React.FC = () => {
               END-TO-END EXECUTION WORKFLOW
             </p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px', fontSize: '11px', fontWeight: 600, color: 'var(--neutral-200)' }}>
-              <div style={{ textAlign: 'center' }}><div style={{ color: 'var(--accent-blue-muted)' }}>SAP S21</div><div>PO & Contract</div></div>
+              <div style={{ textAlign: 'center' }}><div style={{ color: 'var(--accent-blue-muted)' }}>SAP S/4HANA</div><div>Sales Order (SO)</div></div>
               <ArrowRight size={12} color="var(--neutral-500)" />
               <div style={{ textAlign: 'center' }}><div style={{ color: 'var(--teal-600)' }}>Carrier TA</div><div>Dispatch Task</div></div>
               <ArrowRight size={12} color="var(--neutral-500)" />

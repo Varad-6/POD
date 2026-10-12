@@ -1,15 +1,15 @@
 description: |
-  Displays all active SAP S/4HANA Outline Agreements with customer, yard, validity dates, and status.
+  Displays all active SAP S/4HANA Sales Orders (VA03) and Customer Outline Agreements with customer, yard, validity dates, and status.
 
 slots: []
 
 response_context:
   - value: $target_result.total_count
-    description: Total active outline agreements
+    description: Total active sales orders and outline agreements
   - value: $target_result.summary
-    description: List of active outline agreements
+    description: List of active sales orders and outline agreements
   - value: $target_result.active_count
-    description: Number of active contracts
+    description: Number of active sales orders
 
 target:
   name: get_contracts

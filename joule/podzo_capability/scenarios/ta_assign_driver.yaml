@@ -1,17 +1,17 @@
 description: |
-  Pairs a fleet driver and vehicle to a transport run.
+  Pairs and assigns a fleet driver and vehicle to a Sales Order (SO) or Purchase Order transport run.
 
 slots:
   - name: driver_id
-    description: Driver name or ID
+    description: Driver name or ID (e.g. Rajesh)
   - name: vehicle_id
-    description: Vehicle registration or ID
+    description: Vehicle registration or ID (e.g. MH12AB1234)
   - name: po_id
-    description: Target Purchase Order Number
+    description: Target Sales Order Number or Purchase Order Number (e.g. 2318, 2321, 2322)
 
 response_context:
   - value: $target_result.assignment_id
-    description: Assignment ID
+    description: Assignment ID or Trip ID
   - value: $target_result.driver_name
     description: Assigned driver
   - value: $target_result.vehicle_reg

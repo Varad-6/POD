@@ -1,17 +1,17 @@
 description: |
-  Displays all purchase orders allocated to transporter vendor with full details.
+  Displays all open and active SAP S/4HANA Sales Orders (SO) and purchase orders allocated for transport dispatch, including open sales orders, tons, customer siding, and status.
 
 slots: []
 
 response_context:
   - value: $target_result.total_count
-    description: Total purchase orders found
+    description: Total sales orders found
   - value: $target_result.summary
-    description: Complete list of purchase orders
+    description: Complete list of sales orders and status
   - value: $target_result.open_count
-    description: Open purchase orders count
+    description: Open sales orders count
   - value: $target_result.assigned_count
-    description: Assigned purchase orders count
+    description: Assigned sales orders count
 
 target:
   name: get_purchase_orders

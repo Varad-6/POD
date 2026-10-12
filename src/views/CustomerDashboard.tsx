@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { StatusBadge } from '../components/StatusBadge';
@@ -22,15 +23,39 @@ const InfoBit: React.FC<{ label: string; value: string | number; mono?: boolean 
 );
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
-export const CustomerDashboard: React.FC = () => {
+interface CustomerDashboardProps {
+  initialTab?: 'ACTIVE' | 'INVOICES' | 'HISTORY';
+}
+
+export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ initialTab = 'ACTIVE' }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const getTabFromPath = (): 'ACTIVE' | 'INVOICES' | 'HISTORY' => {
+    if (location.pathname.includes('/payments')) return 'INVOICES';
+    if (location.pathname.includes('/history')) return 'HISTORY';
+    return initialTab;
+  };
+
   const [incoming, setIncoming] = useState<TransportAssignmentV3[]>([]);
   const [myInvoices, setMyInvoices] = useState<InvoiceEventV3[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<TransportAssignmentV3 | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'INVOICES' | 'HISTORY'>('ACTIVE');
+  const [activeTab, setActiveTab] = useState<'ACTIVE' | 'INVOICES' | 'HISTORY'>(getTabFromPath());
   const [searchTerm, setSearchTerm] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    setActiveTab(getTabFromPath());
+  }, [location.pathname, initialTab]);
+
+  const handleTabChange = (tabId: 'ACTIVE' | 'INVOICES' | 'HISTORY') => {
+    setActiveTab(tabId);
+    if (tabId === 'INVOICES') navigate('/customer/payments');
+    else if (tabId === 'HISTORY') navigate('/customer/history');
+    else navigate('/customer/dashboard');
+  };
 
   // Payment modal state
   const [selectedPayInvoice, setSelectedPayInvoice] = useState<InvoiceEventV3 | null>(null);
@@ -160,7 +185,7 @@ export const CustomerDashboard: React.FC = () => {
           <CheckCircle2 size={56} color="var(--color-success)" style={{ margin: '0 auto 16px' }} />
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--color-success-text)', margin: '0 0 8px' }}>Truck Unloaded Successfully!</h2>
           <p style={{ fontSize: '14.5px', color: 'var(--color-success-text)', margin: '0 0 8px', fontWeight: 600 }}>
-            PO #{a.sap_po_no} / {a.po_item_no} — Net Weight: {netTons} Tons
+            SO #{a.sap_po_no} — Net Weight: {netTons} Tons
           </p>
           <p style={{ fontSize: '13.5px', color: 'var(--color-success-text)', opacity: 0.9, margin: '0 0 28px' }}>
             The delivery receipt has been stamped. The driver can now upload the POD document.
@@ -190,7 +215,7 @@ export const CustomerDashboard: React.FC = () => {
             <ArrowLeft size={14} /> All Trucks
           </Button>
           <span style={{ color: 'var(--color-border)' }}>›</span>
-          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>PO #{a.sap_po_no} / {a.po_item_no}</span>
+          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>SO #{a.sap_po_no}</span>
           <span style={{ marginLeft: 'auto' }}><StatusBadge status={a.status} /></span>
         </div>
 
@@ -198,7 +223,7 @@ export const CustomerDashboard: React.FC = () => {
         <Card title="Incoming Delivery — Unloading Yard" accentColor="var(--color-brand-blue-600)">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
-              <InfoBit label="PO Number / Item" value={`PO #${a.sap_po_no} / ${a.po_item_no}`} mono />
+              <InfoBit label="Sales Order (SO)" value={`SO #${a.sap_po_no}`} mono />
               <InfoBit label="Driver" value={a.driver_name || '—'} />
               <InfoBit label="Truck" value={a.vehicle_reg || '—'} mono />
               <InfoBit label="Cargo" value={a.material || '—'} />
@@ -517,7 +542,7 @@ export const CustomerDashboard: React.FC = () => {
           { id: 'HISTORY', label: 'Delivery History', count: historyItems.length }
         ]}
         activeTab={activeTab}
-        onChange={(id) => setActiveTab(id as any)}
+        onChange={(id) => handleTabChange(id as any)}
       />
 
       {activeTab === 'INVOICES' && (
@@ -617,7 +642,7 @@ export const CustomerDashboard: React.FC = () => {
           <div style={{ maxWidth: '360px' }}>
             <input 
               type="text"
-              placeholder="Search PO #, driver, vehicle reg, or product..."
+              placeholder="Search SO #, driver, vehicle reg, or product..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="form-input"
@@ -639,10 +664,10 @@ export const CustomerDashboard: React.FC = () => {
           }
           columns={[
             {
-              header: 'PO Number / Item',
+              header: 'Sales Order Ref',
               render: (a) => (
                 <span className="mono" style={{ fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>
-                  #{a.sap_po_no} / {a.po_item_no}
+                  SO #{a.sap_po_no}
                 </span>
               )
             },

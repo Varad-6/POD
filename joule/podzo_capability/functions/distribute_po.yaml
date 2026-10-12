@@ -14,14 +14,12 @@ action_groups:
       - type: api-request
         system_alias: PodzoneService
         method: POST
-        path: /api/v3/po/distribute
+        path: /api/v3/joule/distribute-so
         headers:
           Content-Type: application/json
         body:
-          po_id: <? po_id ?>
-          transporter_id: <? transporter_id ?>
-          availability_window_start: "06:00"
-          availability_window_end: "18:00"
+          so_no: <? po_id ?>
+          transporter_name: <? transporter_id ?>
         timeout: 10
         result_variable: dist_res
 
@@ -30,4 +28,4 @@ action_groups:
       - type: message
         message:
           type: text
-          content: Purchase Order distribution could not be completed.
+          content: Sales Order distribution could not be completed.

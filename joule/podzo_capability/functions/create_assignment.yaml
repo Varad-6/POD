@@ -9,7 +9,7 @@ parameters:
     optional: true
 
 result:
-  assignment_id: <? cr_res.body.id ?>
+  assignment_id: <? cr_res.body.assignment_id ?>
   driver_name: <? cr_res.body.driver_name ?>
   vehicle_reg: <? cr_res.body.vehicle_reg ?>
   message: <? cr_res.body.message ?>
@@ -20,13 +20,13 @@ action_groups:
       - type: api-request
         system_alias: PodzoneService
         method: POST
-        path: /api/v3/assignments
+        path: /api/v3/joule/assign-driver
         headers:
           Content-Type: application/json
         body:
-          driver_id: <? driver_id ?>
-          vehicle_id: <? vehicle_id ?>
-          po_id: <? po_id ?>
+          driver_name: <? driver_id ?>
+          vehicle_reg: <? vehicle_id ?>
+          so_no: <? po_id ?>
           scheduled_date: <? scheduled_date ?>
         timeout: 10
         result_variable: cr_res

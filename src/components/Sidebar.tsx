@@ -9,6 +9,8 @@ import {
   LogOut, 
   LayoutDashboard,
   Activity,
+  CreditCard,
+  History,
   X
 } from 'lucide-react';
 import { useAuthV3 } from '../contexts/AuthContextV3';
@@ -151,54 +153,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {currentUser.role === 'CA' ? (
               <>
-                {/* Group 1: OPERATIONS */}
+                {/* Company Admin 3 Core Workspaces */}
                 <div>
                   {!isEffectiveCollapsed && (
                     <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                      OPERATIONS
+                      WORKFLOW STATIONS
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <NavLink 
                       to="/admin/dashboard" 
                       className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "Fleet Logistics Command" : undefined}
+                      title={isEffectiveCollapsed ? "Open Sales Orders" : undefined}
                       style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
                     >
                       <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Fleet Logistics Command</span>}
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Open Sales Orders</span>}
                     </NavLink>
                     
                     <NavLink 
                       to="/admin/approvals" 
                       className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "POD Verification Desk" : undefined}
+                      title={isEffectiveCollapsed ? "POD Verification" : undefined}
                       style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
                     >
                       <ClipboardCheck size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>POD Verification Desk</span>}
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>POD Verification</span>}
                     </NavLink>
-                  </div>
-                </div>
 
-
-
-                {/* Group 3: FINANCE */}
-                <div>
-                  {!isEffectiveCollapsed && (
-                    <div style={{ padding: '0 14px 6px', fontSize: '10.5px', fontWeight: 700, color: 'var(--color-text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                      FINANCE & BILLING
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     <NavLink 
                       to="/admin/invoices" 
                       className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "Post Invoice Desk" : undefined}
+                      title={isEffectiveCollapsed ? "Payments" : undefined}
                       style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
                     >
                       <FileClock size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Post Invoice Desk</span>}
+                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Payments</span>}
                     </NavLink>
                   </div>
                 </div>
@@ -229,12 +219,31 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
                 )}
                 <NavLink 
                   to="/customer/dashboard" 
+                  end
                   className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
                   title={isEffectiveCollapsed ? "Yard Receiving Gate" : undefined}
                   style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
                 >
                   <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
                   {!isEffectiveCollapsed && <span style={navLabelStyle}>Yard Receiving Gate</span>}
+                </NavLink>
+                <NavLink 
+                  to="/customer/payments" 
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  title={isEffectiveCollapsed ? "Payments & Settlements" : undefined}
+                  style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                >
+                  <CreditCard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                  {!isEffectiveCollapsed && <span style={navLabelStyle}>Payments & Settlements</span>}
+                </NavLink>
+                <NavLink 
+                  to="/customer/history" 
+                  className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
+                  title={isEffectiveCollapsed ? "Delivery History" : undefined}
+                  style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
+                >
+                  <History size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                  {!isEffectiveCollapsed && <span style={navLabelStyle}>Delivery History</span>}
                 </NavLink>
               </div>
             ) : currentUser.role === 'DR' ? (
@@ -289,16 +298,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed = false, onToggle, m
                     >
                       <LayoutDashboard size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
                       {!isEffectiveCollapsed && <span style={navLabelStyle}>Carrier Control Console</span>}
-                    </NavLink>
-                    
-                    <NavLink 
-                      to="/transporter/pods" 
-                      className={({ isActive }) => `sidebar-nav-item ${isActive ? 'active' : ''}`}
-                      title={isEffectiveCollapsed ? "Waybill POD Uploads" : undefined}
-                      style={isEffectiveCollapsed ? { justifyContent: 'center', padding: '10px 0', borderLeft: 'none', borderRadius: '4px' } : undefined}
-                    >
-                      <Receipt size={17} strokeWidth={1.8} style={{ flexShrink: 0 }} />
-                      {!isEffectiveCollapsed && <span style={navLabelStyle}>Waybill POD Uploads</span>}
                     </NavLink>
                   </div>
                 </div>

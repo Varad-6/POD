@@ -75,6 +75,8 @@ export function initDb(): Database.Database {
   addColumnIfNotExists('pod_documents', 'ocr_provider', 'TEXT');
   addColumnIfNotExists('pod_documents', 'ocr_processing_status', "TEXT DEFAULT 'EXTRACTED'");
   addColumnIfNotExists('pod_documents', 'scanned_pod_url', 'TEXT');
+  addColumnIfNotExists('pod_documents', 'ocr_stamped_bool', 'INTEGER DEFAULT 0');
+  addColumnIfNotExists('pod_documents', 'ocr_stamp_text', 'TEXT');
 
   // Migration for review_queue to remove any legacy CHECK constraint restrictions
   try {
@@ -104,6 +106,57 @@ export function initDb(): Database.Database {
     console.warn('[DB V3] review_queue migration check warning:', err);
   }
 
+  // Migration for transport_assignments to support STAGING_EXCEPTION status
+  try {
+    const taSql = (instance.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='transport_assignments'").get() as any)?.sql || '';
+    if (taSql.includes('CHECK') && !taSql.includes('STAGING_EXCEPTION')) {
+      console.log('[DB V3] Migrating transport_assignments table to support STAGING_EXCEPTION status...');
+      instance.exec(`
+        PRAGMA foreign_keys = OFF;
+        CREATE TABLE transport_assignments_new (
+          id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+          job_config_id       INTEGER REFERENCES job_configs(id),
+          driver_id           INTEGER NOT NULL REFERENCES drivers(id),
+          vehicle_id          INTEGER NOT NULL REFERENCES vehicles(id),
+          location            TEXT,
+          license_no          TEXT NOT NULL,
+          gstin               TEXT NOT NULL,
+          scheduled_date      TEXT NOT NULL,
+          assigned_qty        REAL,
+          queue_entry_time    TEXT,
+          actual_arrival_time TEXT,
+          loading_status      TEXT DEFAULT 'PENDING',
+          journey_authorized  INTEGER DEFAULT 0,
+          queue_time_mins     INTEGER,
+          penalty_amount      REAL DEFAULT 0.0,
+          status              TEXT NOT NULL DEFAULT 'ASSIGNED',
+          dispatch_ip         TEXT,
+          dispatch_user_agent TEXT,
+          so_distribution_id  INTEGER,
+          so_id               INTEGER
+        );
+        INSERT OR IGNORE INTO transport_assignments_new (
+          id, job_config_id, driver_id, vehicle_id, location, license_no, gstin,
+          scheduled_date, assigned_qty, queue_entry_time, actual_arrival_time,
+          loading_status, journey_authorized, queue_time_mins, penalty_amount,
+          status, dispatch_ip, dispatch_user_agent, so_distribution_id, so_id
+        )
+        SELECT 
+          id, job_config_id, driver_id, vehicle_id, location, license_no, gstin,
+          scheduled_date, assigned_qty, queue_entry_time, actual_arrival_time,
+          loading_status, journey_authorized, queue_time_mins, penalty_amount,
+          status, dispatch_ip, dispatch_user_agent, so_distribution_id, so_id
+        FROM transport_assignments;
+        DROP TABLE transport_assignments;
+        ALTER TABLE transport_assignments_new RENAME TO transport_assignments;
+        PRAGMA foreign_keys = ON;
+      `);
+      console.log('[DB V3] transport_assignments migrated successfully.');
+    }
+  } catch (err) {
+    console.warn('[DB V3] transport_assignments migration warning:', err);
+  }
+
   // Ensure job_config_pos junction table exists
   instance.exec(`
     CREATE TABLE IF NOT EXISTS job_config_pos (
@@ -115,6 +168,9 @@ export function initDb(): Database.Database {
       created_at        TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(job_config_id, po_id)
     );
+
+    INSERT OR IGNORE INTO job_configs (id, po_id, transporter_id, availability_window, timebound, status)
+    VALUES (1, 1, 1, '2026-10-08', '2026-10-31', 'ASSIGNED');
   `);
 
 
@@ -175,6 +231,17 @@ export function initDb(): Database.Database {
     console.log('[DB V3] Staging user sa_staging01 initialized.');
   }
 
+  addColumnIfNotExists('users', 'transporter_id', 'INTEGER');
+  addColumnIfNotExists('users', 'customer_id', 'INTEGER');
+  try {
+    instance.exec(`
+      UPDATE users SET transporter_id = entity_id WHERE role = 'TA' AND (transporter_id IS NULL OR transporter_id = 0);
+      UPDATE users SET customer_id = entity_id WHERE role = 'CR' AND (customer_id IS NULL OR customer_id = 0);
+    `);
+  } catch (e) {
+    // ignore
+  }
+
   addColumnIfNotExists('sales_orders', 'total_net_amount', 'REAL DEFAULT 0.0');
   addColumnIfNotExists('sales_orders', 'currency', "TEXT DEFAULT 'INR'");
 
@@ -214,6 +281,63 @@ export function initDb(): Database.Database {
   addColumnIfNotExists('outbound_deliveries', 'volume_cd3', "REAL DEFAULT 0");
   addColumnIfNotExists('outbound_deliveries', 'no_packages', "INTEGER DEFAULT 0");
   addColumnIfNotExists('outbound_deliveries', 'items_json', "TEXT");
+  addColumnIfNotExists('transport_assignments', 'bilty_no', "TEXT");
+  addColumnIfNotExists('transport_assignments', 'bilty_date', "TEXT");
+  addColumnIfNotExists('transport_assignments', 'bilty_url', "TEXT");
+
+  // Core V3 Workflow Tables
+  instance.exec(`
+    CREATE TABLE IF NOT EXISTS so_distributions (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      so_id             INTEGER NOT NULL REFERENCES sales_orders(id),
+      transporter_id    INTEGER NOT NULL REFERENCES transporters(id),
+      distributed_by    INTEGER NOT NULL REFERENCES users(id),
+      distributed_at    TEXT NOT NULL DEFAULT (datetime('now')),
+      status            TEXT NOT NULL CHECK(status IN ('PENDING','ASSIGNED','COMPLETED')) DEFAULT 'PENDING'
+    );
+
+    CREATE TABLE IF NOT EXISTS staging_checks (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      assignment_id     INTEGER NOT NULL REFERENCES transport_assignments(id),
+      checked_by        INTEGER NOT NULL REFERENCES users(id),
+      checked_at        TEXT NOT NULL DEFAULT (datetime('now')),
+      result            TEXT NOT NULL CHECK(result IN ('MATCH','MISMATCH')),
+      mismatch_notes    TEXT,
+      waybill_no        TEXT,
+      waybill_issued_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS invoice_events (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      assignment_id     INTEGER UNIQUE NOT NULL REFERENCES transport_assignments(id),
+      invoice_no        TEXT UNIQUE,
+      total_value       REAL NOT NULL,
+      accepted_payload  REAL NOT NULL,
+      rate              REAL NOT NULL,
+      status            TEXT NOT NULL CHECK(status IN (
+        'DRAFT','PARKED','PAID_PARTIAL','PAID_FULL'
+      )) DEFAULT 'DRAFT',
+      posted_by         INTEGER REFERENCES users(id),
+      posted_at         TEXT,
+      customer_notified_at TEXT,
+      created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS payment_events (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      invoice_id        INTEGER NOT NULL REFERENCES invoice_events(id),
+      payment_type      TEXT NOT NULL CHECK(payment_type IN ('FULL','PARTIAL')),
+      amount_paid       REAL NOT NULL,
+      balance_before    REAL NOT NULL,
+      balance_after     REAL NOT NULL,
+      paid_by           INTEGER NOT NULL REFERENCES users(id),
+      paid_at           TEXT NOT NULL DEFAULT (datetime('now')),
+      ref_no            TEXT
+    );
+  `);
+
+  addColumnIfNotExists('transport_assignments', 'so_distribution_id', 'INTEGER');
+  addColumnIfNotExists('transport_assignments', 'so_id', 'INTEGER');
 
   // Ensure POC Sales Orders (2318, 2320, 2321, 2322) are seeded if table is empty or update with real SAP master data
   try {
@@ -231,8 +355,14 @@ export function initDb(): Database.Database {
     insertCustomer.run(3, 'Company KK limited', '131', 18.5987, 73.7634, '05, wakad, Pune, Maharashtra, 411057, India');
 
     const insertSO = instance.prepare(`
-      INSERT OR REPLACE INTO sales_orders (id, sap_so_no, customer_id, sap_customer_no, created_date, delivery_date, overall_status, total_net_amount, currency, portal_status)
+      INSERT INTO sales_orders (id, sap_so_no, customer_id, sap_customer_no, created_date, delivery_date, overall_status, total_net_amount, currency, portal_status)
       VALUES (?, ?, ?, ?, date('now'), date('now', '+2 days'), 'A', ?, 'INR', 'OPEN')
+      ON CONFLICT(id) DO UPDATE SET
+        sap_so_no = excluded.sap_so_no,
+        customer_id = excluded.customer_id,
+        sap_customer_no = excluded.sap_customer_no,
+        total_net_amount = excluded.total_net_amount,
+        currency = excluded.currency
     `);
     const insertItem = instance.prepare(`
       INSERT OR REPLACE INTO sales_order_items (so_id, sap_so_no, item_no, material, material_desc, order_qty, uom, net_price, plant, storage_location)
@@ -334,87 +464,11 @@ export function initDb(): Database.Database {
     console.warn('[DB V3] Sales order seeding check warning:', err);
   }
 
-  // Ensure active demonstration trip exists for driver and open review item exists
+  // Target Flow: Ensure clean state - all Sales Orders start OPEN, no ghost invoices or test assignments
   try {
-    const activeDriverTrips = (instance.prepare("SELECT COUNT(*) as c FROM transport_assignments WHERE driver_id = 1 AND status IN ('ASSIGNED', 'MINE_TARE_LOGGED', 'MINE_GROSS_LOGGED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'UNDER_REVIEW')").get() as any)?.c || 0;
-    if (activeDriverTrips === 0) {
-      console.log('[DB V3] Seeding ready-to-test demonstration trip for Driver Rajesh Kumar...');
-      // 1. Create or get job config for PO 4500001714 (id 1)
-      let jcId = (instance.prepare("SELECT id FROM job_configs WHERE po_id = 1 LIMIT 1").get() as any)?.id;
-      if (!jcId) {
-        const jcRes = instance.prepare(`
-          INSERT INTO job_configs (po_id, transporter_id, availability_window, availability_window_start, availability_window_end, requested_pickup_datetime, expected_delivery_datetime, final_due_datetime, timebound, status)
-          VALUES (1, 1, '06:00-18:00', '06:00', '18:00', datetime('now', '-1 day'), datetime('now', '+1 day'), datetime('now', '+2 days'), datetime('now', '+7 days'), 'ASSIGNED')
-        `).run();
-        jcId = Number(jcRes.lastInsertRowid);
-        instance.prepare("INSERT OR REPLACE INTO job_config_pos (job_config_id, po_id, planned_qty, uom) VALUES (?, 1, 34.0, 'TO')").run(jcId);
-      }
-
-      // 2. Create transport assignment at DELIVERED state
-      const today = new Date().toISOString().slice(0, 10);
-      const taRes = instance.prepare(`
-        INSERT INTO transport_assignments (job_config_id, driver_id, vehicle_id, location, license_no, gstin, scheduled_date, status)
-        VALUES (?, 1, 1, 'Mine Siding', 'DL-850912-GP', '27AABCS0001A1Z1', ?, 'DELIVERED')
-      `).run(jcId, today);
-      const newTaId = Number(taRes.lastInsertRowid);
-
-      // 3. Seed weight logs
-      instance.prepare("INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail) VALUES (?, 'MINE_TARE', 10000, 'Tare Scale 1')").run(newTaId);
-      instance.prepare("INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail) VALUES (?, 'MINE_GROSS', 44000, 'Gross Scale 1')").run(newTaId);
-      instance.prepare("INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail) VALUES (?, 'DEST_GROSS', 44000, 'Dest Gross Scale')").run(newTaId);
-      instance.prepare("INSERT INTO weight_logs (assignment_id, stage, weight_kg, truck_detail) VALUES (?, 'DEST_TARE', 10000, 'Dest Tare Scale')").run(newTaId);
-
-      // 4. Seed OTP
-      instance.prepare("INSERT INTO otp_verifications (assignment_id, stage, otp_code, status) VALUES (?, 'PICKUP', '4821', 'VERIFIED')").run(newTaId);
-      instance.prepare("INSERT INTO otp_verifications (assignment_id, stage, otp_code, status) VALUES (?, 'DELIVERY', '9142', 'VERIFIED')").run(newTaId);
-
-      // 5. Seed Bilty
-      instance.prepare("INSERT INTO bilty_uploads (assignment_id, bilty_no, bilty_date, upload_url) VALUES (?, 'BL-2026-9901', ?, '/uploads/bilty/sample_bilty.pdf')").run(newTaId, today);
-
-      console.log(`[DB V3] Created active test assignment #${newTaId} for Driver Rajesh Kumar.`);
-    }
-
-    // Ensure at least 1 open item in review_queue so Company Admin POD verification desk is never blank
-    const openReviewCount = (instance.prepare("SELECT COUNT(*) as c FROM review_queue WHERE status = 'OPEN'").get() as any)?.c || 0;
-    if (openReviewCount === 0) {
-      let candidateAssignment = instance.prepare(`
-        SELECT ta.id, jc.po_id, po.sap_po_no, po.rate
-        FROM transport_assignments ta
-        JOIN job_configs jc ON jc.id = ta.job_config_id
-        JOIN purchase_orders po ON (po.id = jc.po_id OR po.id = (SELECT po_id FROM job_config_pos WHERE job_config_id = jc.id LIMIT 1))
-        ORDER BY ta.id DESC LIMIT 1
-      `).get() as any;
-
-      if (candidateAssignment) {
-        const assignId = candidateAssignment.id;
-        instance.prepare("UPDATE transport_assignments SET status = 'UNDER_REVIEW' WHERE id = ?").run(assignId);
-        instance.prepare(`
-          INSERT OR REPLACE INTO pod_documents (
-            assignment_id, pod_file_url, scanned_pod_url, ocr_waybill_extracted, ocr_weight_extracted,
-            ocr_confidence_pct, match_status, ocr_invoice_no, ocr_vendor_name,
-            ocr_po_no, ocr_material, ocr_quantity, ocr_total_amount, ocr_tax_amount,
-            ocr_line_items_json, ocr_raw_text, file_hash, ocr_provider,
-            ocr_processing_status, ocr_processed_at
-          ) VALUES (
-            ?, '/test-invoices/invoice_001_full_match.png', '/test-invoices/invoice_001_full_match.png', '4500001714', 34.0,
-            98.5, 'MATCH', 'INV-2026-0001', 'Sipho Transport Services',
-            '4500001714', 'SL BIT 20%ASH (40006653)', 34.0, 5923.65, 772.65,
-            '[{\"itemNumber\":1,\"materialCode\":\"40006653\",\"description\":\"SL BIT 20%ASH (40006653)\",\"quantity\":34,\"uom\":\"TO\",\"unitPrice\":151.5,\"taxRatePct\":15,\"lineTotal\":5151}]',
-            'Sample OCR Invoice Text', 'hash_sample_001', 'OPENAI',
-            'EXTRACTED', datetime('now')
-          )
-        `).run(assignId);
-
-        instance.prepare("DELETE FROM review_queue WHERE assignment_id = ?").run(assignId);
-        instance.prepare(`
-          INSERT INTO review_queue (assignment_id, flag_reason, status, blocks_miro_bool)
-          VALUES (?, 'AWAITING_CA_VERIFY', 'OPEN', 1)
-        `).run(assignId);
-        console.log(`[DB V3] Seeded open review queue item for assignment #${assignId}.`);
-      }
-    }
+    instance.prepare("UPDATE sales_orders SET portal_status = 'OPEN' WHERE portal_status IS NULL").run();
   } catch (err) {
-    console.warn('[DB V3] Auto-seed active assignment warning:', err);
+    console.warn('[DB V3] Sales order status check warning:', err);
   }
 
   return instance;

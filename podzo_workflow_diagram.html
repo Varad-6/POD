@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PODZO - Invoice Decision Intelligence Workflow</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #F8FAFC;
+    color: #0F172A;
+    padding: 40px;
+    display: flex;
+    justify-content: center;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .canvas {
+    width: 1200px;
+    background: #FFFFFF;
+    border-radius: 28px;
+    padding: 48px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+    border: 1px solid #E2E8F0;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* ─── Header ─── */
+  .header-card {
+    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+    border: 1.5px solid #BFDBFE;
+    border-radius: 20px;
+    padding: 28px 36px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.06);
+  }
+
+  .header-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: #1E3A8A;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .header-subtitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2563EB;
+    margin-bottom: 4px;
+  }
+
+  .header-meta {
+    font-size: 13.5px;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  /* ─── Layman Project Overview Banner ─── */
+  .layman-banner {
+    background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
+    border: 1.5px solid #86EFAC;
+    border-radius: 18px;
+    padding: 22px 28px;
+    box-shadow: 0 4px 14px rgba(22, 101, 52, 0.05);
+  }
+
+  .layman-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .layman-badge {
+    background: #16A34A;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+
+  .layman-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: #14532D;
+    letter-spacing: -0.01em;
+  }
+
+  .layman-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .layman-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: #166534;
+  }
+
+  .layman-bullet {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #BBF7D0;
+    color: #15803D;
+    font-weight: 800;
+    font-size: 11px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .layman-item strong {
+    color: #0F172A;
+    font-weight: 700;
+  }
+
+  /* ─── Workflow Step Cards ─── */
+  .step-card {
+    background: #FAFCFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 18px;
+    padding: 22px 26px;
+    position: relative;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.02);
+  }
+
+  .step-card.purple-theme {
+    background: #FAF8FF;
+    border-color: #E9D5FF;
+  }
+
+  .step-card.amber-theme {
+    background: #FFFDF7;
+    border-color: #FDE68A;
+  }
+
+  .step-card.green-theme {
+    background: #F8FDF9;
+    border-color: #BBF7D0;
+  }
+
+  .step-card.blue-theme {
+    background: #F8FAFF;
+    border-color: #BFDBFE;
+  }
+
+  .step-card.cyan-theme {
+    background: #F6FEFC;
+    border-color: #A7F3D0;
+  }
+
+  .step-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #FFFFFF;
+    font-weight: 800;
+    font-size: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  }
+
+  .step-num.bg-blue { background: #2563EB; }
+  .step-num.bg-purple { background: #7C3AED; }
+  .step-num.bg-amber { background: #D97706; }
+  .step-num.bg-green { background: #16A34A; }
+  .step-num.bg-indigo { background: #4F46E5; }
+  .step-num.bg-darkblue { background: #1E3A8A; }
+  .step-num.bg-teal { background: #0D9488; }
+  .step-num.bg-emerald { background: #059669; }
+
+  .step-titles {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .step-title-main {
+    font-size: 17px;
+    font-weight: 800;
+    color: #0F172A;
+    letter-spacing: -0.01em;
+  }
+
+  .step-title-sub {
+    font-size: 12.5px;
+    color: #64748B;
+    font-weight: 600;
+  }
+
+  /* ─── Grid of Sub-Cards ─── */
+  .subcards-row {
+    display: flex;
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  .subcard {
+    flex: 1;
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  }
+
+  .subcard-icon-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .icon-blue { background: #EFF6FF; color: #2563EB; }
+  .icon-purple { background: #F5F3FF; color: #7C3AED; }
+  .icon-amber { background: #FEF3C7; color: #D97706; }
+  .icon-green { background: #DCFCE7; color: #16A34A; }
+  .icon-cyan { background: #ECFDF5; color: #0D9488; }
+  .icon-red { background: #FEE2E2; color: #DC2626; }
+
+  .subcard-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .subcard-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1E293B;
+  }
+
+  .subcard-desc {
+    font-size: 11.5px;
+    color: #64748B;
+    font-weight: 500;
+    margin-top: 1px;
+  }
+
+  /* ─── Side System Box (SAP S/4HANA) ─── */
+  .with-sidebar {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .main-flow-col {
+    flex: 2.8;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sap-system-box {
+    flex: 1.2;
+    background: linear-gradient(135deg, #F0F7FF 0%, #E0EFFF 100%);
+    border: 1.5px solid #93C5FD;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .sap-box-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #1D4ED8;
+  }
+
+  .sap-box-list {
+    list-style: none;
+    font-size: 11.5px;
+    color: #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sap-box-list li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sap-box-list li::before {
+    content: "•";
+    color: #2563EB;
+    font-weight: bold;
+  }
+
+  /* ─── Arrow Down Connector ─── */
+  .flow-arrow-down {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: -10px 0;
+    color: #3B82F6;
+    font-size: 20px;
+    font-weight: 800;
+    z-index: 2;
+  }
+
+  .flow-arrow-down svg {
+    filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.2));
+  }
+
+  /* ─── Decision Diamond & Outcome Branches ─── */
+  .decision-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .decision-diamond {
+    background: #EFF6FF;
+    border: 2px solid #3B82F6;
+    color: #1D4ED8;
+    font-weight: 800;
+    font-size: 13.5px;
+    padding: 10px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .outcomes-row {
+    display: flex;
+    gap: 14px;
+    width: 100%;
+  }
+
+  .outcome-card {
+    flex: 1;
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.03);
+  }
+
+  .outcome-card.matched {
+    background: #F0FDF4;
+    border: 1.5px solid #86EFAC;
+  }
+
+  .outcome-card.warning {
+    background: #FEFCE8;
+    border: 1.5px solid #FDE047;
+  }
+
+  .outcome-card.exception {
+    background: #FEF2F2;
+    border: 1.5px solid #FCA5A5;
+  }
+
+  .outcome-icon-circle {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+
+  .matched .outcome-icon-circle { background: #DCFCE7; color: #16A34A; }
+  .warning .outcome-icon-circle { background: #FEF08A; color: #CA8A04; }
+  .exception .outcome-icon-circle { background: #FEE2E2; color: #DC2626; }
+
+  .outcome-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .outcome-title {
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .matched .outcome-title { color: #15803D; }
+  .warning .outcome-title { color: #A16207; }
+  .exception .outcome-title { color: #B91C1C; }
+
+  .outcome-desc {
+    font-size: 11.5px;
+    color: #475569;
+    font-weight: 500;
+  }
+
+  /* ─── Extraction Details Grid in Step 5 ─── */
+  .extraction-box {
+    background: #FFFFFF;
+    border: 1.5px dashed #CBD5E1;
+    border-radius: 12px;
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .extract-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #334155;
+  }
+
+  .extract-pill-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2563EB;
+  }
+
+  .extract-pill strong {
+    color: #0F172A;
+    font-weight: 700;
+  }
+
+  /* ─── Final Bottom Outcomes Strip ─── */
+  .final-strip {
+    display: flex;
+    gap: 14px;
+    margin-top: 4px;
+  }
+
+  .final-pill {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .final-pill.green {
+    background: #DCFCE7;
+    color: #15803D;
+    border: 1px solid #86EFAC;
+  }
+
+  .final-pill.amber {
+    background: #FEF3C7;
+    color: #B45309;
+    border: 1px solid #FDE68A;
+  }
+
+  .final-pill.red {
+    background: #FEE2E2;
+    color: #B91C1C;
+    border: 1px solid #FCA5A5;
+  }
+
+  /* ─── Footer Tag ─── */
+  .footer-tag {
+    text-align: center;
+    font-size: 12px;
+    color: #94A3B8;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding-top: 8px;
+    border-top: 1px solid #F1F5F9;
+  }
+</style>
+</head>
+<body>
+
+<div class="canvas">
+
+  <!-- TOP HEADER -->
+  <div class="header-card">
+    <div class="header-title">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+        <polyline points="2 17 12 22 22 17"></polyline>
+        <polyline points="2 12 12 17 22 12"></polyline>
+      </svg>
+      PODZO — Invoice Decision Intelligence Workflow
+    </div>
+    <div class="header-subtitle">
+      End-to-End Enterprise Logistics System Architecture & Reconciliation Workflow
+    </div>
+    <div class="header-meta">
+      From SAP S/4HANA Sales Order Intake to Multi-Driver Fleet Haulage, AI Vision Verification & MIRO Payment Clearance
+    </div>
+  </div>
+
+  <!-- EXPLAIN PROJECT IN 4-5 LINES (LAYMAN'S LANGUAGE) -->
+  <div class="layman-banner">
+    <div class="layman-header">
+      <span class="layman-badge">Executive Overview</span>
+      <span class="layman-title">What is the PODZO Project? (Explained in Plain English)</span>
+    </div>
+    <div class="layman-lines">
+      <div class="layman-item">
+        <span class="layman-bullet">1</span>
+        <span><strong>Live SAP Linkage:</strong> Connects heavy corporate SAP S/4HANA Sales Orders (VA01 / VL03N) directly with physical road freight and rail siding logistics.</span>
+      </div>
+      <div class="layman-item">
+        <span class="layman-bullet">2</span>
+        <span><strong>Multi-Driver Fleet Dispatch:</strong> Transport carriers split heavy orders across multiple trucks and drivers using the standard <strong>1 Box = 1 Ton (1,000 kg)</strong> payload rule.</span>
+      </div>
+      <div class="layman-item">
+        <span class="layman-bullet">3</span>
+        <span><strong>Dual-Weighbridge Scale Auditing:</strong> Trucks are weighed at departure (mine siding) and arrival (customer yard) to catch any weight loss, leakage, or scale discrepancies.</span>
+      </div>
+      <div class="layman-item">
+        <span class="layman-bullet">4</span>
+        <span><strong>Vision AI Document & Stamp Check:</strong> Drivers take a photo of the offloaded delivery note; our Vision AI extracts items, weights, and verifies the mandatory <strong>official receiving yard stamp</strong>.</span>
+      </div>
+      <div class="layman-item">
+        <span class="layman-bullet">5</span>
+        <span><strong>Straight-Through SAP MIRO Posting:</strong> Clean deliveries immediately post the supplier invoice into SAP (MIRO) and clear customer payments—eliminating paper disputes and fraud.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STAGE 1: INVOICE / SO INTAKE -->
+  <div class="step-card blue-theme">
+    <div class="step-header">
+      <div class="step-num bg-blue">1</div>
+      <div class="step-titles">
+        <div class="step-title-main">Order Intake & Delivery Synchronization</div>
+        <div class="step-title-sub">Ingestion of Live Order-to-Cash (O2C) Data from SAP S/4HANA</div>
+      </div>
+    </div>
+    <div class="with-sidebar">
+      <div class="main-flow-col">
+        <div class="subcards-row">
+          <div class="subcard">
+            <div class="subcard-icon-box icon-blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            </div>
+            <div class="subcard-text">
+              <span class="subcard-title">SAP Sales Orders (VA01)</span>
+              <span class="subcard-desc">Material specs, order tonnage, customer delivery dates</span>
+            </div>
+          </div>
+          <div class="subcard">
+            <div class="subcard-icon-box icon-blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+            </div>
+            <div class="subcard-text">
+              <span class="subcard-title">Outbound Deliveries (VL03N)</span>
+              <span class="subcard-desc">Picking, shipping point & delivery slips (e.g. #80001474)</span>
+            </div>
+          </div>
+        </div>
+        <div class="subcard">
+          <div class="subcard-icon-box icon-blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          </div>
+          <div class="subcard-text">
+            <span class="subcard-title">Company Admin (CA) Distribution Engine</span>
+            <span class="subcard-desc">Real-time order allocation to certified transport carriers (e.g. Sipho Transport Services)</span>
+          </div>
+        </div>
+      </div>
+      <div class="sap-system-box">
+        <div class="sap-box-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+          SAP S/4HANA O2C
+        </div>
+        <ul class="sap-box-list">
+          <li>Sales Orders (VA01/VA03)</li>
+          <li>Outbound Deliveries (VL03N)</li>
+          <li>Customer Masters (BP)</li>
+          <li>Real-time RFC / OData API</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow-down">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+  </div>
+
+  <!-- STAGE 2: CARRIER ALLOCATION & MULTI-DRIVER FLEET SPLIT -->
+  <div class="step-card purple-theme">
+    <div class="step-header">
+      <div class="step-num bg-purple">2</div>
+      <div class="step-titles">
+        <div class="step-title-main">Fleet Allocation & Multi-Driver Load Splitting</div>
+        <div class="step-title-sub">Transporter Admin (TA) Operations Cockpit & Payload Mapping</div>
+      </div>
+    </div>
+    <div class="subcards-row">
+      <div class="subcard">
+        <div class="subcard-icon-box icon-purple">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Multi-Driver Fleet Slotting</span>
+          <span class="subcard-desc">Assign 2+ drivers & trucks for split loads (e.g. Truck 1: 10T, Truck 2: 5T)</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-purple">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Standard 1 Box = 1 Ton Rule</span>
+          <span class="subcard-desc">1,000 kg per box payload mapping enforced across all vehicles</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-purple">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Independent Trip IDs</span>
+          <span class="subcard-desc">Live dispatch trips generated with dedicated driver mobile telemetry</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow-down">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+  </div>
+
+  <!-- STAGE 3: MINE SIDING PRE-DISPATCH & BILTY DOCUMENTATION -->
+  <div class="step-card amber-theme">
+    <div class="step-header">
+      <div class="step-num bg-amber">3</div>
+      <div class="step-titles">
+        <div class="step-title-main">Weighbridge Siding & Consignment Clearance</div>
+        <div class="step-title-sub">Siding Supervisor (SR) Station Gate Inspection & Weigh Log</div>
+      </div>
+    </div>
+    <div class="subcards-row">
+      <div class="subcard">
+        <div class="subcard-icon-box icon-amber">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"></path><path d="M6 8l6-5 6 5"></path><path d="M3 13a3 3 0 0 0 6 0l-3-6-3 6z"></path><path d="M15 13a3 3 0 0 0 6 0l-3-6-3 6z"></path></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Mine Tare & Gross Weighing</span>
+          <span class="subcard-desc">Empty truck tare vs loaded gross weight logged to calibrate net tonnage</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-amber">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Digital Bilty (LR) Note Upload</span>
+          <span class="subcard-desc">Consignment note scanned and cryptographic hash logged</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-amber">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><polyline points="9 11 12 14 22 4"></polyline></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Supervisor Gate Release</span>
+          <span class="subcard-desc">Seal security, driver license check & staging pre-clearance</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow-down">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+  </div>
+
+  <!-- STAGE 4: IN-TRANSIT TELEMETRY & YARD OFFLOAD -->
+  <div class="step-card cyan-theme">
+    <div class="step-header">
+      <div class="step-num bg-teal">4</div>
+      <div class="step-titles">
+        <div class="step-title-main">GPS Haulage & Customer Receiving Gate</div>
+        <div class="step-title-sub">Driver Mobile App (DR) Transit & Yard Receiver (CR) Gate Inspection</div>
+      </div>
+    </div>
+    <div class="subcards-row">
+      <div class="subcard">
+        <div class="subcard-icon-box icon-cyan">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">GPS Telemetry & Transit</span>
+          <span class="subcard-desc">Live hauling waypoint telemetry & 500m geofence arrival capture</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-cyan">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18"></path><path d="M6 8l6-5 6 5"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="18" r="3"></circle></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Yard Receiving Weighbridge</span>
+          <span class="subcard-desc">Destination Gross & Tare scales capture delivered net payload</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-cyan">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Official Yard Receiving Stamp</span>
+          <span class="subcard-desc">Physical delivery note stamped and authorized with seal signature</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow-down">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+  </div>
+
+  <!-- STAGE 5: VISION AI OCR & EXTRACTION -->
+  <div class="step-card purple-theme">
+    <div class="step-header">
+      <div class="step-num bg-indigo">5</div>
+      <div class="step-titles">
+        <div class="step-title-main">AI OCR Extraction & Vision Intelligence</div>
+        <div class="step-title-sub">GPT-4o Vision Multi-Modal Extraction from Uploaded POD Scans</div>
+      </div>
+    </div>
+    <div class="extraction-box">
+      <div class="extract-pill">
+        <div class="extract-pill-dot"></div>
+        <span><strong>Carrier Name:</strong> Authorized entity (GSTIN)</span>
+      </div>
+      <div class="extract-pill">
+        <div class="extract-pill-dot"></div>
+        <span><strong>Invoice & Receipt #:</strong> Unique billing ID</span>
+      </div>
+      <div class="extract-pill">
+        <div class="extract-pill-dot"></div>
+        <span><strong>SAP Sales Order Ref:</strong> SO & VL03N match</span>
+      </div>
+      <div class="extract-pill">
+        <div class="extract-pill-dot"></div>
+        <span><strong>Delivered Tonnage:</strong> Billed vs scale weight</span>
+      </div>
+      <div class="extract-pill">
+        <div class="extract-pill-dot"></div>
+        <span><strong>Line Items & Rates:</strong> Cargo & unit prices</span>
+      </div>
+      <div class="extract-pill">
+        <div class="extract-pill-dot" style="background: #16A34A;"></div>
+        <span><strong>Official Yard Stamp:</strong> Verified receiver seal</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow-down">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+  </div>
+
+  <!-- DECISION DIAMOND: 5-GATE VERIFICATION -->
+  <div class="decision-wrapper">
+    <div class="decision-diamond">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 22 12 12 22 2 12 12 2"></polygon></svg>
+      5-Gate Reconciliation Verification
+    </div>
+    <div class="outcomes-row">
+      <div class="outcome-card matched">
+        <div class="outcome-icon-circle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <div class="outcome-info">
+          <div class="outcome-title">Matched (Auto-Pass)</div>
+          <div class="outcome-desc">Weight variance &le; &plusmn;0.5%, Certified Stamp detected, 100% matched to SAP SO</div>
+        </div>
+      </div>
+      <div class="outcome-card warning">
+        <div class="outcome-icon-circle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <div class="outcome-info">
+          <div class="outcome-title">Commercial Variance</div>
+          <div class="outcome-desc">Moisture loss or scale drift within commercial limits; flagged for CA review</div>
+        </div>
+      </div>
+      <div class="outcome-card exception">
+        <div class="outcome-icon-circle">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </div>
+        <div class="outcome-info">
+          <div class="outcome-title">Unmatched / Exception</div>
+          <div class="outcome-desc">Missing receiving stamp, overload &gt;0.5%, or wrong SO. Blocks SAP MIRO</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow-down">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+  </div>
+
+  <!-- STAGE 6: AP / CA VERIFICATION DESK -->
+  <div class="step-card blue-theme">
+    <div class="step-header">
+      <div class="step-num bg-darkblue">6</div>
+      <div class="step-titles">
+        <div class="step-title-main">AP Command Center & CA Verification Desk</div>
+        <div class="step-title-sub">Company Admin (CA) Governance, Discrepancy Resolution & Audit Trail</div>
+      </div>
+    </div>
+    <div class="subcards-row">
+      <div class="subcard">
+        <div class="subcard-icon-box icon-green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Force Release & Approve</span>
+          <span class="subcard-desc">Log commercial justification (e.g. moisture loss) and unlock MIRO</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-amber">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="10" y1="15" x2="10" y2="9"></line><line x1="14" y1="15" x2="14" y2="9"></line></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Hold & Park for Review</span>
+          <span class="subcard-desc">Request supervisor weigh scale recalibration or siding re-audit</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-red">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Reject POD Discrepancy</span>
+          <span class="subcard-desc">Flag unstamped or fraudulent slips; return to carrier for re-upload</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow-down">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+  </div>
+
+  <!-- STAGE 7: S/4HANA MIRO INVOICE POSTING -->
+  <div class="step-card blue-theme">
+    <div class="step-header">
+      <div class="step-num bg-blue">7</div>
+      <div class="step-titles">
+        <div class="step-title-main">Post Supplier Invoice (SAP MIRO)</div>
+        <div class="step-title-sub">Automated S/4HANA Accounts Payable Document Creation</div>
+      </div>
+    </div>
+    <div class="with-sidebar">
+      <div class="main-flow-col">
+        <div class="subcards-row">
+          <div class="subcard">
+            <div class="subcard-icon-box icon-blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            </div>
+            <div class="subcard-text">
+              <span class="subcard-title">Post S/4HANA Invoice (MIRO)</span>
+              <span class="subcard-desc">Generate official SAP accounting document (Parked &rarr; Posted after approval)</span>
+            </div>
+          </div>
+          <div class="subcard">
+            <div class="subcard-icon-box icon-blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <div class="subcard-text">
+              <span class="subcard-title">IFRS 15 Revenue Lock</span>
+              <span class="subcard-desc">Automated 3-way match unlocks freight liability in general ledger</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sap-system-box">
+        <div class="sap-box-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+          SAP S/4HANA FI/AP
+        </div>
+        <ul class="sap-box-list">
+          <li>Accounting Document No.</li>
+          <li>Open AP Item in Ledger</li>
+          <li>Cost Center Debit / Carrier Credit</li>
+          <li>Real-time MIRO Status Sync</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="flow-arrow-down">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+  </div>
+
+  <!-- STAGE 8: PAYMENT PROCESS & FINAL CLEARING -->
+  <div class="step-card green-theme">
+    <div class="step-header">
+      <div class="step-num bg-emerald">8</div>
+      <div class="step-titles">
+        <div class="step-title-main">Payment Execution & Final Reconciliation</div>
+        <div class="step-title-sub">Customer Settlement Desk & S/4HANA General Ledger Clearing</div>
+      </div>
+    </div>
+    <div class="subcards-row">
+      <div class="subcard">
+        <div class="subcard-icon-box icon-green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Customer Settlement Portal</span>
+          <span class="subcard-desc">Execute full or partial payments until outstanding balance reaches zero</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">SAP F110 Payment Run</span>
+          <span class="subcard-desc">Electronic fund transfer and automated bank remittance processing</span>
+        </div>
+      </div>
+      <div class="subcard">
+        <div class="subcard-icon-box icon-green">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        </div>
+        <div class="subcard-text">
+          <span class="subcard-title">Final S/4HANA Clearing</span>
+          <span class="subcard-desc">Open items cleared, complete immutable audit log archived</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final Outcome Chips -->
+    <div class="final-strip" style="margin-top: 14px;">
+      <div class="final-pill green">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        <span>Paid & Cleared &bull; Order-to-Cash Complete</span>
+      </div>
+      <div class="final-pill amber">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>Payment Scheduled &bull; Net 30/60 In Progress</span>
+      </div>
+      <div class="final-pill red">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span>Blocked / Dispute &bull; Resolution Required</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer-tag">
+    PODZO &bull; Advanced Logistics & Invoice Decision Intelligence &bull; Standard Payload: 1 Box = 1 Ton (1,000 kg) &bull; SAP S/4HANA 2026 Ready
+  </div>
+
+</div>
+
+</body>
+</html>

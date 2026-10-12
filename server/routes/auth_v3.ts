@@ -25,11 +25,14 @@ router.post('/login', (req: Request, res: Response) => {
   const valid = bcrypt.compareSync(password, user.password_hash);
   if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
+  const resolvedEntityId = user.entity_id || 1;
   const payload = {
     userId: user.id,
     username: user.username,
     role: user.role,
-    entityId: user.entity_id,
+    entityId: resolvedEntityId,
+    transporterId: user.role === 'TA' ? resolvedEntityId : null,
+    customerId: user.role === 'CR' ? resolvedEntityId : null,
   };
 
   const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
@@ -42,7 +45,9 @@ router.post('/login', (req: Request, res: Response) => {
       role: user.role,
       displayName: user.display_name,
       email: user.email,
-      entityId: user.entity_id,
+      entityId: resolvedEntityId,
+      transporterId: user.role === 'TA' ? resolvedEntityId : null,
+      customerId: user.role === 'CR' ? resolvedEntityId : null,
     }
   });
 });
@@ -53,13 +58,16 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
     'SELECT id, username, role, display_name, email, entity_id FROM users WHERE id = ?'
   ).get(req.user!.userId) as any;
   if (!user) return res.status(404).json({ error: 'User not found' });
+  const resolvedEntityId = user.entity_id || 1;
   return res.json({
     id: user.id,
     username: user.username,
     role: user.role,
     displayName: user.display_name,
     email: user.email,
-    entityId: user.entity_id,
+    entityId: resolvedEntityId,
+    transporterId: user.role === 'TA' ? resolvedEntityId : null,
+    customerId: user.role === 'CR' ? resolvedEntityId : null,
   });
 });
 

@@ -4,9 +4,10 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { PageHeader } from '../components/PageHeader';
 import { KPISummaryBar } from '../components/KPISummaryBar';
+import { StatusBadge } from '../components/StatusBadge';
 import { useAuthV3 } from '../contexts/AuthContextV3';
-import { API_BASE } from '../lib/api_v3';
-import { Truck, FileText, ClipboardList, Receipt, ArrowRight, ChevronRight, RefreshCw } from 'lucide-react';
+import { salesOrdersApi, SoDistributionV3, API_BASE } from '../lib/api_v3';
+import { Truck, FileText, ClipboardList, Receipt, ArrowRight, ChevronRight, RefreshCw, Package } from 'lucide-react';
 
 // ─── Dashboard Navigation Card ────────────────────────────────────────────────
 const NavCard: React.FC<{
@@ -73,6 +74,7 @@ export const TransporterDashboard: React.FC = () => {
   const { user } = useAuthV3();
   const [jobConfigs, setJobConfigs] = useState<any[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
+  const [distributions, setDistributions] = useState<SoDistributionV3[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
@@ -85,21 +87,21 @@ export const TransporterDashboard: React.FC = () => {
   const loadTAStats = async () => {
     setLoading(true);
     try {
-      const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-      const host = isLocal ? 'http://localhost:3001' : 'https://podzone-srv-sleepy-baboon-kp.cfapps.eu30.hana.ondemand.com';
-      const [jobsRes, assignsRes] = await Promise.all([
+      const [jobsRes, assignsRes, dists] = await Promise.all([
         fetch(`${API_BASE}/job-configs`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
         }),
         fetch(`${API_BASE}/assignments`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('podzo_token_v3') || ''}` }
-        })
+        }),
+        salesOrdersApi.getDistributions().catch(() => [])
       ]);
 
       const jobs = await jobsRes.json();
       const assigns = await assignsRes.json();
       setJobConfigs(Array.isArray(jobs) ? jobs : []);
       setAssignments(Array.isArray(assigns) ? assigns : []);
+      setDistributions(Array.isArray(dists) ? dists : []);
     } catch (err) {
       console.error('Failed to load transporter stats:', err);
     } finally {
@@ -111,10 +113,10 @@ export const TransporterDashboard: React.FC = () => {
     loadTAStats();
   }, []);
 
-  const pendingPO = jobConfigs.filter(j => j.status === 'PENDING');
-  const pendingDriverAssign = jobConfigs.filter(j => j.status === 'PENDING' && (!j.driver_id || !j.vehicle_id));
-  const activeTransports = assignments.filter(a => a.status === 'DISPATCHED' || a.status === 'IN_TRANSIT' || a.status === 'ACCEPTED');
-  const podPending = assignments.filter(a => (a.status === 'DELIVERED' && !a.pod_file_url) || a.status === 'REJECTED');
+  const pendingDist = distributions.filter(d => d.status === 'PENDING');
+  const pendingDriverDist = distributions.filter(d => !d.driver_name || d.status === 'PENDING');
+  const activeTransports = assignments.filter(a => ['ASSIGNED', 'MINE_TARE_LOGGED', 'MINE_GROSS_LOGGED', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED'].includes(a.status));
+  const podPending = assignments.filter(a => a.status === 'DELIVERED');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -122,7 +124,7 @@ export const TransporterDashboard: React.FC = () => {
       {/* 1. Page Header */}
       <PageHeader 
         title={`Welcome, ${user?.displayName?.split(' ')[0] || 'Transporter'}`}
-        subtitle="Operations Command Console • Manage transport purchase orders, fleet assignments, trip telemetry, and freight settlements."
+        subtitle="Operations Command Console • Manage assigned SAP Sales Orders, fleet dispatch, trip telemetry, and delivery verification."
         actions={
           <Button 
             variant="ghost" 
@@ -136,31 +138,31 @@ export const TransporterDashboard: React.FC = () => {
         }
       />
 
-      {/* 2. SAP Horizontal KPI Summary Bar (Reference Screenshot 1) */}
+      {/* 2. SAP Horizontal KPI Summary Bar */}
       <KPISummaryBar
         items={[
           {
-            id: 'pending-po',
-            value: pendingPO.length,
-            label: 'Pending Orders',
-            subtitle: pendingPO.length > 0 ? 'Requires Action' : 'All released handled',
-            onClick: () => navigate('/transporter/purchase-orders'),
-            accentColor: pendingPO.length > 0 ? 'var(--color-brand-blue-600)' : undefined
+            id: 'pending-so',
+            value: distributions.length,
+            label: 'Assigned Orders',
+            subtitle: pendingDist.length > 0 ? `${pendingDist.length} Awaiting Dispatch` : 'All allocated active',
+            onClick: () => navigate('/transporter/sales-orders'),
+            accentColor: distributions.length > 0 ? 'var(--color-brand-blue-600)' : undefined
           },
           {
             id: 'driver-assign',
-            value: pendingDriverAssign.length,
+            value: pendingDriverDist.length,
             label: 'Driver Needed',
-            subtitle: pendingDriverAssign.length > 0 ? 'Driver / Truck Needed' : 'All assigned',
-            onClick: () => navigate('/transporter/purchase-orders'),
-            accentColor: pendingDriverAssign.length > 0 ? 'var(--color-warning)' : undefined
+            subtitle: pendingDriverDist.length > 0 ? 'Driver / Truck Required' : 'All crewed',
+            onClick: () => navigate('/transporter/sales-orders'),
+            accentColor: pendingDriverDist.length > 0 ? 'var(--color-warning)' : undefined
           },
           {
             id: 'active-trips',
             value: activeTransports.length,
             label: 'Active Trips',
             subtitle: 'In Transit Telemetry',
-            onClick: () => navigate('/transporter/trips'),
+            onClick: () => navigate('/transporter/sales-orders'),
           },
           {
             id: 'pod-pending',
@@ -180,7 +182,7 @@ export const TransporterDashboard: React.FC = () => {
           title="Assigned Sales Orders"
           description="View complete Sales Orders distributed by Company Admin and allocate fleet capacity."
           route="/transporter/sales-orders"
-          badge={pendingPO.length > 0 ? `${pendingPO.length} Pending` : undefined}
+          badge={distributions.length > 0 ? `${distributions.length} Orders` : undefined}
         />
         <NavCard
           icon={<ClipboardList size={20} />}
@@ -191,11 +193,135 @@ export const TransporterDashboard: React.FC = () => {
         />
       </div>
 
-      {/* 4. Guided Workflow Process Bar */}
-      <Card title="Transport Execution Lifecycle" subtitle="Standard operating procedure from PO allocation to SAP clearance">
+      {/* Standard Packaging & Load Mapping Note Banner */}
+      <div style={{
+        padding: '12px 16px',
+        backgroundColor: '#eff6ff',
+        border: '1px solid #bfdbfe',
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        fontSize: '13px',
+        color: '#1e40af'
+      }}>
+        <Package size={17} style={{ flexShrink: 0, color: '#2563eb' }} />
+        <span>
+          <strong>Standard Payload Conversion: 1 Box = 1 Ton (1,000 kg).</strong> Fleet trucks are allocated based on box capacity.
+        </span>
+      </div>
+
+      {/* 4. Active Allocated Orders Section */}
+      <Card
+        title="Allocated Sales Orders Haulage"
+        subtitle="Live orders distributed by Company Admin requiring fleet crew allocation"
+        action={
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => navigate('/transporter/sales-orders')}
+          >
+            Manage Fleet Hauls <ArrowRight size={13} style={{ marginLeft: '4px' }} />
+          </Button>
+        }
+      >
+        {distributions.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: '13.5px' }}>
+            No Sales Orders distributed to your fleet yet. Orders distributed by Company Admin will appear here.
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="data-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
+                  <th style={{ padding: '10px 12px' }}>SAP SO #</th>
+                  <th style={{ padding: '10px 12px' }}>Outbound Deliveries (VL03N)</th>
+                  <th style={{ padding: '10px 12px' }}>Client Yard</th>
+                  <th style={{ padding: '10px 12px' }}>Allocated Load</th>
+                  <th style={{ padding: '10px 12px' }}>Assigned Fleet</th>
+                  <th style={{ padding: '10px 12px' }}>Status</th>
+                  <th style={{ padding: '10px 12px', textAlign: 'right' }}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {distributions.slice(0, 5).map(dist => (
+                  <tr key={dist.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 700, fontFamily: 'monospace' }}>
+                      #{dist.sap_so_no}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      {dist.deliveries_summary ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                          {dist.deliveries_summary.split(', ').map((delNo: string) => (
+                            <span
+                              key={delNo}
+                              style={{
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                                backgroundColor: '#eff6ff',
+                                border: '1px solid #bfdbfe',
+                                fontFamily: 'monospace',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                color: '#1d4ed8'
+                              }}
+                            >
+                              #{delNo}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div style={{ fontWeight: 600 }}>{dist.customer_name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>{dist.sap_customer_no}</div>
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Package size={13} color="var(--color-brand-blue-600)" />
+                        <span style={{ fontWeight: 600 }}>
+                          {dist.total_qty ? `${dist.total_qty.toLocaleString()} Boxes (${dist.total_qty.toLocaleString()} Tons)` : `${dist.item_count || 1} Packages`}
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      {dist.driver_name ? (
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{dist.driver_name}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontFamily: 'monospace' }}>{dist.vehicle_reg}</div>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>Unassigned</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <StatusBadge status={dist.assignment_status || dist.status} />
+                    </td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>
+                      <Button
+                        size="sm"
+                        variant={dist.status === 'ASSIGNED' ? 'secondary' : 'primary'}
+                        onClick={() => navigate('/transporter/sales-orders')}
+                        style={{ padding: '3px 8px', fontSize: '12px' }}
+                      >
+                        {dist.status === 'ASSIGNED' ? 'View Trip' : 'Assign Driver'}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+
+      {/* 5. Guided Workflow Process Bar */}
+      <Card title="Transport Execution Lifecycle" subtitle="Standard operating procedure from Sales Order allocation to SAP clearance">
         <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '16px' : '0', position: 'relative' }}>
           {[
-            { num: '1', title: 'Order Release', desc: 'Admin releases outline agreement PO' },
+            { num: '1', title: 'Order Release', desc: 'Admin allocates Sales Order' },
             { num: '2', title: 'Assign Fleet', desc: 'Allocate driver and truck capacity' },
             { num: '3', title: 'Trip Execution', desc: 'Loading siding, scale, transit, delivery' },
             { num: '4', title: 'Upload POD', desc: 'Submit delivery receipt for OCR audit' },
