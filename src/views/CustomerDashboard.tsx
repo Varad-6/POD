@@ -120,10 +120,11 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ initialTab
   useEffect(() => {
     if (selectedAssignment) {
       const tare = selectedAssignment.mine_tare_kg || 10000;
-      const targetQtyTons = selectedAssignment.po_target_qty || 34.0;
+      const targetQtyTons = selectedAssignment.assigned_qty || selectedAssignment.po_target_qty || 15.0;
       const targetQtyKg = targetQtyTons * 1000;
+      const gross = selectedAssignment.mine_gross_kg || (tare + targetQtyKg);
       setDestTare(String(tare));
-      setDestGross(String(tare + targetQtyKg));
+      setDestGross(String(gross));
       setUnitCalc(`Convert ${targetQtyKg} kg to ${targetQtyTons} Tons`);
     }
   }, [selectedAssignment]);
@@ -215,7 +216,9 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ initialTab
             <ArrowLeft size={14} /> All Trucks
           </Button>
           <span style={{ color: 'var(--color-border)' }}>›</span>
-          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>SO #{a.sap_po_no}</span>
+          <span className="mono" style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-text-heading)' }}>
+            SO #{a.sap_po_no}{a.sap_delivery_no ? ` · Del #${a.sap_delivery_no}` : ''}
+          </span>
           <span style={{ marginLeft: 'auto' }}><StatusBadge status={a.status} /></span>
         </div>
 
@@ -224,6 +227,7 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ initialTab
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap' }}>
               <InfoBit label="Sales Order (SO)" value={`SO #${a.sap_po_no}`} mono />
+              {a.sap_delivery_no && <InfoBit label="Outbound Delivery" value={`#${a.sap_delivery_no}`} mono />}
               <InfoBit label="Driver" value={a.driver_name || '—'} />
               <InfoBit label="Truck" value={a.vehicle_reg || '—'} mono />
               <InfoBit label="Cargo" value={a.material || '—'} />
@@ -666,9 +670,20 @@ export const CustomerDashboard: React.FC<CustomerDashboardProps> = ({ initialTab
             {
               header: 'Sales Order Ref',
               render: (a) => (
-                <span className="mono" style={{ fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>
-                  SO #{a.sap_po_no}
-                </span>
+                <div>
+                  <div className="mono" style={{ fontWeight: 800, color: 'var(--color-brand-blue-700)' }}>
+                    SO #{a.sap_po_no}
+                  </div>
+                  {a.sap_delivery_no ? (
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }} className="mono">
+                      Del #{a.sap_delivery_no}
+                    </div>
+                  ) : a.deliveries_summary ? (
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }} className="mono">
+                      Del: {a.deliveries_summary}
+                    </div>
+                  ) : null}
+                </div>
               )
             },
             {

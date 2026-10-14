@@ -284,6 +284,7 @@ export function initDb(): Database.Database {
   addColumnIfNotExists('transport_assignments', 'bilty_no', "TEXT");
   addColumnIfNotExists('transport_assignments', 'bilty_date', "TEXT");
   addColumnIfNotExists('transport_assignments', 'bilty_url', "TEXT");
+  addColumnIfNotExists('transport_assignments', 'sap_delivery_no', "TEXT");
 
   // Core V3 Workflow Tables
   instance.exec(`

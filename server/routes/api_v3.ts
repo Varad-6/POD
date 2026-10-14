@@ -266,12 +266,14 @@ router.get('/assignments', requireAuth, requireRole('CA', 'TA', 'SR'), (req: Req
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_TARE' LIMIT 1) as dest_tare_kg,
            COALESCE(bu.bilty_no, ta.bilty_no) as bilty_no,
            COALESCE(bu.bilty_date, ta.bilty_date) as bilty_date,
-           COALESCE(bu.upload_url, ta.bilty_url) as bilty_url
+           COALESCE(bu.upload_url, ta.bilty_url) as bilty_url,
+           COALESCE(ta.sap_delivery_no, (SELECT sap_delivery_no FROM outbound_deliveries WHERE so_id = so.id ORDER BY id ASC LIMIT 1)) as sap_delivery_no
     FROM transport_assignments ta
     LEFT JOIN job_configs jc ON jc.id = ta.job_config_id
     LEFT JOIN purchase_orders po ON po.id = jc.po_id
+    LEFT JOIN contracts c ON c.id = po.contract_id
     LEFT JOIN sales_orders so ON so.id = ta.so_id
-    LEFT JOIN customers cu ON cu.id = so.customer_id
+    LEFT JOIN customers cu ON cu.id = COALESCE(so.customer_id, c.customer_id)
     JOIN drivers d ON d.id = ta.driver_id
     JOIN vehicles v ON v.id = ta.vehicle_id
     LEFT JOIN pod_documents pd ON pd.assignment_id = ta.id
@@ -283,7 +285,7 @@ router.get('/assignments', requireAuth, requireRole('CA', 'TA', 'SR'), (req: Req
     query += ' WHERE ta.status = ?';
     params.push(status);
   }
-  query += ' ORDER BY ta.id DESC';
+  query += ' GROUP BY ta.id ORDER BY ta.id DESC';
   return res.json(db.prepare(query).all(...params));
 });
 
@@ -929,19 +931,21 @@ router.post('/so-distributions/:id/assign', requireAuth, requireRole('TA'), (req
   }
 
   const fallbackJobConfig = db.prepare('SELECT id FROM job_configs ORDER BY id ASC LIMIT 1').get() as any;
-  const jobConfigId = fallbackJobConfig ? fallbackJobConfig.id : 1;
+  const delivs = db.prepare('SELECT sap_delivery_no FROM outbound_deliveries WHERE so_id = ? ORDER BY id ASC').all(dist.so_id) as any[];
 
   const insertAssignment = db.prepare(`
     INSERT INTO transport_assignments (
       job_config_id, so_distribution_id, so_id, driver_id, vehicle_id,
-      location, license_no, gstin, scheduled_date, assigned_qty, status
-    ) VALUES (?, ?, ?, ?, ?, 'Mine Siding', ?, '27AABCS0001A1Z1', ?, ?, 'ASSIGNED')
+      location, license_no, gstin, scheduled_date, assigned_qty, status, sap_delivery_no
+    ) VALUES (?, ?, ?, ?, ?, 'Mine Siding', ?, '27AABCS0001A1Z1', ?, ?, 'ASSIGNED', ?)
   `);
 
   const createdAssignmentIds: number[] = [];
   const assignedSummaries: string[] = [];
 
-  for (const item of validatedAllocations) {
+  for (let idx = 0; idx < validatedAllocations.length; idx++) {
+    const item = validatedAllocations[idx];
+    const targetDeliv = delivs[idx]?.sap_delivery_no || delivs[0]?.sap_delivery_no || null;
     const result = insertAssignment.run(
       jobConfigId,
       dist.id,
@@ -950,11 +954,12 @@ router.post('/so-distributions/:id/assign', requireAuth, requireRole('TA'), (req
       item.vehicle.id,
       item.driver.license_no,
       item.date,
-      item.qty
+      item.qty,
+      targetDeliv
     );
     const assignmentId = Number(result.lastInsertRowid);
     createdAssignmentIds.push(assignmentId);
-    assignedSummaries.push(`${item.driver.name} (Truck ${item.vehicle.reg_no} — ${item.qty} Boxes/Tons)`);
+    assignedSummaries.push(`${item.driver.name} (Truck ${item.vehicle.reg_no} — ${item.qty} Boxes/Tons${targetDeliv ? ` • Delivery #${targetDeliv}` : ''})`);
   }
 
   // Update status
@@ -3279,6 +3284,8 @@ router.get('/assignments/incoming', requireAuth, requireRole('CR'), (req: Reques
            COALESCE(cu.address, 'Duvha Power Station') AS to_location, 
            COALESCE(cu.name, 'Customer Yard') as customer_name,
            d.name as driver_name, v.reg_no as vehicle_reg,
+           COALESCE(ta.sap_delivery_no, (SELECT sap_delivery_no FROM outbound_deliveries WHERE so_id = so.id ORDER BY id ASC LIMIT 1)) as sap_delivery_no,
+           (SELECT GROUP_CONCAT(sap_delivery_no, ', ') FROM outbound_deliveries WHERE so_id = so.id) as deliveries_summary,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_TARE' LIMIT 1) as mine_tare_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'MINE_GROSS' LIMIT 1) as mine_gross_kg,
            (SELECT weight_kg FROM weight_logs WHERE assignment_id = ta.id AND stage = 'DEST_GROSS' LIMIT 1) as dest_gross_kg,
@@ -3289,11 +3296,13 @@ router.get('/assignments/incoming', requireAuth, requireRole('CR'), (req: Reques
     LEFT JOIN purchase_orders po ON po.id = jc.po_id
     LEFT JOIN contracts c ON c.id = po.contract_id
     LEFT JOIN sales_orders so ON so.id = ta.so_id
-    LEFT JOIN customers cu ON (cu.id = so.customer_id OR cu.id = c.customer_id)
+    LEFT JOIN customers cu ON cu.id = COALESCE(so.customer_id, c.customer_id)
     JOIN drivers d ON d.id = ta.driver_id
     JOIN vehicles v ON v.id = ta.vehicle_id
     LEFT JOIN bilty_uploads bu ON bu.assignment_id = ta.id
     WHERE ta.status IN ('DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'DELIVERED', 'POD_UPLOADED', 'APPROVED', 'INVOICED', 'MIRO_PARKED', 'MIRO_POSTED', 'CLEARED')
+    GROUP BY ta.id
+    ORDER BY ta.id DESC
   `).all();
 
   return res.json(incoming);
@@ -3658,15 +3667,18 @@ router.post('/joule/assign-driver', requireAuth, (req: Request, res: Response) =
   let distRow = db.prepare('SELECT id FROM so_distributions WHERE so_id = ? ORDER BY id DESC LIMIT 1').get(resolvedSoId) as any;
   let distId = distRow ? distRow.id : 1;
 
+  const deliv = db.prepare('SELECT sap_delivery_no FROM outbound_deliveries WHERE so_id = ? ORDER BY id ASC LIMIT 1').get(resolvedSoId) as any;
+  const targetDeliv = deliv ? deliv.sap_delivery_no : null;
+
   const taRes = db.prepare(`
-    INSERT INTO transport_assignments (job_config_id, driver_id, vehicle_id, location, license_no, gstin, scheduled_date, status, so_distribution_id, so_id)
-    VALUES (1, ?, ?, 'Mine Siding Gate 01', ?, '27AABCS0001A1Z1', ?, 'ASSIGNED', ?, ?)
-  `).run(resolvedDriverId, resolvedVehicleId, driverRow?.license_no || 'DL-850912-GP', schedDate, distId, resolvedSoId);
+    INSERT INTO transport_assignments (job_config_id, driver_id, vehicle_id, location, license_no, gstin, scheduled_date, status, so_distribution_id, so_id, sap_delivery_no)
+    VALUES (1, ?, ?, 'Mine Siding Gate 01', ?, '27AABCS0001A1Z1', ?, 'ASSIGNED', ?, ?, ?)
+  `).run(resolvedDriverId, resolvedVehicleId, driverRow?.license_no || 'DL-850912-GP', schedDate, distId, resolvedSoId, targetDeliv);
 
   const assignId = Number(taRes.lastInsertRowid);
   db.prepare("UPDATE sales_orders SET portal_status = 'IN_PROGRESS' WHERE id = ?").run(resolvedSoId);
 
-  const summary = `✅ Success: Driver ${driverRow?.name || 'Rajesh Kumar'} assigned with vehicle ${vehicleRow?.reg_no || 'MH12AB1234'} to Sales Order #${soRow?.sap_so_no || '2322'} for ${schedDate}.\n• Trip ID: #${assignId}\n• Payload Standard: 1 Box = 1 Ton (15 Boxes / 15.0 Tons)\n• Status: Ready for Siding Gate Weighbridge Scale.`;
+  const summary = `✅ Success: Driver ${driverRow?.name || 'Rajesh Kumar'} assigned with vehicle ${vehicleRow?.reg_no || 'MH12AB1234'} to Sales Order #${soRow?.sap_so_no || '2322'}${targetDeliv ? ` (Delivery #${targetDeliv})` : ''} for ${schedDate}.\n• Trip ID: #${assignId}\n• Payload Standard: 1 Box = 1 Ton (15 Boxes / 15.0 Tons)\n• Status: Ready for Siding Gate Weighbridge Scale.`;
 
   return res.status(201).json({
     success: true,

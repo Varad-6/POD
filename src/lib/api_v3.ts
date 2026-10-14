@@ -346,6 +346,9 @@ export interface TransportAssignmentV3 {
   material_codes?: string;
   from_location?: string;
   to_location?: string;
+  sap_delivery_no?: string;
+  deliveries_summary?: string;
+  assigned_qty?: number;
   driver_name?: string;
   vehicle_reg?: string;
   supervisor_stamped_count?: number;
