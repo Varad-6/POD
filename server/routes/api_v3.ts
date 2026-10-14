@@ -931,6 +931,7 @@ router.post('/so-distributions/:id/assign', requireAuth, requireRole('TA'), (req
   }
 
   const fallbackJobConfig = db.prepare('SELECT id FROM job_configs ORDER BY id ASC LIMIT 1').get() as any;
+  const jobConfigId = fallbackJobConfig ? fallbackJobConfig.id : 1;
   const delivs = db.prepare('SELECT sap_delivery_no FROM outbound_deliveries WHERE so_id = ? ORDER BY id ASC').all(dist.so_id) as any[];
 
   const insertAssignment = db.prepare(`
